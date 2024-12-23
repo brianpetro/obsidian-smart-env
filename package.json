@@ -1,0 +1,18 @@
+{
+  "name": "obsidian-smart-env",
+  "version": "1.0.0",
+  "author": "Your Name",
+  "license": "MIT",
+  "description": "Obsidian plugin that extends or references smart-environment for Obsidian use-cases.",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "npx ava --verbose"
+  },
+  "dependencies": {
+    "smart-environment": "file:../smart-environment"
+  },
+  "devDependencies": {
+    "ava": "^5.3.1"
+  }
+}
