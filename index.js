@@ -13,7 +13,7 @@ import { SmartEnv } from 'smart-environment';
  * @param {Object} [plugin_config={}] - Additional or custom config for Obsidian usage.
  * @returns {Promise<SmartEnv>} The SmartEnv instance.
  */
-export async function init_obsidian_smart_env(main, plugin_config = null) {
+export async function init_smart_env(main, plugin_config = null) {
   if(!plugin_config) plugin_config = main.smart_env_config;
   return await SmartEnv.create(main, {
     // global_ref: window,
@@ -34,4 +34,9 @@ export async function wait_for_smart_env() {
       }
     }, 100);
   });
+}
+
+export async function wait_for_smart_env_then_init(main, plugin_config = null) {
+  await wait_for_smart_env();
+  await init_smart_env(main, plugin_config);
 }
