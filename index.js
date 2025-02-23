@@ -16,7 +16,6 @@ import { SmartEnv } from 'smart-environment';
 export async function init_smart_env(main, plugin_config = null) {
   if(!plugin_config) plugin_config = main.smart_env_config;
   return await SmartEnv.create(main, {
-    // global_ref: window,
     global_prop: 'smart_env',
     collections: {},
     item_types: {},
