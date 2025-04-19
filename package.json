@@ -1,18 +1,34 @@
 {
   "name": "obsidian-smart-env",
-  "version": "1.0.0",
-  "author": "🌴 Brian",
+  "author": "Brian Joseph Petro (🌴 Brian)",
   "license": "MIT",
-  "description": "Obsidian plugin that extends or references smart-environment for Obsidian use-cases.",
+  "version": "1.0.0",
   "type": "module",
+  "description": "Implements Smart Environment best practices for Obsidian.",
   "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "brianpetro/jsbrains"
+  },
+  "bugs": {
+    "url": "https://github.com/brianpetro/jsbrains/issues"
+  },
   "scripts": {
+    "build": "node build.js",
     "test": "npx ava --verbose"
   },
+  "homepage": "https://jsbrains.org",
   "dependencies": {
-    "smart-environment": "file:../jsbrains/smart-environment"
+    "obsidian": "latest",
+    "smart-environment": "file:../jsbrains/smart-environment",
+    "smart-file-system": "file:../jsbrains/smart-fs",
+    "smart-settings": "file:../jsbrains/smart-settings",
+    "smart-view": "file:../jsbrains/smart-view",
+    "smart-sources": "file:../jsbrains/smart-sources",
+    "smart-blocks": "file:../jsbrains/smart-blocks",
+    "smart-notices": "file:../jsbrains/smart-notices",
+    "smart-model": "file:../jsbrains/smart-model"
   },
   "devDependencies": {
-    "ava": "^5.3.1"
   }
 }

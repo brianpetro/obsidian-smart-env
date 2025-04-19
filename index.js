@@ -1,41 +1,31 @@
-/**
- * @file index.js
- * @description Entry point for the obsidian-smart-env package. Checks for an
- * existing `window.smart_env`, creates or updates it, and merges Obsidian-specific
- * config with plugin-specific `smart-env.config`.
- */
+/*
+ * Copyright (c) Brian Joseph Petro (🌴 Brian)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+ * LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+ * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
+import { SmartEnv } from './smart_env.js';
+import { merge_env_config } from 'smart-environment/utils/merge_env_config.js';
+import { camel_case_to_snake_case } from 'smart-environment/utils/camel_case_to_snake_case.js';
 
-import { SmartEnv } from 'smart-environment';
-
-/**
- * Initializes or updates a SmartEnv instance in `window.smart_env` using a plugin-specific config.
- * @function init_obsidian_smart_env
- * @param {Object} [plugin_config={}] - Additional or custom config for Obsidian usage.
- * @returns {Promise<SmartEnv>} The SmartEnv instance.
- */
-export async function init_smart_env(main, plugin_config = null) {
-  if(!plugin_config) plugin_config = main.smart_env_config;
-  return await SmartEnv.create(main, {
-    global_prop: 'smart_env',
-    collections: {},
-    item_types: {},
-    modules: {},
-    ...plugin_config,
-  });
-}
-
-export async function wait_for_smart_env() {
-  return new Promise((resolve) => {
-    const interval = setInterval(() => {
-      if (window.smart_env && window.smart_env.collections_loaded) {
-        clearInterval(interval);
-        resolve(window.smart_env);
-      }
-    }, 100);
-  });
-}
-
-export async function wait_for_smart_env_then_init(main, plugin_config = null) {
-  await wait_for_smart_env();
-  await init_smart_env(main, plugin_config);
-}
+export {
+  SmartEnv,
+  merge_env_config,
+  camel_case_to_snake_case,
+};
