@@ -16,7 +16,7 @@ import { render as model_settings_component } from "smart-model/components/setti
 import smart_block from "smart-blocks/smart_block.js";
 import smart_source from "smart-sources/smart_source.js";
 import { parse_blocks } from "smart-blocks/content_parsers/parse_blocks.js";
-import { merge_env_config } from 'smart-environment/utils/merge_env_config';
+import { merge_env_config } from 'smart-environment/utils/merge_env_config.js';
 const smart_env_config = {
   env_path: '',
   modules: {
