@@ -28,7 +28,7 @@ Key principles:
 
 Smart Environment enables individuals and teams to leverage the power of AI while maintaining control over their data and workflows. Designed for extensibility, it provides a framework for integrating AI capabilities into your existing tools and processes.
 
-The SmartEnv class uses a singleton pattern to ensure that only one instance of Smart Environment is created. This instance is accessible through a global reference, which is either `window` or `global`, depending on the environment.
+The SmartEnv class uses a singleton pattern to ensure that only one instance of Smart Environment is created. This instance is accessible through a global reference.
 
 ## Interface
 

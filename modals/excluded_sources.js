@@ -21,8 +21,6 @@ export class ExcludedSourcesModal extends Modal {
   async onOpen() {
     this.titleEl.setText('Excluded Sources');
 
-    // await this.env.smart_sources.fs.init();
-
     this.contentEl.addClass('excluded-sources-modal');
     this.render_excluded_list();
   }
