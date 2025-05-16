@@ -12,6 +12,9 @@ import { Notice } from 'obsidian';
 import { SmartNotices } from "smart-notices/smart_notices.js"; // TODO: move to jsbrains
 import { render as source_settings_component } from 'smart-sources/components/settings.js';
 import { render as model_settings_component } from "smart-model/components/settings.js";
+import { SmartEmbedModel } from "smart-embed-model";
+import { SmartEmbedOpenAIAdapter } from "smart-embed-model/adapters/openai.js";
+import { SmartEmbedTransformersIframeAdapter } from "smart-embed-model/adapters/transformers_iframe.js";
 // actions architecture
 import smart_block from "smart-blocks/smart_block.js";
 import smart_source from "smart-sources/smart_source.js";
@@ -32,6 +35,14 @@ const smart_env_config = {
       class: SmartNotices,
       adapter: Notice,
     },
+    smart_embed_model: {
+      class: SmartEmbedModel,
+      adapters: {
+        transformers: SmartEmbedTransformersIframeAdapter,
+        openai: SmartEmbedOpenAIAdapter,
+        // ollama: SmartEmbedModelOllamaAdapter,
+      },
+    },
   },
   collections: {
     smart_sources: {
@@ -47,7 +58,8 @@ const smart_env_config = {
       content_parsers: [
         parse_blocks,
       ],
-      process_embed_queue: false,
+      // process_embed_queue: false,
+      process_embed_queue: true, // trigger embedding on load
     },
     smart_blocks: {
       collection_key: 'smart_blocks',

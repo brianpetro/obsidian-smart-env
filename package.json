@@ -33,5 +33,8 @@
     "smart-sources": "file:../jsbrains/smart-sources",
     "smart-view": "file:../jsbrains/smart-view"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@xenova/transformers": "latest",
+    "js-tiktoken": "^1.0.19"
+  }
 }
