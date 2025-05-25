@@ -219,7 +219,9 @@ export async function post_process(env, container, opts = {}) {
     const collection_key = el.dataset.smartSettings;
     const collection = env[collection_key];
     if (!collection) continue;
-    await collection.render_settings(el);
+    // await collection.render_settings(el);
+    const collection_settings_frag = await env.render_component('collection_settings', collection);
+    el.appendChild(collection_settings_frag);
   }
 
   // Finally, render current lists

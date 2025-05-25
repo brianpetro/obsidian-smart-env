@@ -25,8 +25,8 @@
     "smart-embed-model": "file:../jsbrains/smart-embed-model",
     "smart-entities": "file:../jsbrains/smart-entities",
     "smart-environment": "file:../jsbrains/smart-environment",
-    "smart-http-request": "file:../jsbrains/smart-http-request",
     "smart-file-system": "file:../jsbrains/smart-fs",
+    "smart-http-request": "file:../jsbrains/smart-http-request",
     "smart-model": "file:../jsbrains/smart-model",
     "smart-notices": "file:../jsbrains/smart-notices",
     "smart-settings": "file:../jsbrains/smart-settings",
@@ -35,6 +35,7 @@
   },
   "devDependencies": {
     "@xenova/transformers": "latest",
+    "ava": "^6.3.0",
     "js-tiktoken": "^1.0.19"
   }
 }

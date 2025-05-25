@@ -112,6 +112,6 @@ const smart_env_config = {
     },
   },
 };
-import { smart_env_config as dist_config } from './dist/smart_env.config.js';
+import { smart_env_config as dist_config } from './smart_env.config.js';
 merge_env_config(smart_env_config, dist_config);
 export default smart_env_config;
