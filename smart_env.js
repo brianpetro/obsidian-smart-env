@@ -6,6 +6,7 @@ import {
 import { SmartEnv as BaseSmartEnv } from 'smart-environment';
 import { merge_env_config } from 'smart-environment/utils/merge_env_config.js';
 import default_config from './default.config.js';
+import { add_smart_chat_icon, add_smart_connections_icon } from './utils/add_icons.js';
 
 export class SmartEnv extends BaseSmartEnv {
   static async create(plugin, main_env_opts = null) {
@@ -30,6 +31,8 @@ export class SmartEnv extends BaseSmartEnv {
     this.manual_load = true;
   }
   async load() {
+    add_smart_chat_icon();
+    add_smart_connections_icon();
     if(Platform.isMobile && !this.manual_load){
       this.notices.show('load_env');
       return;
