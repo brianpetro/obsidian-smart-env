@@ -15,6 +15,7 @@ import { render as model_settings_component } from "smart-model/components/setti
 import { SmartEmbedModel } from "smart-embed-model";
 import { SmartEmbedOpenAIAdapter } from "smart-embed-model/adapters/openai.js";
 import { SmartEmbedTransformersIframeAdapter } from "smart-embed-model/adapters/transformers_iframe.js";
+import { SmartEmbedOllamaAdapter } from "smart-embed-model/adapters/ollama.js";
 // actions architecture
 import smart_block from "smart-blocks/smart_block.js";
 import smart_source from "smart-sources/smart_source.js";
@@ -40,7 +41,7 @@ const smart_env_config = {
       adapters: {
         transformers: SmartEmbedTransformersIframeAdapter,
         openai: SmartEmbedOpenAIAdapter,
-        // ollama: SmartEmbedModelOllamaAdapter,
+        ollama: SmartEmbedOllamaAdapter,
       },
     },
   },
