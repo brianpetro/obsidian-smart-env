@@ -8,8 +8,8 @@ import { ObsidianMarkdownSourceContentAdapter } from "smart-sources/adapters/obs
 import { SmartBlocks, SmartBlock } from 'smart-blocks';
 import { AjsonMultiFileBlocksDataAdapter } from "smart-blocks/adapters/data/ajson_multi_file.js";
 import { MarkdownBlockContentAdapter } from "smart-blocks/adapters/markdown_block.js";
-import { Notice } from 'obsidian';
-import { SmartNotices } from "smart-notices/smart_notices.js"; // TODO: move to jsbrains
+// import { Notice } from 'obsidian';
+// import { SmartNotices } from "smart-notices/smart_notices.js"; // TODO: move to jsbrains
 import { render as source_settings_component } from 'smart-sources/components/settings.js';
 import { render as model_settings_component } from "smart-model/components/settings.js";
 import { SmartEmbedModel } from "smart-embed-model";
@@ -32,10 +32,10 @@ const smart_env_config = {
       class: SmartView,
       adapter: SmartViewObsidianAdapter,
     },
-    smart_notices: {
-      class: SmartNotices,
-      adapter: Notice,
-    },
+    // smart_notices: {
+    //   class: SmartNotices,
+    //   adapter: Notice,
+    // },
     smart_embed_model: {
       class: SmartEmbedModel,
       adapters: {

@@ -25,7 +25,6 @@ export async function build_html(env, opts = {}) {
       return a.localeCompare(b);
     })
   ;
-  console.log('collection_keys', collection_keys);
   // For each collection, produce a stats snippet
   for (const collection_key of collection_keys) {
     const collection = env[collection_key];
@@ -63,7 +62,6 @@ function generate_collection_stats(collection, collectionKey) {
   const total_items = Object.values(collection.items).length;
   const niceName = format_collection_name(collectionKey);
   const state = collection.env.collections[collectionKey];
-  console.log('state', collectionKey, state);
 
   // If not loaded
   if (state !== 'loaded') {

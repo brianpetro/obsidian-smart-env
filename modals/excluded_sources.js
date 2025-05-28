@@ -53,7 +53,6 @@ export class ExcludedSourcesModal extends Modal {
     //   }
     // }
     const excluded_file_paths = this.env.smart_sources.excluded_file_paths;
-    console.log(excluded_file_paths);
     for (const file_path of excluded_file_paths) {
       const li = list_el.createEl('li');
       li.setText(file_path);

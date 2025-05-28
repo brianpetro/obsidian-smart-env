@@ -7,9 +7,12 @@ import { SmartEnv as BaseSmartEnv } from 'smart-environment';
 import { merge_env_config } from 'smart-environment/utils/merge_env_config.js';
 import default_config from './default.config.js';
 import { add_smart_chat_icon, add_smart_connections_icon } from './utils/add_icons.js';
+import { SmartNotices } from "smart-notices/smart_notices.js"; // TODO: move to jsbrains
 
 export class SmartEnv extends BaseSmartEnv {
   static async create(plugin, main_env_opts = null) {
+    add_smart_chat_icon();
+    add_smart_connections_icon();
     if(!main_env_opts) main_env_opts = plugin.smart_env_config;
     // Special handling for old Obsidian smart environments
     // Detect if environment has 'init_main'
@@ -27,14 +30,14 @@ export class SmartEnv extends BaseSmartEnv {
     const opts = merge_env_config(main_env_opts, default_config);
     return await super.create(plugin, opts);
   }
-  manual_load() {
-    this.manual_load = true;
-  }
-  async load() {
-    add_smart_chat_icon();
-    add_smart_connections_icon();
-    if(Platform.isMobile && !this.manual_load){
-      this.notices.show('load_env');
+  async load(force_load = false) {
+    if(Platform.isMobile && !force_load){
+      // create doc frag with a button to run load_env
+      const frag = this.smart_view.create_doc_fragment(`<div><p>Smart Environment loading deferred on mobile.</p><button>Load Environment</button></div>`);
+      frag.querySelector('button').addEventListener('click', () => {
+        this.load(true);
+      });
+      new Notice(frag, 0);
       return;
     }
     await super.load();
@@ -90,10 +93,18 @@ export class SmartEnv extends BaseSmartEnv {
       })
     );
   }
+  get notices() {
+    if(!this._notices) {
+      this._notices = new SmartNotices(this, {
+        adapter: Notice,
+      });
+    }
+    return this._notices;
+  }
 }
 
 async function disable_plugin(app, plugin_id) {
-  console.log('disabling plugin', plugin_id);
+  console.log('disabling plugin ' + plugin_id);
   await app.plugins.unloadPlugin(plugin_id);
   await app.plugins.disablePluginAndSave(plugin_id);
   await app.plugins.loadManifests();
