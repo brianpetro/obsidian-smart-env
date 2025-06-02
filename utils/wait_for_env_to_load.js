@@ -1,8 +1,8 @@
 import { Platform } from "obsidian";
 export async function wait_for_env_to_load(scope, opts = {}) {
-  const { wait_for_state = 'loaded' } = opts;
+  const { wait_for_states = ['loaded'] } = opts;
   const container = scope.container || scope.containerEl;
-  if (scope.env?.state !== wait_for_state) {
+  if (!wait_for_states.includes(scope.env?.state)) {
     let clicked_load_env = false;
     while (scope.env.state === 'init' && Platform.isMobile && !clicked_load_env) {
       if(container){
@@ -19,7 +19,7 @@ export async function wait_for_env_to_load(scope, opts = {}) {
       await new Promise(r => setTimeout(r, 2000));
     }
     // wait for entities to be initialized
-    while (scope.env.state !== wait_for_state) {
+    while (!wait_for_states.includes(scope.env.state)) {
       if(container){
         const loading_msg = scope.env?.smart_connections_plugin?.obsidian_is_syncing ? "Waiting for Obsidian Sync to finish..." : "Loading Obsidian Smart Environment...";
         container.empty();

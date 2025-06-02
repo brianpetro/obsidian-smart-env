@@ -4,6 +4,7 @@
 import { render as collection_settings_component } from './components/collection_settings.js';
 import { render as env_settings_component } from './components/env_settings.js';
 import { render as env_stats_component } from './components/env_stats.js';
+import { render as supporter_callout_component } from './components/supporter_callout.js';
 
 export const smart_env_config = {
   collections: {
@@ -15,6 +16,7 @@ export const smart_env_config = {
   components: {
     collection_settings: collection_settings_component,
     env_settings: env_settings_component,
-    env_stats: env_stats_component
+    env_stats: env_stats_component,
+    supporter_callout: supporter_callout_component
   }
 };
