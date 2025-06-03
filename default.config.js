@@ -105,12 +105,24 @@ const smart_env_config = {
         },
       },
     },
+    excluded_headings: '',
     file_exclusions: 'Untitled',
     folder_exclusions: '',
+    language: 'en',
+    new_user: true,
+    smart_chat_threads: {
+      chat_model: {
+        adapter: "ollama",
+        ollama: {}
+      },
+    },
+    smart_notices: {},
     smart_view_filter: {
+      expanded_view: false,
       render_markdown: true,
       show_full_path: false,
     },
+    version: "",
   },
 };
 import { smart_env_config as dist_config } from './smart_env.config.js';
