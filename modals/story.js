@@ -37,6 +37,15 @@ export class StoryModal extends Modal {
       });
       webview.style.width = '100%';
       webview.style.height = '100%';
+
+      // Listen for navigation changes
+      webview.addEventListener('did-navigate', (event) => {
+        const new_url = event.url || webview.getAttribute('src');
+        if (new_url && new_url !== this.url) {
+          open_url_externally(this.plugin, new_url);
+          this.close();
+        }
+      });
     }
 
   }
