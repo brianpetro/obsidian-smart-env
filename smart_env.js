@@ -76,14 +76,18 @@ export class SmartEnv extends BaseSmartEnv {
         if(file instanceof TFile && this.smart_sources?.source_adapters?.[file.extension]){
           const source = this.smart_sources?.get(file.path);
           if(source){
-            if(!this.sources_import_timeouts) this.sources_import_timeouts = {};
-            if(this.sources_import_timeouts[file.path]) clearTimeout(this.sources_import_timeouts[file.path]);
-            this.sources_import_timeouts[file.path] = setTimeout(() => {
-              source.data.last_import = { at: 0, hash: null, mtime: 0, size: 0 };
-              source.import().then(() => {
-                this.smart_sources?.process_embed_queue();
-                // console.log(`SmartEnv: re-imported source ${file.path}`);
-              });
+            if(!this.sources_import_queue) this.sources_import_queue = [];
+            source.data.last_import = { at: 0, hash: null, mtime: 0, size: 0 };
+            this.sources_import_queue.push(source);
+            if(this.sources_import_timeouts) clearTimeout(this.sources_import_timeouts);
+            this.sources_import_timeouts = setTimeout(async () => {
+              for (const src of this.sources_import_queue) {
+                await src.import();
+                // console.log(`SmartEnv: re-imported source ${src.key}`);
+              }
+              await this.smart_sources?.process_embed_queue();
+              this.sources_import_queue = [];
+              this.sources_import_timeouts = null;
             }, this.settings.re_import_wait_time * 1000);
           }
         }
