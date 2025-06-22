@@ -110,6 +110,7 @@ const smart_env_config = {
     folder_exclusions: '',
     language: 'en',
     new_user: true, // DEPRECATED: 2025-06-05 (use localStorage instead)
+    re_import_wait_time: 13,
     smart_chat_threads: {
       chat_model: {
         adapter: "ollama",

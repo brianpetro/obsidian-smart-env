@@ -79,8 +79,12 @@ export class SmartEnv extends BaseSmartEnv {
             if(!this.sources_import_timeouts) this.sources_import_timeouts = {};
             if(this.sources_import_timeouts[file.path]) clearTimeout(this.sources_import_timeouts[file.path]);
             this.sources_import_timeouts[file.path] = setTimeout(() => {
-              source.import();
-            }, 23000);
+              source.data.last_import = { at: 0, hash: null, mtime: 0, size: 0 };
+              source.import().then(() => {
+                this.smart_sources?.process_embed_queue();
+                // console.log(`SmartEnv: re-imported source ${file.path}`);
+              });
+            }, this.settings.re_import_wait_time * 1000);
           }
         }
       })
@@ -100,6 +104,16 @@ export class SmartEnv extends BaseSmartEnv {
       });
     }
     return this._notices;
+  }
+  get settings_config() {
+    const config = super.settings_config;
+    delete config['is_obsidian_vault'];
+    config['re_import_wait_time'] = {
+      type: 'number',
+      name: 'Re-import wait time',
+      description: 'Time in seconds to wait before re-importing a file after modification.',
+    };
+    return config;
   }
 }
 
