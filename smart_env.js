@@ -74,23 +74,22 @@ export class SmartEnv extends BaseSmartEnv {
     plugin.registerEvent(
       plugin.app.vault.on('modify', (file) => {
         if(file instanceof TFile && this.smart_sources?.source_adapters?.[file.extension]){
+          if(!this.sources_re_import_queue) this.sources_re_import_queue = {};
+          if(this.sources_re_import_queue?.[file.path]) return; // already in queue
+          // queue re-import the file
           const source = this.smart_sources?.get(file.path);
           if(source){
-            if(!this.sources_import_queue) this.sources_import_queue = [];
             source.data.last_import = { at: 0, hash: null, mtime: 0, size: 0 };
-            this.sources_import_queue.push(source);
-            if(this.sources_import_timeouts) clearTimeout(this.sources_import_timeouts);
-            this.sources_import_timeouts = setTimeout(async () => {
-              for (const src of this.sources_import_queue) {
-                await src.import();
-                // console.log(`SmartEnv: re-imported source ${src.key}`);
-              }
-              await this.smart_sources?.process_embed_queue();
-              this.sources_import_queue = [];
-              this.sources_import_timeouts = null;
-            }, this.settings.re_import_wait_time * 1000);
+            this.sources_re_import_queue[source.key] = source;
+            this.debounce_re_import_queue();
           }
         }
+      })
+    );
+    plugin.registerEvent(
+      plugin.app.workspace.on('editor-change', () => {
+        this.sources_re_import_halted = true; // halt re-importing
+        this.debounce_re_import_queue();
       })
     );
     plugin.registerEvent(
@@ -101,6 +100,23 @@ export class SmartEnv extends BaseSmartEnv {
       })
     );
   }
+  debounce_re_import_queue() {
+    if (this.sources_re_import_timeout) clearTimeout(this.sources_re_import_timeout);
+    this.sources_re_import_timeout = setTimeout(async () => {
+      this.sources_re_import_halted = false;
+      for (const [key, src] of Object.entries(this.sources_re_import_queue)) {
+        await src.import();
+        delete this.sources_re_import_queue[key];
+        if (this.sources_re_import_halted) {
+          this.debounce_re_import_queue();
+          return; // halt re-importing if halted
+        }
+      }
+      await this.smart_sources?.process_embed_queue();
+      this.sources_re_import_timeout = null;
+    }, this.settings.re_import_wait_time * 1000);
+  }
+
   get notices() {
     if(!this._notices) {
       this._notices = new SmartNotices(this, {
