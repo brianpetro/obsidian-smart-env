@@ -88,7 +88,11 @@ export class SmartEnv extends BaseSmartEnv {
     );
     plugin.registerEvent(
       plugin.app.workspace.on('editor-change', () => {
-        this.sources_re_import_halted = true; // halt re-importing
+        this.debounce_re_import_queue();
+      })
+    );
+    plugin.registerEvent(
+      plugin.app.workspace.on('active-leaf-change', () => {
         this.debounce_re_import_queue();
       })
     );
@@ -101,6 +105,7 @@ export class SmartEnv extends BaseSmartEnv {
     );
   }
   debounce_re_import_queue() {
+    this.sources_re_import_halted = true; // halt re-importing
     if (this.sources_re_import_timeout) clearTimeout(this.sources_re_import_timeout);
     this.sources_re_import_timeout = setTimeout(async () => {
       this.sources_re_import_halted = false;
