@@ -65,6 +65,8 @@ export async function build_html(env, opts = {}) {
           <li>IMPORTANT: make sure local <code>BGE-micro-v2</code> embedding model works before trying other local models.</li>
           <li>API models require an API key and send your notes to third-party servers for processing.</li>
         </ul>
+        <div data-smart-notices></div>
+        <hr>
       </div>
     </div>
   `;
@@ -83,6 +85,8 @@ export async function render(env, opts = {}) {
 
   // The main container and the body to toggle
   env.settings_container = frag.querySelector('.sc-env-settings-container');
+  const lean_coffee_callout = await env.render_component('lean_coffee_callout', env);
+  env.settings_container.appendChild(lean_coffee_callout);
 
   // Post-process the references
   post_process.call(this, env, env.settings_container, opts);
@@ -105,6 +109,10 @@ export async function post_process(env, container, opts = {}) {
       heading_btn.textContent = is_hidden ? 'Hide environment settings' : 'Show environment settings';
     });
   }
+
+  const muted_notices_frag = await env.render_component('muted_notices', env);
+  await this.render_setting_components(muted_notices_frag, { scope: env });
+  container.querySelector('[data-smart-notices]').appendChild(muted_notices_frag);
 
   // Excluded folders
   const add_folder_btn = container.querySelector('.sc-add-excluded-folder-btn');

@@ -4,7 +4,10 @@
 import { render as collection_settings_component } from './components/collection_settings.js';
 import { render as env_settings_component } from './components/env_settings.js';
 import { render as env_stats_component } from './components/env_stats.js';
+import { render as lean_coffee_callout_component } from './components/lean_coffee_callout.js';
+import { render as muted_notices_component } from './components/muted_notices.js';
 import { render as supporter_callout_component } from './components/supporter_callout.js';
+import { render as user_agreement_callout_component } from './components/user_agreement_callout.js';
 
 export const smart_env_config = {
   collections: {
@@ -17,6 +20,9 @@ export const smart_env_config = {
     collection_settings: collection_settings_component,
     env_settings: env_settings_component,
     env_stats: env_stats_component,
-    supporter_callout: supporter_callout_component
+    lean_coffee_callout: lean_coffee_callout_component,
+    muted_notices: muted_notices_component,
+    supporter_callout: supporter_callout_component,
+    user_agreement_callout: user_agreement_callout_component
   }
 };
