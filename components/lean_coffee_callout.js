@@ -20,7 +20,7 @@ export function build_html(env, opts={}) {
         <p dir="auto">
           <span>Ask questions. Bring challenges. Request features. Show workflows. Be ready to share.</span>
           <br>
-          <i>Join the next <a href="https://lu.ma/calendar/cal-ZJtdnzAdURyouM7" target="_external">Community Lean Coffee</a> meeting.</i>
+          <i>Join the next <a href="https://lu.ma/calendar/cal-ZJtdnzAdURyouM7" target="_external">Community Lean Coffee</a> meeting.</i> Unable to attend? Submit a question <a href="https://docs.google.com/forms/d/e/1FAIpQLSdqOtTjksMwg1BOuGNCncpMQ_QT-wcd-3AgZGIe3A_isut5aQ/viewform?usp=dialog" target="_external">here</a> 🌴
         </p>
       </div>
     </div>
