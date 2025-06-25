@@ -164,11 +164,12 @@ export class SmartEnv extends BaseSmartEnv {
     if (queue_length) {
       this.status_msg.setText(`Embed now (${queue_length})`);
       this.status_container.setAttribute('title', 'Click to re-import.');
-      this.status_container.addEventListener('click', re_embed_click_handler.bind(this));
+      this.status_container.removeEventListener('click', re_embed_click_handler);
+      this.status_container.addEventListener('click', re_embed_click_handler);
     }else{
       this.status_msg.setText('Smart Env ' + this.constructor.version);
       this.status_container.setAttribute('title', 'Learn about Community Supporters');
-      this.status_container.removeEventListener('click', re_embed_click_handler.bind(this));
+      this.status_container.removeEventListener('click', re_embed_click_handler);
     }
   }
 
@@ -201,6 +202,6 @@ async function disable_plugin(app, plugin_id) {
 function re_embed_click_handler (e) {
   e.preventDefault();
   e.stopPropagation();
-  this.status_msg.setText(`Embedding...`);
-  this.run_re_import.call(this);
+  smart_env.status_msg.setText(`Embedding...`);
+  smart_env.run_re_import();
 }
