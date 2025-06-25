@@ -115,16 +115,21 @@ export class SmartEnv extends BaseSmartEnv {
       this.sources_re_import_timeout = null;
       return; // nothing to re-import
     }
-    this.sources_re_import_timeout = setTimeout(async () => {
-      this.sources_re_import_halted = false;
+    this.sources_re_import_timeout = setTimeout(this.run_re_import.bind(this), this.settings.re_import_wait_time * 1000);
+  }
+
+  async run_re_import() {
+    this.sources_re_import_halted = false;
+    const queue_length = Object.keys(this.sources_re_import_queue || {}).length;
+    if (queue_length) {
       for (const [key, src] of Object.entries(this.sources_re_import_queue)) {
         await src.import();
         // Build embed queue to prevent scanning all sources on process_embed_queue
-        if(!this.smart_sources._embed_queue) this.smart_sources._embed_queue = [];
+        if (!this.smart_sources._embed_queue) this.smart_sources._embed_queue = [];
         this.smart_sources._embed_queue.push(src);
-        if(this.smart_blocks.settings.embed_blocks){
-          for(const block of src.blocks) {
-            if(block._queue_embed || (block.should_embed && block.is_unembedded)) {
+        if (this.smart_blocks.settings.embed_blocks) {
+          for (const block of src.blocks) {
+            if (block._queue_embed || (block.should_embed && block.is_unembedded)) {
               this.smart_sources._embed_queue.push(block);
               block._queue_embed = true; // mark for embedding
             }
@@ -133,15 +138,16 @@ export class SmartEnv extends BaseSmartEnv {
         delete this.sources_re_import_queue[key];
         if (this.sources_re_import_halted) {
           this.debounce_re_import_queue();
-          return; // halt re-importing if halted
+          // return; // halt re-importing if halted
         }
       }
       // console.time('process_embed_queue');
       await this.smart_sources?.process_embed_queue();
-      // console.timeEnd('process_embed_queue');
-      this.sources_re_import_timeout = null;
-      this.refresh_status();
-    }, this.settings.re_import_wait_time * 1000);
+    }
+    // console.timeEnd('process_embed_queue');
+    if(this.sources_re_import_timeout) clearTimeout(this.sources_re_import_timeout);
+    this.sources_re_import_timeout = null;
+    this.refresh_status();
   }
 
   refresh_status() {
@@ -156,9 +162,13 @@ export class SmartEnv extends BaseSmartEnv {
     }
     const queue_length = Object.keys(this.sources_re_import_queue || {}).length;
     if (queue_length) {
-      this.status_msg.setText('Embed queue: ' + queue_length);
+      this.status_msg.setText(`Embed now (${queue_length})`);
+      this.status_container.setAttribute('title', 'Click to re-import.');
+      this.status_container.addEventListener('click', re_embed_click_handler.bind(this));
     }else{
       this.status_msg.setText('Smart Env ' + this.constructor.version);
+      this.status_container.setAttribute('title', 'Learn about Community Supporters');
+      this.status_container.removeEventListener('click', re_embed_click_handler.bind(this));
     }
   }
 
@@ -187,4 +197,10 @@ async function disable_plugin(app, plugin_id) {
   await app.plugins.unloadPlugin(plugin_id);
   await app.plugins.disablePluginAndSave(plugin_id);
   await app.plugins.loadManifests();
+}
+function re_embed_click_handler (e) {
+  e.preventDefault();
+  e.stopPropagation();
+  this.status_msg.setText(`Embedding...`);
+  this.run_re_import.call(this);
 }

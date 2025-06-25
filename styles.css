@@ -1,4 +1,4 @@
-.status-bar-item.plugin-smart-connections {
+.status-bar-item:has(.smart-env-status-container) {
   padding: 0 0.5em;
 
   &:hover {
