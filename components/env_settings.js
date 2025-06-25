@@ -68,6 +68,7 @@ export async function build_html(env, opts = {}) {
         <div data-smart-notices></div>
         <hr>
       </div>
+      ${render_sign_in_or_open_smart_plugins(env)}
     </div>
   `;
 }
@@ -289,4 +290,21 @@ function render_excluded_file_list(env, container) {
   if (!arr.length) {
     ul.createEl('li', { text: 'No files excluded yet.' });
   }
+}
+
+function render_sign_in_or_open_smart_plugins(env) {
+  const oauth_storage_prefix = env.plugin.app.vault.getName().toLowerCase().replace(/[^a-z0-9]/g, '_') + '_smart_plugins_oauth_';
+  const isLoggedIn = !!localStorage.getItem(oauth_storage_prefix+'token');
+  const buttonLabel = isLoggedIn ? 'Open Smart Plugins' : 'Sign in';
+  const buttonCallback = isLoggedIn ? 'open_smart_plugins_settings' : 'initiate_smart_plugins_oauth';
+
+  return `
+    <div class="setting-component"
+      data-name="Smart Plugins - Early Access"
+      data-type="button"
+      data-btn-text="${buttonLabel}"
+      data-description="Supporters can sign in to access early-release Smart Plugins"
+      data-callback="${buttonCallback}"
+    ></div>
+  `;
 }

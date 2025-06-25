@@ -10,6 +10,9 @@ import default_config from './default.config.js';
 import { add_smart_chat_icon, add_smart_connections_icon } from './utils/add_icons.js';
 import { SmartNotices } from "smart-notices/smart_notices.js"; // TODO: move to jsbrains
 import styles from './styles.css' with { type: 'css' };
+import { exchange_code_for_tokens, install_smart_plugins_plugin, get_smart_server_url, enable_plugin } from './sc_oauth.js';
+import { open_url_externally } from "./utils/open_url_externally.js";
+
 
 export class SmartEnv extends BaseSmartEnv {
   static async create(plugin, main_env_opts = null) {
@@ -33,6 +36,12 @@ export class SmartEnv extends BaseSmartEnv {
     return await super.create(plugin, opts);
   }
   async load(force_load = false) {
+    if(!Platform.isMobile){
+      // Register protocol handler for obsidian://sc-op/callback
+      this.plugin.registerObsidianProtocolHandler("sc-op/callback", async (params) => {
+        await this.handle_sc_op_oauth_callback(params);
+      });
+    }
     if(Platform.isMobile && !force_load){
       // create doc frag with a button to run load_env
       const frag = this.smart_view.create_doc_fragment(`<div><p>Smart Environment loading deferred on mobile.</p><button>Load Environment</button></div>`);
@@ -190,6 +199,63 @@ export class SmartEnv extends BaseSmartEnv {
       description: 'Time in seconds to wait before re-importing a file after modification.',
     };
     return config;
+  }
+  // Smart Plugins
+  /**
+   * This is the function that is called by the new "Sign in with Smart Plugins" button.
+   * It replicates the old 'initiate_oauth()' logic from sc_settings_tab.js
+   */
+  initiate_smart_plugins_oauth() {
+    console.log("initiate_smart_plugins_oauth");
+    const state = Math.random().toString(36).slice(2);
+    const redirect_uri = encodeURIComponent("obsidian://sc-op/callback");
+    const url = `${get_smart_server_url()}/oauth?client_id=smart-plugins-op&redirect_uri=${redirect_uri}&state=${state}`;
+    open_url_externally(this.plugin, url);
+  }
+  /**
+   * Handles the OAuth callback from the Smart Plugins server.
+   * @param {Object} params - The URL parameters from the OAuth callback.
+   */
+  async handle_sc_op_oauth_callback(params) {
+    const code = params.code;
+    if (!code) {
+      new Notice("No OAuth code provided in URL. Login failed.");
+      return;
+    }
+    try {
+      // your existing OAuth + plugin install logic
+      await exchange_code_for_tokens(code, this.plugin);
+      await install_smart_plugins_plugin(this.plugin);
+      new Notice("Smart Plugins installed / updated successfully!");
+      this.open_smart_plugins_settings();
+    } catch (err) {
+      console.error("OAuth callback error", err);
+      new Notice(`OAuth callback error: ${err.message}`);
+    }
+  }
+  /**
+   * Opens the Obsidian settings window with the 'Smart Plugins' tab active.
+   * @public
+   */
+  async open_smart_plugins_settings() {
+    const spInstalled = this.plugin.app.plugins.plugins['smart-plugins'];
+    if(!spInstalled) {
+      await install_smart_plugins_plugin(this.plugin);
+      await new Promise(r => setTimeout(r, 500));
+    }
+    // check if Smart Plugins is enabled
+    const spEnabled = this.plugin.app.plugins.enabledPlugins.has('smart-plugins');
+    if(!spEnabled) {
+      await enable_plugin(this.plugin.app, 'smart-plugins');
+      await new Promise(r => setTimeout(r, 500));
+    }
+    // open Obsidian settings
+    this.plugin.app.commands.executeCommandById('app:open-settings');
+    // find the Smart Plugins tab by name
+    const spTab = this.plugin.app.setting.pluginTabs.find(t => t.name === 'Smart Plugins');
+    if (spTab) {
+      this.plugin.app.setting.openTab(spTab);
+    }
   }
 }
 
