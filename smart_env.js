@@ -2,12 +2,14 @@ import {
   Notice,
   Platform,
   TFile,
+  setIcon,
 } from 'obsidian';
 import { SmartEnv as BaseSmartEnv } from 'smart-environment';
 import { merge_env_config } from 'smart-environment/utils/merge_env_config.js';
 import default_config from './default.config.js';
 import { add_smart_chat_icon, add_smart_connections_icon } from './utils/add_icons.js';
 import { SmartNotices } from "smart-notices/smart_notices.js"; // TODO: move to jsbrains
+import styles from './styles.css' with { type: 'css' };
 
 export class SmartEnv extends BaseSmartEnv {
   static async create(plugin, main_env_opts = null) {
@@ -103,8 +105,10 @@ export class SmartEnv extends BaseSmartEnv {
         }
       })
     );
+    this.refresh_status();
   }
   debounce_re_import_queue() {
+    this.refresh_status();
     this.sources_re_import_halted = true; // halt re-importing
     if (this.sources_re_import_timeout) clearTimeout(this.sources_re_import_timeout);
     if(!this.sources_re_import_queue || Object.keys(this.sources_re_import_queue).length === 0) {
@@ -136,7 +140,26 @@ export class SmartEnv extends BaseSmartEnv {
       await this.smart_sources?.process_embed_queue();
       // console.timeEnd('process_embed_queue');
       this.sources_re_import_timeout = null;
+      this.refresh_status();
     }, this.settings.re_import_wait_time * 1000);
+  }
+
+  refresh_status() {
+    if (!this.status_elm) {
+      this.status_elm = this.main.addStatusBarItem();
+      this.smart_view.apply_style_sheet(styles);
+      this.status_container = this.status_elm.createEl('a', { cls: 'smart-env-status-container' });
+      this.status_container.setAttribute('href', 'https://smartconnections.app/community-supporters/?utm_source=status-bar');
+      this.status_container.setAttribute('target', '_external');
+      setIcon(this.status_container, 'smart-connections');
+      this.status_msg = this.status_container.createSpan('smart-env-status-msg');
+    }
+    const queue_length = Object.keys(this.sources_re_import_queue || {}).length;
+    if (queue_length) {
+      this.status_msg.setText('Embed queue: ' + queue_length);
+    }else{
+      this.status_msg.setText('Smart Env ' + this.constructor.version);
+    }
   }
 
   get notices() {
