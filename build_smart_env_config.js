@@ -98,7 +98,7 @@ ${components_config}
     if (!fs.existsSync(dir)) return {};
     const items = {};
     fs.readdirSync(dir)
-      .filter(f => f.endsWith('.js'))
+      .filter(f => f.endsWith('.js') && !f.endsWith('.test.js')) // skip test files
       .forEach(f => {
         const key = f.replace('.js', '');
         const import_var = to_pascal_case(key);

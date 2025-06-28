@@ -33,6 +33,7 @@ test.before(() => {
 
   /* items */
   write_file('src/items/awesome_block.js', 'export function AwesomeBlock(){}');
+  write_file('src/items/awesome_block.test.js', 'export function AwesomeBlock(){}');
 
   /* components – root level */
   write_file('src/components/env_settings.js', 'export function render(){}');
@@ -67,6 +68,10 @@ test('items are imported with PascalCase vars', t => {
   t.regex(file, /import { AwesomeBlock } from/);
   t.regex(file, /item_types:[\s\S]*AwesomeBlock/);
 });
+test('should skip .test.js files', t => {
+  const file = read_generated_config();
+  t.false(file.includes('AwesomeBlock.test.js'));
+});
 
 test('root-level component appears in config', t => {
   const file = read_generated_config();
@@ -87,6 +92,7 @@ test('generated module is importable', async t => {
   t.truthy(cfg.smart_env_config);
   t.truthy(cfg.smart_env_config.components.env_settings);
 });
+
 
 test.after.always(() => {
   fs.rmSync(tmp_root, { recursive: true, force: true });
