@@ -12,10 +12,27 @@ import { MarkdownBlockContentAdapter } from "smart-blocks/adapters/markdown_bloc
 // import { SmartNotices } from "smart-notices/smart_notices.js"; // TODO: move to jsbrains
 import { render as source_settings_component } from 'smart-sources/components/settings.js';
 import { render as model_settings_component } from "smart-model/components/settings.js";
+// smart model
 import { SmartEmbedModel } from "smart-embed-model";
 import { SmartEmbedOpenAIAdapter } from "smart-embed-model/adapters/openai.js";
 import { SmartEmbedTransformersIframeAdapter } from "smart-embed-model/adapters/transformers_iframe.js";
 import { SmartEmbedOllamaAdapter } from "smart-embed-model/adapters/ollama.js";
+// chat model
+import { SmartChatModel } from "smart-chat-model";
+import {
+  SmartChatModelAnthropicAdapter,
+  SmartChatModelAzureAdapter,
+  // SmartChatModelCohereAdapter,
+  SmartChatModelCustomAdapter,
+  SmartChatModelGeminiAdapter,
+  SmartChatModelGroqAdapter,
+  SmartChatModelLmStudioAdapter,
+  SmartChatModelOllamaAdapter,
+  SmartChatModelOpenaiAdapter,
+  SmartChatModelOpenRouterAdapter,
+} from "smart-chat-model/adapters.js";
+import { SmartHttpRequest, SmartHttpObsidianRequestAdapter } from "smart-http-request";
+import { requestUrl } from "obsidian";
 // actions architecture
 import smart_block from "smart-blocks/smart_block.js";
 import smart_source from "smart-sources/smart_source.js";
@@ -43,6 +60,25 @@ const smart_env_config = {
         openai: SmartEmbedOpenAIAdapter,
         ollama: SmartEmbedOllamaAdapter,
       },
+    },
+    smart_chat_model: {
+      class: SmartChatModel,
+      // DEPRECATED FORMAT: will be changed (requires SmartModel adapters getters update)
+      adapters: {
+        anthropic: SmartChatModelAnthropicAdapter,
+        azure: SmartChatModelAzureAdapter,
+        custom: SmartChatModelCustomAdapter,
+        gemini: SmartChatModelGeminiAdapter,
+        groq: SmartChatModelGroqAdapter,
+        lm_studio: SmartChatModelLmStudioAdapter,
+        ollama: SmartChatModelOllamaAdapter,
+        open_router: SmartChatModelOpenRouterAdapter,
+        openai: SmartChatModelOpenaiAdapter,
+      },
+      http_adapter: new SmartHttpRequest({
+        adapter: SmartHttpObsidianRequestAdapter,
+        obsidian_request_url: requestUrl,
+      }),
     },
   },
   collections: {
