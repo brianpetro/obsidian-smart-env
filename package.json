@@ -29,6 +29,7 @@
     "smart-http-request": "file:../jsbrains/smart-http-request",
     "smart-model": "file:../jsbrains/smart-model",
     "smart-notices": "file:../jsbrains/smart-notices",
+    "smart-plugins-obsidian": "file:../smart-plugins-obsidian",
     "smart-settings": "file:../jsbrains/smart-settings",
     "smart-sources": "file:../jsbrains/smart-sources",
     "smart-view": "file:../jsbrains/smart-view"
@@ -37,5 +38,8 @@
     "@xenova/transformers": "latest",
     "ava": "^6.3.0",
     "js-tiktoken": "^1.0.19"
-  }
+  },
+  "workspaces": [
+    "../smart-plugins-obsidian"
+  ]
 }

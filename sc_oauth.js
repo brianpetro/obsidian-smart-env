@@ -19,7 +19,7 @@ import {
   parse_zip_into_files,
   write_files_with_adapter,
   enable_plugin,
-} from '../../../smart-plugins-obsidian/utils.js';
+} from 'smart-plugins-obsidian/utils.js';
 export { get_smart_server_url, enable_plugin };
 
 const CLIENT_ID = 'smart-plugins-op';
