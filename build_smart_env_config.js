@@ -88,7 +88,7 @@ ${components_config}
     if (!fs.existsSync(dir)) return {};
     return Object.fromEntries(
       fs.readdirSync(dir)
-        .filter(f => f.endsWith('.js'))
+        .filter(f => validate_file_type(f))
         .map(f => [f.replace('.js', ''), normalize_relative_path(path.join(dir, f))])
     );
   }
@@ -98,7 +98,7 @@ ${components_config}
     if (!fs.existsSync(dir)) return {};
     const items = {};
     fs.readdirSync(dir)
-      .filter(f => f.endsWith('.js') && !f.endsWith('.test.js')) // skip test files
+      .filter(f => validate_file_type(f))
       .forEach(f => {
         const key = f.replace('.js', '');
         const import_var = to_pascal_case(key);
@@ -125,31 +125,34 @@ ${components_config}
 
     /* ----- local ----- */
     function walk(curr_dir, rel_parts) {
-      fs.readdirSync(curr_dir).forEach(entry => {
-        const abs = path.join(curr_dir, entry);
-        const is_dir = fs.statSync(abs).isDirectory();
-        if (is_dir) {
-          walk(abs, [...rel_parts, entry]);
-          return;
-        }
-        if (!entry.endsWith('.js')) return;
+      fs.readdirSync(curr_dir)
+        .filter(entry => validate_file_type(entry))
+        .forEach(entry => {
+          const abs = path.join(curr_dir, entry);
+          const is_dir = fs.statSync(abs).isDirectory();
+          if (is_dir) {
+            walk(abs, [...rel_parts, entry]);
+            return;
+          }
+          if (!entry.endsWith('.js')) return;
 
-        const comp_name = entry.replace('.js', '');
-        const folder_snake = rel_parts.map(to_snake_case);
-        const import_var = [...folder_snake, comp_name, 'component'].join('_');
-        const import_path = normalize_relative_path(abs);
+          const comp_name = entry.replace('.js', '');
+          const folder_snake = rel_parts.map(to_snake_case);
+          const import_var = [...folder_snake, comp_name, 'component'].join('_');
+          const import_path = normalize_relative_path(abs);
 
-        /* flat list */
-        flat.push({ import_var, import_path });
+          /* flat list */
+          flat.push({ import_var, import_path });
 
-        /* nested object */
-        let node = nested;
-        for (const part of folder_snake) {
-          if (!node[part]) node[part] = {};
-          node = node[part];
-        }
-        node[comp_name] = { import_var };
-      });
+          /* nested object */
+          let node = nested;
+          for (const part of folder_snake) {
+            if (!node[part]) node[part] = {};
+            node = node[part];
+          }
+          node[comp_name] = { import_var };
+        });
+      ;
     }
   }
 
@@ -191,3 +194,9 @@ ${components_config}
     return parts.join(',\n');
   }
 }
+function validate_file_type(f) {
+  if(f.endsWith('.test.js')) return false;
+  if(f.endsWith('.spec.js')) return false;
+  return f.endsWith('.js');
+}
+
