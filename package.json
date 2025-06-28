@@ -21,7 +21,9 @@
   "dependencies": {
     "obsidian": "latest",
     "smart-blocks": "file:../jsbrains/smart-blocks",
+    "smart-chat-model": "file:../jsbrains/smart-chat-model",
     "smart-collections": "file:../jsbrains/smart-collections",
+    "smart-completions": "file:../jsbrains/smart-completions",
     "smart-embed-model": "file:../jsbrains/smart-embed-model",
     "smart-entities": "file:../jsbrains/smart-entities",
     "smart-environment": "file:../jsbrains/smart-environment",

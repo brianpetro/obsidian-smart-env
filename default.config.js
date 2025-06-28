@@ -33,6 +33,7 @@ import {
 } from "smart-chat-model/adapters.js";
 import { SmartHttpRequest, SmartHttpObsidianRequestAdapter } from "smart-http-request";
 import { requestUrl } from "obsidian";
+import { smart_completions, SmartCompletion } from "smart-completions";
 // actions architecture
 import smart_block from "smart-blocks/smart_block.js";
 import smart_source from "smart-sources/smart_source.js";
@@ -108,10 +109,12 @@ const smart_env_config = {
         // "canvas": MarkdownBlockContentAdapter,
       },
     },
+    smart_completions
   },
   item_types: {
     SmartSource,
     SmartBlock,
+    SmartCompletion,
   },
   items: {
     smart_source,

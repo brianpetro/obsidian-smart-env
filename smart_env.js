@@ -36,7 +36,7 @@ export class SmartEnv extends BaseSmartEnv {
     return await super.create(plugin, opts);
   }
   async load(force_load = false) {
-    if(!Platform.isMobile){
+    if(!Platform.isMobile && !this.plugin.app.workspace.protocolHandlers.has('sc-op/callback')) {
       // Register protocol handler for obsidian://sc-op/callback
       this.plugin.registerObsidianProtocolHandler("sc-op/callback", async (params) => {
         await this.handle_sc_op_oauth_callback(params);
