@@ -257,6 +257,25 @@ export class SmartEnv extends BaseSmartEnv {
       this.plugin.app.setting.openTab(spTab);
     }
   }
+  // WAIT FOR OBSIDIAN SYNC
+  async ready_to_load_collections() {
+    await new Promise(r => setTimeout(r, 3000)); // wait 3 seconds for other processes to finish
+    await this.wait_for_obsidian_sync();
+  }
+  async wait_for_obsidian_sync() {
+    while (this.obsidian_is_syncing) {
+      console.log("Smart Connections: Waiting for Obsidian Sync to finish");
+      await new Promise(r => setTimeout(r, 1000));
+      if(!this.plugin) throw new Error("Plugin disabled while waiting for obsidian sync, reload required."); // if plugin is disabled, stop waiting for sync
+    }
+  }
+  get obsidian_is_syncing() {
+    const obsidian_sync_instance = this.plugin?.app?.internalPlugins?.plugins?.sync?.instance;
+    if(!obsidian_sync_instance) return false; // if no obsidian sync instance, not syncing
+    if(obsidian_sync_instance?.syncStatus.startsWith('Uploading')) return false; // if uploading, don't wait for obsidian sync
+    if(obsidian_sync_instance?.syncStatus.startsWith('Fully synced')) return false; // if fully synced, don't wait for obsidian sync
+    return obsidian_sync_instance?.syncing;
+  }
 }
 
 async function disable_plugin(app, plugin_id) {

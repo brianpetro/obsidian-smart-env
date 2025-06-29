@@ -21,7 +21,7 @@ export async function wait_for_env_to_load(scope, opts = {}) {
     // wait for entities to be initialized
     while (!wait_for_states.includes(scope.env.state)) {
       if(container){
-        const loading_msg = scope.env?.smart_connections_plugin?.obsidian_is_syncing ? "Waiting for Obsidian Sync to finish..." : "Loading Obsidian Smart Environment...";
+        const loading_msg = scope.env?.obsidian_is_syncing ? "Waiting for Obsidian Sync to finish..." : "Loading Obsidian Smart Environment...";
         container.empty();
         // set loading message
         scope.env.smart_view.safe_inner_html(container, loading_msg);
