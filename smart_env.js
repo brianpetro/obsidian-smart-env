@@ -161,6 +161,10 @@ export class SmartEnv extends BaseSmartEnv {
 
   refresh_status() {
     if (!this.status_elm) {
+      const existing = this.main.app.statusBar.containerEl.querySelector('.smart-env-status-container');
+      if (existing) {
+        existing.closest('.status-bar-item')?.remove();
+      }
       this.status_elm = this.main.addStatusBarItem();
       this.smart_view.apply_style_sheet(styles);
       this.status_container = this.status_elm.createEl('a', { cls: 'smart-env-status-container' });
