@@ -6,6 +6,7 @@ import { render as env_settings_component } from './components/env_settings.js';
 import { render as env_stats_component } from './components/env_stats.js';
 import { render as lean_coffee_callout_component } from './components/lean_coffee_callout.js';
 import { render as muted_notices_component } from './components/muted_notices.js';
+import { render as source_inspector_component } from './components/source_inspector.js';
 import { render as supporter_callout_component } from './components/supporter_callout.js';
 import { render as user_agreement_callout_component } from './components/user_agreement_callout.js';
 
@@ -22,6 +23,7 @@ export const smart_env_config = {
     env_stats: env_stats_component,
     lean_coffee_callout: lean_coffee_callout_component,
     muted_notices: muted_notices_component,
+    source_inspector: source_inspector_component,
     supporter_callout: supporter_callout_component,
     user_agreement_callout: user_agreement_callout_component
   }
