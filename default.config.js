@@ -31,6 +31,7 @@ import {
   SmartChatModelOllamaAdapter,
   SmartChatModelOpenaiAdapter,
   SmartChatModelOpenRouterAdapter,
+  SmartChatModelXaiAdapter
 } from "smart-chat-model/adapters.js";
 import { SmartHttpRequest, SmartHttpObsidianRequestAdapter } from "smart-http-request";
 import { requestUrl } from "obsidian";
@@ -76,6 +77,7 @@ const smart_env_config = {
         ollama: SmartChatModelOllamaAdapter,
         open_router: SmartChatModelOpenRouterAdapter,
         openai: SmartChatModelOpenaiAdapter,
+        xai: SmartChatModelXaiAdapter,
       },
       http_adapter: new SmartHttpRequest({
         adapter: SmartHttpObsidianRequestAdapter,
