@@ -58,7 +58,11 @@ export class SmartEnv extends BaseSmartEnv {
       plugin.app.vault.on('create', (file) => {
         if(file instanceof TFile && this.smart_sources?.source_adapters?.[file.extension]){
           const source = this.smart_sources?.init_file_path(file.path);
-          if(source) this.smart_sources?.fs.include_file(file.path);
+          if(source) {
+            this.queue_source_re_import(source);
+          }else{
+            console.warn("SmartEnv: Unable to init source for newly created file", file.path);
+          }
         }
       })
     );
@@ -66,7 +70,11 @@ export class SmartEnv extends BaseSmartEnv {
       plugin.app.vault.on('rename', (file, old_path) => {
         if(file instanceof TFile && this.smart_sources?.source_adapters?.[file.extension]){
           const source = this.smart_sources?.init_file_path(file.path);
-          if(source) this.smart_sources?.fs.include_file(file.path);
+          if(source) {
+            this.queue_source_re_import(source);
+          }else{
+            console.warn("SmartEnv: Unable to init source for renamed file", file.path);
+          }
         }
         if(old_path){
           const source = this.smart_sources?.get(old_path);
@@ -85,14 +93,11 @@ export class SmartEnv extends BaseSmartEnv {
     plugin.registerEvent(
       plugin.app.vault.on('modify', (file) => {
         if(file instanceof TFile && this.smart_sources?.source_adapters?.[file.extension]){
-          if(!this.sources_re_import_queue) this.sources_re_import_queue = {};
-          if(this.sources_re_import_queue?.[file.path]) return; // already in queue
-          // queue re-import the file
           const source = this.smart_sources?.get(file.path);
           if(source){
-            source.data.last_import = { at: 0, hash: null, mtime: 0, size: 0 };
-            this.sources_re_import_queue[source.key] = source;
-            this.debounce_re_import_queue();
+            this.queue_source_re_import(source);
+          }else{
+            console.warn("SmartEnv: Unable to get source for modified file", file.path);
           }
         }
       })
@@ -116,6 +121,16 @@ export class SmartEnv extends BaseSmartEnv {
     );
     this.refresh_status();
   }
+  // queue re-import the file
+  queue_source_re_import(source) {
+    if(!source || !source.key) return;
+    if(!this.sources_re_import_queue) this.sources_re_import_queue = {};
+    if(this.sources_re_import_queue?.[source.key]) return; // already in queue
+    source.data.last_import = { at: 0, hash: null, mtime: 0, size: 0 };
+    this.sources_re_import_queue[source.key] = source;
+    this.debounce_re_import_queue();
+  }
+
   debounce_re_import_queue() {
     this.refresh_status();
     this.sources_re_import_halted = true; // halt re-importing
@@ -133,6 +148,7 @@ export class SmartEnv extends BaseSmartEnv {
     if (queue_length) {
       for (const [key, src] of Object.entries(this.sources_re_import_queue)) {
         await src.import();
+        if(!src.should_embed) continue; // skip embedding if should not embed
         // Build embed queue to prevent scanning all sources on process_embed_queue
         if (!this.smart_sources._embed_queue) this.smart_sources._embed_queue = [];
         this.smart_sources._embed_queue.push(src);
