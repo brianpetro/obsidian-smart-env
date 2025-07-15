@@ -10,6 +10,7 @@ export class ExcalidrawSourceContentAdapter extends ObsidianMarkdownSourceConten
     const drawing_lines_start = full_content.indexOf('## Drawing');
     if (text_elements_start === -1 || drawing_lines_start === -1) {
       console.warn('Excalidraw file does not contain expected sections.');
+      this.item.data.last_read.size = 0; // reset size if sections are not found
       return ""; // Return empty string if sections are not found
     }
 
@@ -27,7 +28,14 @@ export class ExcalidrawSourceContentAdapter extends ObsidianMarkdownSourceConten
       .filter(Boolean) // filter out empty lines
       .join('\n')
     ;
-    console.log('Excalidraw text content:', stripped_refs);
+    this.item.data.last_read.size = stripped_refs.length;
     return stripped_refs;
+  }
+  get size() {
+    if (this.item.data?.last_read?.size) {
+      return this.item.data.last_read.size;
+    }
+    // fallback
+    return this.file?.stat?.size || 0;
   }
 }
