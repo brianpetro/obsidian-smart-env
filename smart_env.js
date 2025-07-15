@@ -148,10 +148,9 @@ export class SmartEnv extends BaseSmartEnv {
     if (queue_length) {
       for (const [key, src] of Object.entries(this.sources_re_import_queue)) {
         await src.import();
-        if(!src.should_embed) continue; // skip embedding if should not embed
         // Build embed queue to prevent scanning all sources on process_embed_queue
         if (!this.smart_sources._embed_queue) this.smart_sources._embed_queue = [];
-        this.smart_sources._embed_queue.push(src);
+        if (src.should_embed) this.smart_sources._embed_queue.push(src); // skip embedding if should not embed
         if (this.smart_blocks.settings.embed_blocks) {
           for (const block of src.blocks) {
             if (block._queue_embed || (block.should_embed && block.is_unembedded)) {
@@ -163,13 +162,13 @@ export class SmartEnv extends BaseSmartEnv {
         delete this.sources_re_import_queue[key];
         if (this.sources_re_import_halted) {
           this.debounce_re_import_queue();
-          // return; // halt re-importing if halted
         }
       }
-      // console.time('process_embed_queue');
-      await this.smart_sources?.process_embed_queue();
+      // skip if no embed queue items (prevent scanning all for items to embed, takes a while)
+      if(this.smart_sources?._embed_queue?.length) {
+        await this.smart_sources.process_embed_queue();
+      }
     }
-    // console.timeEnd('process_embed_queue');
     if(this.sources_re_import_timeout) clearTimeout(this.sources_re_import_timeout);
     this.sources_re_import_timeout = null;
     this.refresh_status();
