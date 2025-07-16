@@ -12,6 +12,8 @@ import { SmartNotices } from "smart-notices/smart_notices.js"; // TODO: move to 
 import styles from './styles.css' with { type: 'css' };
 import { exchange_code_for_tokens, install_smart_plugins_plugin, get_smart_server_url, enable_plugin } from './sc_oauth.js';
 import { open_url_externally } from "./utils/open_url_externally.js";
+import { register_status_bar_context_menu } from "./utils/register_status_bar_context_menu.js";
+
 
 
 export class SmartEnv extends BaseSmartEnv {
@@ -174,7 +176,7 @@ export class SmartEnv extends BaseSmartEnv {
     this.refresh_status();
   }
 
-  refresh_status() {
+ refresh_status() {
     if (!this.status_elm) {
       const existing = this.main.app.statusBar.containerEl.querySelector('.smart-env-status-container');
       if (existing) {
@@ -182,23 +184,66 @@ export class SmartEnv extends BaseSmartEnv {
       }
       this.status_elm = this.main.addStatusBarItem();
       this.smart_view.apply_style_sheet(styles);
-      this.status_container = this.status_elm.createEl('a', { cls: 'smart-env-status-container' });
-      this.status_container.setAttribute('href', 'https://smartconnections.app/community-supporters/?utm_source=status-bar');
-      this.status_container.setAttribute('target', '_external');
+
+      this.status_container = this.status_elm.createEl('a', {
+        cls: 'smart-env-status-container',
+      });
       setIcon(this.status_container, 'smart-connections');
-      this.status_msg = this.status_container.createSpan('smart-env-status-msg');
+
+      /* span used for dynamic message */
+      this.status_msg = this.status_container.createSpan(
+        'smart-env-status-msg',
+      );
+
+      /* right‑click (and later left‑click) context‑menu */
+      this.open_context_menu_handler = register_status_bar_context_menu(
+        this,
+        this.status_container,
+      );
     }
+
     const queue_length = Object.keys(this.sources_re_import_queue || {}).length;
+
+    /* ---------- QUEUE PRESENT → “Embed now (n)” ---------- */
     if (queue_length) {
       this.status_msg.setText(`Embed now (${queue_length})`);
-      this.status_container.setAttribute('title', 'Click to re-import.');
-      this.status_container.removeEventListener('click', re_embed_click_handler);
+      this.status_container.setAttribute('title', 'Click to re‑import.');
+      this.status_container.removeAttribute('href');
+
+      /* remove “open menu” click handler, add embed handler */
+      this.status_container.removeEventListener(
+        'click',
+        this.open_menu_click_handler,
+      );
+      this.status_container.removeEventListener(
+        'click',
+        re_embed_click_handler,
+      );
       this.status_container.addEventListener('click', re_embed_click_handler);
-    }else{
-      this.status_msg.setText('Smart Env ' + this.constructor.version);
-      this.status_container.setAttribute('title', 'Learn about Community Supporters');
-      this.status_container.removeEventListener('click', re_embed_click_handler);
+      return;
     }
+
+    /* ---------- NO QUEUE → normal status ---------- */
+    this.status_msg.setText('Smart Env ' + this.constructor.version);
+    this.status_container.setAttribute('title', 'Smart Environment status');
+    this.status_container.removeEventListener('click', re_embed_click_handler);
+
+    /* strip external link – navigation now happens via menu */
+    this.status_container.removeAttribute('href');
+    this.status_container.removeAttribute('target');
+
+    /* lazily create / (re)bind “open menu” click handler */
+    if (!this.open_menu_click_handler) {
+      this.open_menu_click_handler = (e) => {
+        const evt = new MouseEvent('contextmenu', e);
+        this.status_container.dispatchEvent(evt);
+      };
+    }
+    this.status_container.removeEventListener(
+      'click',
+      this.open_menu_click_handler,
+    );
+    this.status_container.addEventListener('click', this.open_menu_click_handler);
   }
 
   get notices() {
