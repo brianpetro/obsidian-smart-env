@@ -19,16 +19,22 @@ export function build_smart_env_config(dist_dir, roots) {
 
   const all_collections = {};
   const all_items = {};
-  const all_components_flat = [];
+  // Use a Map to ensure only the latest import_var is kept
+  const all_components_flat_map = new Map();
   const all_components_nested = {};
 
   for (const root of roots) {
     Object.assign(all_collections, scan_collections(root));
     Object.assign(all_items, scan_items(root));
     const { flat, nested } = scan_components(root);
-    all_components_flat.push(...flat);
+    // For each component, overwrite previous entry with same import_var
+    flat.forEach(({ import_var, import_path }) => {
+      all_components_flat_map.set(import_var, { import_var, import_path });
+    });
     deep_merge(all_components_nested, nested);
   }
+
+  const all_components_flat = Array.from(all_components_flat_map.values());
 
   /* ----------  IMPORT STRINGS ---------- */
   const collection_imports = Object.entries(all_collections)
@@ -140,6 +146,10 @@ ${components_config}
           const folder_snake = rel_parts.map(to_snake_case);
           const import_var = [...folder_snake, comp_name, 'component'].join('_');
           const import_path = normalize_relative_path(abs);
+
+          // Remove previous entry with same import_var (keep newer)
+          const prevIdx = flat.findIndex(e => e.import_var === import_var);
+          if (prevIdx !== -1) flat.splice(prevIdx, 1);
 
           /* flat list */
           flat.push({ import_var, import_path });
