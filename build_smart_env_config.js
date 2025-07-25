@@ -11,6 +11,7 @@
 import fs from 'fs';
 import path from 'path';
 import { pathToFileURL } from 'url';
+import { to_pascal_case } from 'smart-utils/to_pascal_case.js';
 
 export function build_smart_env_config(dist_dir, roots) {
   if (!fs.existsSync(dist_dir)) {
@@ -174,9 +175,6 @@ ${components_config}
   }
 
   /* ----- util helpers ----- */
-  function to_pascal_case(s) {
-    return s.replace(/(^|_|-)(\w)/g, (_, __, c) => c.toUpperCase());
-  }
   function to_snake_case(s) {
     return s
       .replace(/[-\s]+/g, '_')
