@@ -34,6 +34,7 @@
     "smart-plugins-obsidian": "file:../smart-plugins-obsidian",
     "smart-settings": "file:../jsbrains/smart-settings",
     "smart-sources": "file:../jsbrains/smart-sources",
+    "smart-utils": "file:../jsbrains/smart-utils",
     "smart-view": "file:../jsbrains/smart-view"
   },
   "devDependencies": {
