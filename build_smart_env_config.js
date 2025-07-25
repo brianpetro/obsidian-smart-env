@@ -142,6 +142,13 @@ ${components_config}
           }
           if (!entry.endsWith('.js')) return;
 
+          // skip if no "function render" export
+          const content = fs.readFileSync(abs, 'utf-8');
+          if (
+            !content.includes('function render')
+            && !content.includes('render =')
+          ) return;
+
           const comp_name = entry.replace('.js', '');
           const folder_snake = rel_parts.map(to_snake_case);
           const import_var = [...folder_snake, comp_name, 'component'].join('_');
