@@ -23,6 +23,6 @@ export function register_completion_variable_adapter_replacements(variable_adapt
   variable_adapter_class.register(
     txt => /{{\s*recent_(\d+)\s*}}/i.test(txt),
     replace_recent_n_var,
-    "{{ recent_n }}" // Example variable
+    "{{ recent_10 }}" // Example variable
   );
 }
