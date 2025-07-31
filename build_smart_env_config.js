@@ -133,7 +133,6 @@ ${components_config}
     /* ----- local ----- */
     function walk(curr_dir, rel_parts) {
       fs.readdirSync(curr_dir)
-        .filter(entry => validate_file_type(entry))
         .forEach(entry => {
           const abs = path.join(curr_dir, entry);
           const is_dir = fs.statSync(abs).isDirectory();
@@ -141,7 +140,7 @@ ${components_config}
             walk(abs, [...rel_parts, entry]);
             return;
           }
-          if (!entry.endsWith('.js')) return;
+          if (!validate_file_type(entry)) return;
 
           // skip if no "function render" export
           const content = fs.readFileSync(abs, 'utf-8');
