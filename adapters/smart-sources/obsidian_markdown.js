@@ -2,6 +2,24 @@ import { MarkdownSourceContentAdapter } from "smart-sources/adapters/markdown_so
 import { MarkdownRenderer, htmlToMarkdown, Component } from 'obsidian';
 
 /**
+ * Merge tags from frontmatter and Obsidian's metadata cache.
+ * @param {string|string[]|undefined} fm_tags
+ * @param {{tag: string}[]=} cache_tags
+ * @returns {string[]}
+ */
+function merge_tags(fm_tags, cache_tags = []) {
+  const tag_set = new Set();
+  if (typeof fm_tags === 'string') {
+    fm_tags = fm_tags.replace(/[\[\]]/g, '').split(',').map(t => t.trim()).filter(Boolean);
+  }
+  if (Array.isArray(fm_tags)) {
+    fm_tags.forEach(tag => tag_set.add(tag.startsWith('#') ? tag : `#${tag}`));
+  }
+  cache_tags.forEach(({ tag }) => tag_set.add(tag));
+  return [...tag_set];
+}
+
+/**
  * @class ObsidianMarkdownSourceContentAdapter
  * @extends MarkdownSourceContentAdapter
  * @description
@@ -11,14 +29,19 @@ import { MarkdownRenderer, htmlToMarkdown, Component } from 'obsidian';
  */
 export class ObsidianMarkdownSourceContentAdapter extends MarkdownSourceContentAdapter {
   /**
-   * Returns the frontmatter metadata from Obsidian's metadataCache.
+   * Returns metadata using Obsidian's metadataCache, merging frontmatter and tags.
    * @async
-   * @returns {Promise<Object>} Frontmatter data if available, otherwise undefined.
+   * @returns {Promise<Object|undefined>}
    */
   async get_metadata() {
     const app = this.item.env.main.app;
-    const { frontmatter } = app.metadataCache.getFileCache(this.item.file) || {};
-    return frontmatter;
+    const cache = app.metadataCache.getFileCache(this.item.file) || {};
+    const tags = merge_tags(cache.frontmatter?.tags, cache.tags);
+    if (cache.frontmatter) {
+      if (tags.length) cache.frontmatter.tags = tags;
+      return cache.frontmatter;
+    }
+    return tags.length ? { tags } : undefined;
   }
 
   /**
