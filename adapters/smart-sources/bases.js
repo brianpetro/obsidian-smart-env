@@ -8,6 +8,9 @@ import { FileSourceContentAdapter } from "smart-sources/adapters/_file.js";
  */
 export class BasesSourceContentAdapter extends FileSourceContentAdapter {
   static extensions = ['base'];
+  async import() {
+    /* quietly skip import (for now) */
+  }
 }
 
 export default {
