@@ -53,8 +53,12 @@ export function build_smart_env_config(dist_dir, roots) {
   /* ----------  CONFIG OBJECT STRINGS ---------- */
   const collections_config = obj_keys_to_lines(all_collections, 4).join(',\n');
 
-  const items_config = Object.values(all_items)
+  const item_types_config = Object.values(all_items)
     .map(({ import_var }) => `    ${import_var}`)
+    .join(',\n');
+
+  const items_config = Object.entries(all_items)
+    .map(([key, { import_var }]) => `    ${key}: { class: ${import_var} }`)
     .join(',\n');
 
   const components_config = components_to_string(all_components_nested, 4);
@@ -70,6 +74,9 @@ export const smart_env_config = {
 ${collections_config}
   },
   item_types: {
+${item_types_config}
+  },
+  items: {
 ${items_config}
   },
   components: {

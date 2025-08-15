@@ -91,6 +91,7 @@ test('generated module is importable', async t => {
   const cfg = await import(pathToFileURL(mod_path).href);
   t.truthy(cfg.smart_env_config);
   t.truthy(cfg.smart_env_config.components.env_settings);
+  t.truthy(cfg.smart_env_config.items.awesome_block);
 });
 
 
