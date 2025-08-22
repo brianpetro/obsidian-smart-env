@@ -121,8 +121,8 @@ This template:
 1. Creates a document fragment
 2. Renders general setting components
 3. Iterates through collections, creating containers for each if not already present
-    - looks for containers based on id `{collection_key}_settings`
-    - if container has `data-settings-keys` attribute, it will only render the settings keys specified
+	- looks for containers based on id `{collection_key}_settings`
+	- if container has `data-settings-keys` attribute, it will only render the settings keys specified
 4. Calls each collection's `render_settings` method
 5. Renders additional setting components if needed
 
@@ -191,58 +191,60 @@ The Smart Environment internally normalizes the options provided in `main_env_op
 
 - **`env_path`**: The base path for the environment, important for file system operations.
 - **`collections`**: Defines the data collections managed by the environment.
-    - Each collection should have:
-        - **`class`**: The constructor function or class for the collection.
-        - **`data_adapter`**: Adapter for handling data persistence.
-        - **`item_types`**: Definitions of item classes within the collection.
-- **`modules`**: Specifies additional functionalities or services.
-    - Each module should have:
-        - **`class`**: The constructor function or class for the module.
-        - **`adapter`**: Adapter specific to the module's operation.
+	- Each collection should have:
+		- **`class`**: The constructor function or class for the collection.
+		- **`data_adapter`**: Adapter for handling data persistence.
+		- **`item_types`**: Definitions of item classes within the collection.
+		- **`modules`**: Specifies additional functionalities or services.
+	- Each module should have:
+		- **`class`**: The constructor function or class for the module.
+		- **`adapter`**: Adapter specific to the module's operation.
 - **`default_settings`**: Default configuration settings that can be overridden by user preferences.
 - **`components`**: UI components for rendering settings, views, and other interactive elements.
 
 ```js
 export const smart_env_config = {
-  
-  // Base path for the environment
-  env_path: '',
-  
-  // Collections to initialize
-  collections: {
-    smart_sources: {
-      class: SmartSources,
-      data_adapter: SmartCollectionMultiFileDataAdapter,
-      // Collection-specific options...
-    },
-    // Other collections...
-  },
+	
+	// Base path for the environment
+	env_path: '',
+	
+	// Collections to initialize
+	collections: {
+		smart_sources: {
+			class: SmartSources,
+			data_adapter: SmartCollectionMultiFileDataAdapter,
+			// Collection-specific options...
+		},
+		// Other collections...
+	},
 
-  // Available item types
-  item_types: {
-    SmartSource,
-    SmartBlock,
-  },
+	// Available item types
+	item_types: {
+		SmartSource,
+		SmartBlock,
+	},
 
-  // Module configurations
-  modules: {
-    smart_fs: {
-      class: SmartFs,
-      adapter: SmartFsAdapter,
-    },
-    smart_view: {
-      class: SmartView,
-      adapter: ViewAdapter,
-    },
-    // Other modules...
-  },
+	// Module configurations
+	modules: {
+		smart_fs: {
+			class: SmartFs,
+			adapter: SmartFsAdapter,
+		},
+		smart_view: {
+			class: SmartView,
+			adapter: ViewAdapter,
+		},
+		// Other modules...
+	},
 
-  // Default settings
-  default_settings: {
-    file_exclusions: 'Untitled',
-    folder_exclusions: 'smart-chats',
-    // Other default settings...
-  }
+	// Default settings
+	default_settings: {
+		smart_sources: {
+			file_exclusions: 'Untitled',
+			folder_exclusions: 'smart-chats',
+		},
+		// Other default settings...
+	}
 };
 ```
 
@@ -254,13 +256,13 @@ When initializing Smart Environment, you must provide runtime options through `m
 import { smart_env_config } from './smart_env.config.js';
 
 const main_env_opts = {
-  ...smart_env_config,
-  // Override or add runtime-specific options
-  env_path: '/custom/path',
-  collections: {
-    ...smart_env_config.collections,
-    // Add or modify collections
-  }
+	...smart_env_config,
+	// Override or add runtime-specific options
+	env_path: '/custom/path',
+	collections: {
+		...smart_env_config.collections,
+		// Add or modify collections
+	}
 };
 
 // Initialize Smart Environment
@@ -291,21 +293,21 @@ Example of minimal configuration:
 
 ```js
 const minimal_config = {
-  collections: {
-    smart_sources: {
-      class: SmartSources,
-      data_adapter: DataAdapter
-    }
-  },
-  modules: {
-    smart_fs: {
-      class: SmartFs,
-      adapter: FsAdapter
-    }
-  },
-  item_types: {
-    SmartSource
-  }
+	collections: {
+		smart_sources: {
+			class: SmartSources,
+			data_adapter: DataAdapter
+		}
+	},
+	modules: {
+		smart_fs: {
+			class: SmartFs,
+			adapter: FsAdapter
+		}
+	},
+	item_types: {
+		SmartSource
+	}
 };
 ```
 
@@ -315,23 +317,23 @@ const minimal_config = {
 import { SmartEnv } from 'smart-environment';
 
 class MyApp {
-  constructor() {
-    this.init();
-  }
+	constructor() {
+		this.init();
+	}
 
-  async init() {
-    this.env = await SmartEnv.create(this, {
-      env_path: '/path/to/my/app',
-      collections: {
-        // Define your collections here
-      },
-      modules: {
-        // Define your modules here
-      }
-    });
-    
-    // Your app initialization code here
-  }
+	async init() {
+		this.env = await SmartEnv.create(this, {
+			env_path: '/path/to/my/app',
+			collections: {
+				// Define your collections here
+			},
+			modules: {
+				// Define your modules here
+			}
+		});
+		
+		// Your app initialization code here
+	}
 }
 
 const app = new MyApp();
