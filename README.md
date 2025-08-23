@@ -31,7 +31,16 @@ Smart Environment enables individuals and teams to leverage the power of AI whil
 The SmartEnv class uses a singleton pattern to ensure that only one instance of Smart Environment is created. This instance is accessible through a global reference.
 
 ## Interface
-- `export_json(filename)` – download or return serialized environment
+### `export_json(filename)`
+– download or return serialized environment
+
+```mermaid
+flowchart TD
+	A[Environment] --> B{to_json}
+	B --> C[Collect collection data]
+	C --> D[export_json]
+	D --> E[Download / return string]
+```
 
 ### `static async create(main, main_env_opts={})`
 
