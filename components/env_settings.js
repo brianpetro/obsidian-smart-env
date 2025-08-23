@@ -246,7 +246,7 @@ function render_excluded_dir_list(env, container) {
   if (!list_container) return;
   list_container.empty();
   const ul = list_container.createEl('ul');
-  const excluded_csv = env.settings.folder_exclusions || '';
+  const excluded_csv = env.settings.smart_sources?.folder_exclusions || '';
   const arr = excluded_csv.split(',').map(s => s.trim()).filter(Boolean);
 
   arr.forEach(folder => {
@@ -256,7 +256,7 @@ function render_excluded_dir_list(env, container) {
     remove_btn.addEventListener('click', () => {
       const splitted = excluded_csv.split(',').map(x => x.trim()).filter(Boolean);
       const new_arr = splitted.filter(f => f !== folder);
-      env.settings.folder_exclusions = new_arr.join(',');
+      env.settings.smart_sources.folder_exclusions = new_arr.join(',');
       render_excluded_dir_list(env, container);
     });
   });
@@ -273,7 +273,7 @@ function render_excluded_file_list(env, container) {
   if (!list_container) return;
   list_container.empty();
   const ul = list_container.createEl('ul');
-  const excluded_csv = env.settings.file_exclusions || '';
+  const excluded_csv = env.settings.smart_sources?.file_exclusions || '';
   const arr = excluded_csv.split(',').map(s => s.trim()).filter(Boolean);
 
   arr.forEach(file_path => {
@@ -283,7 +283,7 @@ function render_excluded_file_list(env, container) {
     remove_btn.addEventListener('click', () => {
       const splitted = excluded_csv.split(',').map(s => s.trim()).filter(Boolean);
       const new_arr = splitted.filter(f => f !== file_path);
-      env.settings.file_exclusions = new_arr.join(',');
+      env.settings.smart_sources.file_exclusions = new_arr.join(',');
       render_excluded_file_list(env, container);
     });
   });

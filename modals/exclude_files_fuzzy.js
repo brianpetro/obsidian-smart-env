@@ -3,7 +3,7 @@ import { FuzzySuggestModal } from 'obsidian';
 /**
  * @file exclude_files_fuzzy.js
  * @description An Obsidian FuzzySuggestModal to pick a single file from env.fs.file_paths
- * and add it to env.settings.file_exclusions (CSV).
+ * and add it to env.settings.smart_sources.file_exclusions (CSV).
  */
 
 export class ExcludedFilesFuzzy extends FuzzySuggestModal {
@@ -24,8 +24,8 @@ export class ExcludedFilesFuzzy extends FuzzySuggestModal {
 
   getItems() {
     // Return all file paths from env.fs
-    // But filter out ones already in env.settings.file_exclusions
-    const fileExclusions = (this.env.settings.file_exclusions || '')
+    // But filter out ones already in env.settings.smart_sources.file_exclusions
+    const fileExclusions = (this.env.settings.smart_sources?.file_exclusions || '')
       .split(',')
       .map(s => s.trim())
       .filter(Boolean);
@@ -42,10 +42,10 @@ export class ExcludedFilesFuzzy extends FuzzySuggestModal {
 
   onChooseItem(item) {
     if (!item) return;
-    const oldVal = this.env.settings.file_exclusions || '';
+    const oldVal = this.env.settings.smart_sources?.file_exclusions || '';
     const splitted = oldVal.split(',').map(s => s.trim()).filter(Boolean);
     if (!splitted.includes(item)) splitted.push(item);
-    this.env.settings.file_exclusions = splitted.join(',');
+    this.env.settings.smart_sources.file_exclusions = splitted.join(',');
     this.callback?.();
   }
 }

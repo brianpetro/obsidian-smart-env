@@ -238,13 +238,14 @@ export const smart_env_config = {
 	},
 
 	// Default settings
-	default_settings: {
-		smart_sources: {
-			file_exclusions: 'Untitled',
-			folder_exclusions: 'smart-chats',
-		},
-		// Other default settings...
-	}
+    default_settings: {
+        smart_sources: {
+            file_exclusions: 'Untitled',
+            folder_exclusions: 'smart-chats',
+            excluded_headings: '',
+        },
+        // Other default settings...
+    }
 };
 ```
 

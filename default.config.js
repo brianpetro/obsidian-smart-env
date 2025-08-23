@@ -156,10 +156,10 @@ const smart_env_config = {
           model_key: 'TaylorAI/bge-micro-v2',
         },
       },
+      excluded_headings: '',
+      file_exclusions: 'Untitled',
+      folder_exclusions: '',
     },
-    excluded_headings: '',
-    file_exclusions: 'Untitled',
-    folder_exclusions: '',
     language: 'en',
     new_user: true, // DEPRECATED: 2025-06-05 (use localStorage instead)
     re_import_wait_time: 13,

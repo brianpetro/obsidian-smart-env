@@ -21,3 +21,11 @@
 .excluded-file-item {
   margin: 0.3rem 0;
 }
+
+/* hide standard text input since env_settings adds improved interface */
+.source-settings.collection-settings {
+  [data-setting='file_exclusions'],
+  [data-setting='folder_exclusions'] {
+    display: none;
+  }
+}
