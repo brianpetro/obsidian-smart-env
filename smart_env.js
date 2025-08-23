@@ -321,6 +321,18 @@ export class SmartEnv extends BaseSmartEnv {
       this.plugin.app.setting.openTab(spTab);
     }
   }
+  /**
+   * Serializes the environment and, when in a browser, triggers a download.
+   * @param {string} [filename='smart_env.json']
+   * @returns {string} stringified JSON
+   */
+  export_json(filename = 'smart_env.json') {
+    const json = JSON.stringify(this.to_json(), null, 2);
+    if (typeof document !== 'undefined') {
+      download_json(json, filename);
+    }
+    return json;
+  }
   // WAIT FOR OBSIDIAN SYNC
   async ready_to_load_collections() {
     await new Promise(r => setTimeout(r, 3000)); // wait 3 seconds for other processes to finish
@@ -353,4 +365,23 @@ function re_embed_click_handler (e) {
   e.stopPropagation();
   smart_env.status_msg.setText(`Embedding...`);
   smart_env.run_re_import();
+}
+
+
+
+/**
+ * Triggers a browser download for the provided JSON string.
+ * @param {string} json
+ * @param {string} filename
+ */
+function download_json(json, filename) {
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  URL.revokeObjectURL(url);
 }
