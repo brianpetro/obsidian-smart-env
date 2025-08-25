@@ -20,7 +20,8 @@ import { Menu, Notice } from "obsidian";
 import { SmartNoteInspectModal } from "../views/source_inspector.js";
 import { EnvStatsModal } from "../modals/env_stats.js";
 
-export function register_status_bar_context_menu(env, status_container) {
+export function register_status_bar_context_menu(env, status_container, deps = {}) {
+  const { Menu: MenuClass = Menu } = deps;
   const plugin = env.main;
 
   /** @type {(ev: MouseEvent) => void} */
@@ -28,7 +29,7 @@ export function register_status_bar_context_menu(env, status_container) {
     ev.preventDefault();
     ev.stopPropagation();
 
-    const menu = new Menu(plugin.app);
+    const menu = new MenuClass(plugin.app);
     menu.addItem((item) =>
       item
         .setTitle("Inspect active note")
@@ -54,6 +55,15 @@ export function register_status_bar_context_menu(env, status_container) {
         .onClick(() => {
           const modal = new EnvStatsModal(plugin.app, env);
           modal.open();
+        }),
+    );
+    menu.addItem((item) =>
+      item
+        .setTitle("Export data")
+        .setIcon("arrow-up-tray")
+        .onClick(() => {
+          env.export_json();
+          new Notice("Smart Env exported");
         }),
     );
     menu.addSeparator();
