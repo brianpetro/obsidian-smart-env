@@ -1,6 +1,6 @@
 # Smart Environment
 
-Welcome to Smart Environment, the efficient, productive, and user-aligned AI-powered ecosystem for personal and professional use. Smart Environment empowers individuals by providing a suite of AI tools in a private, secure, and open-source software package.
+Welcome to Smart Environment, a fast local-first AI layer for Obsidian. Built for vibe coders, it helps you build your own AI Obsidian plugin while keeping data private and under your control.
 
 - [Intro to Smart Environments video](https://youtu.be/0obRntW8Cto)
 
@@ -23,6 +23,9 @@ Key principles:
 - Complement and enhance foundation models
 - Prioritize user agency, privacy and oversight
 - Loads collections (wake-up)
+
+### Reset embeddings after changing models
+If notes keep re-embedding after switching embedding models, open Smart Env settings and click **Clear sources data**, then **Reload sources**.
 
 ## Architecture
 
@@ -248,14 +251,14 @@ export const smart_env_config = {
 	},
 
 	// Default settings
-    default_settings: {
-        smart_sources: {
-            file_exclusions: 'Untitled',
-            folder_exclusions: 'smart-chats',
-            excluded_headings: '',
-        },
-        // Other default settings...
-    }
+		default_settings: {
+				smart_sources: {
+						file_exclusions: 'Untitled',
+						folder_exclusions: 'smart-chats',
+						excluded_headings: '',
+				},
+				// Other default settings...
+		}
 };
 ```
 
