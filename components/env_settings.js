@@ -64,6 +64,7 @@ export async function build_html(env, opts = {}) {
         <ul>
           <li>IMPORTANT: make sure local <code>BGE-micro-v2</code> embedding model works before trying other local models.</li>
           <li>API models require an API key and send your notes to third-party servers for processing.</li>
+          <li>If notes persistently re-embed after switching models, use "Clear sources data" then "Reload sources" to reset.</li>
         </ul>
         <div data-smart-notices></div>
         <hr>
