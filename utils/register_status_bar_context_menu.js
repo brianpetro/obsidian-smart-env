@@ -60,7 +60,7 @@ export function register_status_bar_context_menu(env, status_container, deps = {
     menu.addItem((item) =>
       item
         .setTitle("Export data")
-        .setIcon("arrow-up-tray")
+        .setIcon("download")
         .onClick(() => {
           env.export_json();
           new Notice("Smart Env exported");
