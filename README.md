@@ -1,6 +1,13 @@
 # Smart Environment
 
-Welcome to Smart Environment, a fast local-first AI layer for Obsidian. Built for vibe coders, it helps you build your own AI Obsidian plugin while keeping data private and under your control.
+> [!QUESTION] **Tired of rebuilding the same AI plumbing?**
+> You're an Obsidian vibe coder who wants embeddings, actions, and settings without standing up servers or leaking user data.
+
+> [!WARNING] **The Problem**
+> Every plugin rolls its own indexing layer, slows startup, and risks sending private notes to third-party APIs.
+
+> [!NOTE] **The Solution**
+> `obsidian-smart-env` shares a local-first embedding index across plugins, giving you a drop-in Smart Environment while your users stay fully in control.
 
 - [Intro to Smart Environments video](https://youtu.be/0obRntW8Cto)
 
