@@ -9,6 +9,9 @@
 > [!NOTE] **Drop in a Smart Environment**
 > `obsidian-smart-env` shares a local‑first embedding index across plugins, acting as a Smart Bridge so your users stay fully in control.
 
+> [!FAILURE] **The Cost of Doing Nothing**
+> Ship bloated plugins and waste late nights chasing sync bugs that a Smart Environment would have prevented.
+
 - [Intro to Smart Environments video](https://youtu.be/0obRntW8Cto)
 
 ## Key Features
