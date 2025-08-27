@@ -1,24 +1,23 @@
 # Smart Environment
 
-> [!QUESTION] **Tired of rebuilding the same AI plumbing?**
-> You're an Obsidian vibe coder who wants embeddings, actions, and settings without standing up servers or leaking user data.
+> [!QUESTION] **Ship features, not infrastructure?**
+> You're an Obsidian vibe coder. You want embeddings, actions, and settings without spinning up servers or leaking your users' notes.
 
-> [!WARNING] **The Problem**
-> Every plugin rolls its own indexing layer, slows startup, and risks sending private notes to third-party APIs.
+> [!WARNING] **Every plugin reinvents the wheel**
+> Homegrown indexing layers slow startup and risk pushing private notes to third‑party APIs.
 
-> [!NOTE] **The Solution**
-> `obsidian-smart-env` shares a local-first embedding index across plugins, giving you a drop-in Smart Environment while your users stay fully in control.
+> [!NOTE] **Drop in a Smart Environment**
+> `obsidian-smart-env` shares a local‑first embedding index across plugins, acting as a Smart Bridge so your users stay fully in control.
 
 - [Intro to Smart Environments video](https://youtu.be/0obRntW8Cto)
 
 ## Key Features
 
-- **Local-first**: Your data stays on your device under your control
-- **AI Oversight**: Review changes made by AI to maintain alignment 
-- **Privacy**: Limit data-sharing to only what's necessary
-- **Context Profiles**: Easily switch between home, work, and project configurations
-- **Modular Architecture**: Seamlessly integrate various AI-powered Smart Modules
-- **Complements Foundation Models**: Enhances capabilities of large language models
+ - **Local-first**: data never leaves the user's device
+ - **Shared embeddings**: multiple plugins reuse a single index
+ - **Modular architecture**: drop in Smart Modules as needed
+ - **Context profiles**: switch between work, home, or project scopes
+ - **AI oversight**: review changes made by actions before they apply
 
 ## Overview
 
