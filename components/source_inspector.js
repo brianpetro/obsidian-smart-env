@@ -43,7 +43,7 @@ export async function render(source, opts = {}) {
 /**
  * Post-process: build the actual block listing, read each block, and inject.
  * This replicates the EJS logic:
- *   for each block => a short info line, plus a blockquote with escaped content.
+ *   for each block => a short info line, toggleable embed_input, and a blockquote with escaped content.
  *
  * @param {Object} source - must have data.note
  * @param {DocumentFragment} frag
@@ -107,6 +107,7 @@ export async function post_process(source, frag, opts = {}) {
 
     // Read and sanitize content
     let block_content = '';
+    let embed_input = '';
     try {
       const raw = await block.read();
       block_content = raw
@@ -114,6 +115,10 @@ export async function post_process(source, frag, opts = {}) {
         .replace(/>/g, '&gt;')
         .replace(/\n/g, '<br>')
         .replace(/\t/g, '&nbsp;&nbsp;');
+      const embed_raw = await block.get_embed_input(raw);
+      embed_input = embed_raw
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
     } catch (err) {
       console.error('[source_inspector] Error reading block:', err);
       block_content = `<em style="color:red;">Error reading block content</em>`;
@@ -125,6 +130,10 @@ export async function post_process(source, frag, opts = {}) {
         ${block_info}<br>
         ${should_embed} | ${embed_status}
       </p>
+      <details class="source-inspector-embed-input">
+        <summary>Embed input</summary>
+        <pre style="max-height:300px; overflow:auto; background:#222; color:#fff; padding:0.5em; border-radius:4px;">${embed_input}</pre>
+      </details>
       <blockquote>${block_content}</blockquote>
       <hr>
     `);
