@@ -1,4 +1,4 @@
-# Smart Environment
+# Obsidian Smart Environment
 
 > [!QUESTION] **Ship features, not infrastructure?**
 > You're an Obsidian vibe coder. You want embeddings, actions, and settings without spinning up servers or leaking your users' notes.
@@ -6,8 +6,8 @@
 > [!WARNING] **Every plugin reinvents the wheel**
 > Homegrown indexing layers slow startup and risk pushing private notes to third‑party APIs.
 
-> [!NOTE] **Drop in a Smart Environment**
-> `obsidian-smart-env` shares a local‑first embedding index across plugins, acting as a Smart Bridge so your users stay fully in control.
+> [!NOTE] **Build your own AI Obsidian plugin**
+> `obsidian-smart-env` drops in a local‑first Smart Environment that multiple plugins can share.
 
 > [!FAILURE] **The Cost of Doing Nothing**
 > Ship bloated plugins and waste late nights chasing sync bugs that a Smart Environment would have prevented.
