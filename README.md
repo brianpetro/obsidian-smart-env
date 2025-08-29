@@ -1,7 +1,10 @@
 # Obsidian Smart Environment
 
-> [!QUESTION] **Ship features, not infrastructure?**
-> You're an Obsidian vibe coder. You want embeddings, actions, and settings without spinning up servers or leaking your users' notes.
+> [!QUESTION] **Build your own AI Obsidian plugin?**
+> You're an Obsidian vibe coder who wants embeddings, chat models, actions, and settings without spinning up servers or leaking your users' notes.
+
+> [!TIP] **Ship features, not infrastructure**
+> Let Smart Environment handle embeddings and chat models so you can focus on your plugin.
 
 > [!WARNING] **Every plugin reinvents the wheel**
 > Homegrown indexing layers slow startup and risk pushing private notes to third‑party APIs.
