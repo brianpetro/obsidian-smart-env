@@ -17,12 +17,35 @@
 
 - [Intro to Smart Environments video](https://youtu.be/0obRntW8Cto)
 
+> [!SUCCESS] **Real-time embeddings**
+> Notes re-embed automatically after edits using Obsidian events—no manual reload.
+
+> [!TIP] **Shared index for every plugin**
+> Multiple plugins connect to one embedding index for faster startup.
+
+> [!NOTE] **Full control & export**
+> Choose models and inputs, then export the entire environment JSON from the status bar.
+
+> [!WARNING] **Muted notices**
+> A built-in notice manager keeps alerts quiet unless explicitly surfaced.
+
+```mermaid
+flowchart LR
+	O[Obsidian events] --> S[Smart Environment]
+	S --> I[Shared embedding index]
+	S --> P1[Plugin A]
+	S --> P2[Plugin B]
+```
+
 ## Key Features
 
  - **Local-first**: data never leaves the user's device
  - **Shared embeddings**: multiple plugins reuse a single index
  - **Modular architecture**: drop in Smart Modules as needed
  - **Context profiles**: switch between work, home, or project scopes
+ - **Real-time updates**: embeddings refresh after each note edit
+ - **Status bar export**: save the full Smart Env as JSON
+ - **Muted notice manager**: keep alerts out of the way
  - **AI oversight**: review changes made by actions before they apply
 
 ## Overview
