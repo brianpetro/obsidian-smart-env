@@ -1,18 +1,18 @@
 # Obsidian Smart Environment
 
-> [!QUESTION] **Build your own AI Obsidian plugin?**
-> You're an Obsidian vibe coder who wants embeddings, chat models, actions, and settings without spinning up servers or leaking your users' notes.
+> [!QUESTION] **Ready to build your own AI Obsidian plugin?**
+> You're a vibe coder who wants embeddings, chat models, actions, and settings without spinning up servers or leaking notes.
 
 > [!TIP] **Ship features, not infrastructure**
-> Let Smart Environment handle embeddings and chat models so you can focus on your plugin.
+> Let Smart Environment handle the index and model plumbing so you can focus on your plugin.
 
 > [!WARNING] **Every plugin reinvents the wheel**
 > Homegrown indexing layers slow startup and risk pushing private notes to third‑party APIs.
 
-> [!NOTE] **Build your own AI Obsidian plugin**
-> `obsidian-smart-env` drops in a local‑first Smart Environment that multiple plugins can share.
+> [!NOTE] **Share a local‑first Smart Environment across plugins**
+> `obsidian-smart-env` drops in a shared environment that keeps data on the user's device.
 
-> [!FAILURE] **The Cost of Doing Nothing**
+> [!FAILURE] **The cost of doing nothing**
 > Ship bloated plugins and waste late nights chasing sync bugs that a Smart Environment would have prevented.
 
 - [Intro to Smart Environments video](https://youtu.be/0obRntW8Cto)
