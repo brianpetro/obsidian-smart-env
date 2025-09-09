@@ -20,6 +20,7 @@ import { SmartEmbedOpenAIAdapter } from "smart-embed-model/adapters/openai.js";
 import { SmartEmbedTransformersIframeAdapter } from "smart-embed-model/adapters/transformers_iframe.js";
 import { SmartEmbedOllamaAdapter } from "smart-embed-model/adapters/ollama.js";
 import { GeminiEmbedModelAdapter } from "smart-embed-model/adapters/gemini.js";
+import { LmStudioEmbedModelAdapter } from "smart-embed-model/adapters/lm_studio.js";
 // chat model
 import { SmartChatModel } from "smart-chat-model";
 import {
@@ -67,6 +68,7 @@ const smart_env_config = {
         openai: SmartEmbedOpenAIAdapter,
         ollama: SmartEmbedOllamaAdapter,
         gemini: GeminiEmbedModelAdapter,
+        lm_studio: LmStudioEmbedModelAdapter,
       },
     },
     smart_chat_model: {
