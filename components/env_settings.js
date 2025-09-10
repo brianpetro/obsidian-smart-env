@@ -169,6 +169,7 @@ export async function post_process(env, container, opts = {}) {
       await env.load_collections();
       await env.smart_sources.process_embed_queue();
       const end = Date.now();
+      env.events?.emit('sources:reloaded', { time_ms: end - start });
       env.main.notices?.show('reload_sources', { time_ms: end - start });
     });
   }
