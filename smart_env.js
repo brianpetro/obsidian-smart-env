@@ -113,7 +113,7 @@ export class SmartEnv extends BaseSmartEnv {
         this.debounce_re_import_queue();
         const current_path = leaf.view?.file?.path;
         const current_source = this.smart_sources.get(current_path);
-        if(current_source) current_source.emit_event('current:source');
+        if(current_source) current_source.emit_event('sources:current');
       })
     );
     plugin.registerEvent(
