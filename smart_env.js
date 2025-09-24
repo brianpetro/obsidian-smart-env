@@ -109,6 +109,13 @@ export class SmartEnv extends BaseSmartEnv {
       })
     );
     plugin.registerEvent(
+      plugin.app.vault.on('delete', (file) => {
+        if(file instanceof TFile && this.smart_sources?.source_adapters?.[file.extension]){
+          delete this.smart_sources?.items[file.path];
+        }
+      })
+    );
+    plugin.registerEvent(
       plugin.app.workspace.on('active-leaf-change', (leaf) => {
         this.debounce_re_import_queue();
         const current_path = leaf.view?.file?.path;
@@ -117,10 +124,11 @@ export class SmartEnv extends BaseSmartEnv {
       })
     );
     plugin.registerEvent(
-      plugin.app.vault.on('delete', (file) => {
-        if(file instanceof TFile && this.smart_sources?.source_adapters?.[file.extension]){
-          delete this.smart_sources?.items[file.path];
-        }
+      this.app.workspace.on('file-open', (file) => {
+        this.debounce_re_import_queue();
+        const current_path = file?.path;
+        const current_source = this.smart_sources.get(current_path);
+        if(current_source) current_source.emit_event('sources:opened');
       })
     );
     this.refresh_status();
@@ -136,6 +144,7 @@ export class SmartEnv extends BaseSmartEnv {
     this.debounce_re_import_queue();
   }
 
+  // prevent importing when user is acting within the workspace
   debounce_re_import_queue() {
     this.refresh_status();
     this.sources_re_import_halted = true; // halt re-importing
