@@ -124,7 +124,7 @@ export class SmartEnv extends BaseSmartEnv {
       })
     );
     plugin.registerEvent(
-      this.app.workspace.on('file-open', (file) => {
+      plugin.app.workspace.on('file-open', (file) => {
         this.debounce_re_import_queue();
         const current_path = file?.path;
         const current_source = this.smart_sources.get(current_path);
