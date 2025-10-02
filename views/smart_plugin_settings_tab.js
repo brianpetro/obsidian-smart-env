@@ -1,6 +1,6 @@
 import { PluginSettingTab } from 'obsidian';
-import { wait_for_env_to_load } from './utils/wait_for_env_to_load.js';
-import { open_url_externally } from './utils/open_url_externally.js';
+import { wait_for_env_to_load } from '../utils/wait_for_env_to_load.js';
+import { open_url_externally } from '../utils/open_url_externally.js';
 
 const MORE_PLUGIN_LINKS = [
   {
