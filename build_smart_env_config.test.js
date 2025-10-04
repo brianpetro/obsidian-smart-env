@@ -41,6 +41,12 @@ test.before(() => {
   /* components – one level */
   write_file('src/components/smart-sources/settings.js', 'export function render(){}');
 
+  /* actions */
+  write_file('src/actions/publish.js', `export function publish(){ return 'action'; }
+export const settings_config = { foo: 'bar' };
+`);
+  write_file('src/actions/log.js', 'export function log(){}');
+
 });
 
 /** -------------------------------------------------------------------
@@ -92,6 +98,21 @@ test('generated module is importable', async t => {
   t.truthy(cfg.smart_env_config);
   t.truthy(cfg.smart_env_config.components.env_settings);
   t.truthy(cfg.smart_env_config.items.awesome_block);
+});
+
+test('actions config stores action export on action property', async t => {
+  const mod_path = path.join(tmp_root, 'smart_env.config.js');
+  const cfg = await import(pathToFileURL(mod_path).href);
+  const { actions } = cfg.smart_env_config;
+  t.is(typeof actions.publish.action, 'function');
+  t.is(typeof actions.log.action, 'function');
+});
+
+test('actions config includes settings_config when exported', async t => {
+  const mod_path = path.join(tmp_root, 'smart_env.config.js');
+  const cfg = await import(pathToFileURL(mod_path).href);
+  const { publish } = cfg.smart_env_config.actions;
+  t.deepEqual(publish.settings_config, { foo: 'bar' });
 });
 
 
