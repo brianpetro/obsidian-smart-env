@@ -62,8 +62,14 @@ export function build_smart_env_config(dist_dir, roots) {
 
   // actions
   const action_imports = all_actions_flat
-    .map(({ action_export_name, action_import_var, settings_export_name, settings_import_var, import_path }) => {
+    .map(({ action_export_name, action_import_var, settings_export_name, settings_import_var, display_name_export_name, display_name_import_var, display_description_export_name, display_description_import_var, import_path }) => {
       const specs = [`${action_export_name} as ${action_import_var}`];
+      if (display_name_export_name) {
+        specs.push(`${display_name_export_name} as ${display_name_import_var}`);
+      }
+      if (display_description_export_name) {
+        specs.push(`${display_description_export_name} as ${display_description_import_var}`);
+      }
       if (settings_export_name) {
         specs.push(`${settings_export_name} as ${settings_import_var}`);
       }
@@ -246,12 +252,16 @@ ${actions_config}
         if (!has_action_export) return;
 
         const has_settings_config = has_named_export(content, 'settings_config');
+        const has_display_name = has_named_export(content, 'display_name');
+        const has_display_description = has_named_export(content, 'display_description');
 
         const folder_snake = rel_parts.map(to_snake_case);
         const import_var = [...folder_snake, action_name, 'action'].join('_');
         const import_path = normalize_relative_path(abs);
         const export_name = action_name;
         const settings_import_var = has_settings_config ? `${import_var}_settings_config` : null;
+        const display_name_import_var = has_display_name ? `${import_var}_display_name` : null;
+        const display_description_import_var = has_display_description ? `${import_var}_display_description` : null;
 
         // Remove previous entry with same import_var (keep newer)
         const prevIdx = entries.findIndex(e => e.action_import_var === import_var);
@@ -263,6 +273,10 @@ ${actions_config}
           action_import_var: import_var,
           settings_export_name: has_settings_config ? 'settings_config' : null,
           settings_import_var,
+          display_name_export_name: has_display_name ? 'display_name' : null,
+          display_name_import_var,
+          display_description_export_name: has_display_description ? 'display_description' : null,
+          display_description_import_var,
           import_path
         });
 
@@ -275,6 +289,12 @@ ${actions_config}
         node[action_name] = { action_import_var: import_var };
         if (has_settings_config) {
           node[action_name].settings_import_var = settings_import_var;
+        }
+        if (has_display_name) {
+          node[action_name].display_name_import_var = display_name_import_var;
+        }
+        if (has_display_description) {
+          node[action_name].display_description_import_var = display_description_import_var;
         }
       });
     }
@@ -320,6 +340,8 @@ ${actions_config}
     Object.entries(node).forEach(([k, v]) => {
       if (v.action_import_var) {
         const inner = [`action: ${v.action_import_var}`];
+        if (v.display_name_import_var) inner.push(`display_name: ${v.display_name_import_var}`);
+        if (v.display_description_import_var) inner.push(`display_description: ${v.display_description_import_var}`);
         if (v.settings_import_var) inner.push(`settings_config: ${v.settings_import_var}`);
         parts.push(`${spacer}${k}: { ${inner.join(', ')} }`);
       } else {
