@@ -3,7 +3,7 @@
  * build_smart_env_config.js
  *
  * Scans ./src for collections, items, components, and actions (supports sub-folders),
- * generates "dist/smart_env.config.js" with static import statements.
+ * generates "./smart_env.config.js" with static import statements.
  *
  * Run: `node build_smart_env_config.js`
  */
