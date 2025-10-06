@@ -2,6 +2,7 @@ import { getIcon } from "obsidian";
 export function build_html(plugin, opts={}) {
   const {plugin_name = plugin.manifest.name} = opts;
   return `<div class="wrapper">
+    ${render_sign_in_or_open_smart_plugins(plugin)}
     <div id="footer-callout" data-callout-metadata="" data-callout-fold="" data-callout="info" class="callout" style="mix-blend-mode: unset;">
       <div class="callout-title" style="align-items: center;">
         <div class="callout-icon">
@@ -60,16 +61,39 @@ export function build_html(plugin, opts={}) {
 export function render(plugin, opts={}) {
   const html = build_html.call(this, plugin, opts);
   const frag = this.create_doc_fragment(html);
-  const callout = frag.querySelector('#footer-callout');
-  const icon_container = callout.querySelector('.callout-icon');
+  const container = frag.querySelector('.wrapper');
+  post_process.call(this, plugin, container, opts);
+  return container;
+}
+
+async function post_process(plugin, container) {
+  const icon_container = container.querySelector('.callout-icon');
   const icon = getIcon('hand-heart');
   if (icon) {
     this.empty(icon_container);
     icon_container.appendChild(icon);
   }
-  post_process.call(this, plugin, callout, opts);
-  return callout;
+  const oauth_storage_prefix = plugin.app.vault.getName().toLowerCase().replace(/[^a-z0-9]/g, '_') + '_smart_plugins_oauth_';
+  const is_logged_in = !!localStorage.getItem(oauth_storage_prefix+'token');
+  if (is_logged_in) container.querySelector('#footer-callout').style.display = 'none';
+  await this.render_setting_components(container, { scope: plugin.env });
 }
 
-function post_process(plugin, callout) {
+
+function render_sign_in_or_open_smart_plugins(plugin) {
+  const oauth_storage_prefix = plugin.app.vault.getName().toLowerCase().replace(/[^a-z0-9]/g, '_') + '_smart_plugins_oauth_';
+  const isLoggedIn = !!localStorage.getItem(oauth_storage_prefix+'token');
+  const buttonLabel = isLoggedIn ? 'Open Smart Plugins' : 'Sign in';
+  const buttonCallback = isLoggedIn ? 'open_smart_plugins_settings' : 'initiate_smart_plugins_oauth';
+
+  return `
+    <h2>Supporter perks</h2>
+    <div class="setting-component"
+      data-name="Smart Plugins - Early Access"
+      data-type="button"
+      data-btn-text="${buttonLabel}"
+      data-description="Supporters can sign in to access early-release Smart Plugins"
+      data-callback="${buttonCallback}"
+    ></div>
+  `;
 }
