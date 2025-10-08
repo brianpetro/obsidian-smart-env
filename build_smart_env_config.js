@@ -62,7 +62,19 @@ export function build_smart_env_config(dist_dir, roots) {
 
   // actions
   const action_imports = all_actions_flat
-    .map(({ action_export_name, action_import_var, settings_export_name, settings_import_var, display_name_export_name, display_name_import_var, display_description_export_name, display_description_import_var, import_path }) => {
+    .map(({
+      action_export_name,
+      action_import_var,
+      settings_export_name,
+      settings_import_var,
+      display_name_export_name,
+      display_name_import_var,
+      display_description_export_name,
+      display_description_import_var,
+      pre_process_export_name,
+      pre_process_import_var,
+      import_path
+    }) => {
       const specs = [`${action_export_name} as ${action_import_var}`];
       if (display_name_export_name) {
         specs.push(`${display_name_export_name} as ${display_name_import_var}`);
@@ -72,6 +84,9 @@ export function build_smart_env_config(dist_dir, roots) {
       }
       if (settings_export_name) {
         specs.push(`${settings_export_name} as ${settings_import_var}`);
+      }
+      if (pre_process_export_name) {
+        specs.push(`${pre_process_export_name} as ${pre_process_import_var}`);
       }
       return `import { ${specs.join(', ')} } from '${import_path}';`;
     })
@@ -254,6 +269,7 @@ ${actions_config}
         const has_settings_config = has_named_export(content, 'settings_config');
         const has_display_name = has_named_export(content, 'display_name');
         const has_display_description = has_named_export(content, 'display_description');
+        const has_pre_process = has_named_export(content, 'pre_process');
 
         const folder_snake = rel_parts.map(to_snake_case);
         const import_var = [...folder_snake, action_name, 'action'].join('_');
@@ -262,7 +278,7 @@ ${actions_config}
         const settings_import_var = has_settings_config ? `${import_var}_settings_config` : null;
         const display_name_import_var = has_display_name ? `${import_var}_display_name` : null;
         const display_description_import_var = has_display_description ? `${import_var}_display_description` : null;
-
+        const pre_process_import_var = has_pre_process ? `${import_var}_pre_process` : null;
         // Remove previous entry with same import_var (keep newer)
         const prevIdx = entries.findIndex(e => e.action_import_var === import_var);
         if (prevIdx !== -1) entries.splice(prevIdx, 1);
@@ -277,6 +293,8 @@ ${actions_config}
           display_name_import_var,
           display_description_export_name: has_display_description ? 'display_description' : null,
           display_description_import_var,
+          pre_process_export_name: has_pre_process ? 'pre_process' : null,
+          pre_process_import_var,
           import_path
         });
 
@@ -295,6 +313,9 @@ ${actions_config}
         }
         if (has_display_description) {
           node[action_name].display_description_import_var = display_description_import_var;
+        }
+        if (has_pre_process) {
+          node[action_name].pre_process_import_var = pre_process_import_var;
         }
       });
     }
@@ -343,6 +364,7 @@ ${actions_config}
         if (v.display_name_import_var) inner.push(`display_name: ${v.display_name_import_var}`);
         if (v.display_description_import_var) inner.push(`display_description: ${v.display_description_import_var}`);
         if (v.settings_import_var) inner.push(`settings_config: ${v.settings_import_var}`);
+        if (v.pre_process_import_var) inner.push(`pre_process: ${v.pre_process_import_var}`);
         parts.push(`${spacer}${k}: { ${inner.join(', ')} }`);
       } else {
         const inner = actions_to_string(v, indent + 2);
