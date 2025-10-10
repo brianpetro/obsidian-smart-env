@@ -43,7 +43,7 @@ export function set_local_storage_token({ access_token, refresh_token }, oauth_s
  * Exchange code for tokens => store them
  */
 export async function exchange_code_for_tokens(code, plugin) {
-  const oauth_storage_prefix = plugin.app.vault.getName().toLowerCase().replace(/[^a-z0-9]/g, '_') + '_smart_plugins_oauth_';
+  const oauth_storage_prefix = build_oauth_storage_prefix(plugin.app.vault.getName());
   const url = `${get_smart_server_url()}/auth/oauth_exchange2`;
   const resp = await requestUrl({
     url,
@@ -71,7 +71,7 @@ export async function exchange_code_for_tokens(code, plugin) {
  * and writes them to the local .obsidian/plugins/<folderName>.
  */
 export async function install_smart_plugins_plugin(plugin) {
-  const oauth_storage_prefix = plugin.app.vault.getName().toLowerCase().replace(/[^a-z0-9]/g, '_') + '_smart_plugins_oauth_';
+  const oauth_storage_prefix = build_oauth_storage_prefix(plugin.app.vault.getName());
   const { token } = get_local_storage_token(oauth_storage_prefix);
   if (!token) throw new Error('No token found to install "smart-plugins"');
   const repo = 'brianpetro/smart-plugins-obsidian';
@@ -101,7 +101,7 @@ export async function install_smart_plugins_plugin(plugin) {
  * (Optional) Example: refresh tokens
  */
 export async function refresh_tokens_if_needed(plugin) {
-  const oauth_storage_prefix = plugin.app.vault.getName().toLowerCase().replace(/[^a-z0-9]/g, '_') + '_smart_plugins_oauth_';
+  const oauth_storage_prefix = build_oauth_storage_prefix(plugin.app.vault.getName());
   const { refresh } = get_local_storage_token(oauth_storage_prefix);
   if (!refresh) return false;
   const url = `${get_smart_server_url()}/auth/oauth_exchange2`;
@@ -123,4 +123,18 @@ export async function refresh_tokens_if_needed(plugin) {
   if (!access_token) return false;
   set_local_storage_token({ access_token, refresh_token }, oauth_storage_prefix);
   return true;
+}
+
+const OAUTH_SUFFIX = '_smart_plugins_oauth_';
+/**
+ * Build the Smart Plugins OAuth storage prefix for a given vault name.
+ *
+ * @param {string} vault_name
+ * @returns {string}
+ */
+export function build_oauth_storage_prefix(vault_name) {
+  const safe_name = String(vault_name || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '_');
+  return `${safe_name}${OAUTH_SUFFIX}`;
 }

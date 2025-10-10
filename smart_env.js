@@ -10,7 +10,7 @@ import default_config from './default.config.js';
 import { add_smart_chat_icon, add_smart_connections_icon } from './utils/add_icons.js';
 import { SmartNotices } from "smart-notices/smart_notices.js"; // TODO: move to jsbrains
 import styles from './styles.css' with { type: 'css' };
-import { exchange_code_for_tokens, install_smart_plugins_plugin, get_smart_server_url, enable_plugin } from './sc_oauth.js';
+import { exchange_code_for_tokens, install_smart_plugins_plugin, get_smart_server_url, enable_plugin } from './utils/sc_oauth.js';
 import { open_url_externally } from "./utils/open_url_externally.js";
 import { register_status_bar_context_menu } from "./utils/register_status_bar_context_menu.js";
 import { register_completion_variable_adapter_replacements } from './utils/register_completion_variable_adapter_replacements.js';
