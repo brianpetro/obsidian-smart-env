@@ -36,7 +36,11 @@ test.before(() => {
   write_file('src/items/awesome_block.test.js', 'export function AwesomeBlock(){}');
 
   /* components – root level */
-  write_file('src/components/env_settings.js', 'export function render(){}');
+  write_file(
+    'src/components/env_settings.js',
+    `export function render(){}
+export const settings_config = { theme: 'dark' };`
+  );
 
   /* components – one level */
   write_file('src/components/smart-sources/settings.js', 'export function render(){}');
@@ -100,6 +104,27 @@ test('generated module is importable', async t => {
   t.truthy(cfg.smart_env_config);
   t.truthy(cfg.smart_env_config.components.env_settings);
   t.truthy(cfg.smart_env_config.items.awesome_block);
+});
+
+test('components config exposes render function on render property', async t => {
+  const mod_path = path.join(tmp_root, 'smart_env.config.js');
+  const cfg = await import(pathToFileURL(mod_path).href);
+  const { components } = cfg.smart_env_config;
+  t.is(typeof components.env_settings.render, 'function');
+  t.is(typeof components.smart_sources.settings.render, 'function');
+});
+
+test('components config includes settings_config when exported', async t => {
+  const mod_path = path.join(tmp_root, 'smart_env.config.js');
+  const cfg = await import(pathToFileURL(mod_path).href);
+  const { components } = cfg.smart_env_config;
+  t.deepEqual(components.env_settings.settings_config, { theme: 'dark' });
+  t.false(
+    Object.prototype.hasOwnProperty.call(
+      components.smart_sources.settings,
+      'settings_config'
+    )
+  );
 });
 
 test('actions config stores action export on action property', async t => {

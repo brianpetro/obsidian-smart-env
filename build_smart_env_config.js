@@ -19,7 +19,7 @@ export function build_smart_env_config(dist_dir, roots) {
 
   const all_collections = {};
   const all_items = {};
-  // Use a Map to ensure only the latest import_var is kept
+  // Use a Map to ensure only the latest render import var is kept
   const all_components_flat_map = new Map();
   const all_components_nested = {};
   // actions
@@ -30,9 +30,9 @@ export function build_smart_env_config(dist_dir, roots) {
     Object.assign(all_collections, scan_collections(root));
     Object.assign(all_items, scan_items(root));
     const { flat, nested } = scan_components(root);
-    // For each component, overwrite previous entry with same import_var
-    flat.forEach(({ import_var, import_path }) => {
-      all_components_flat_map.set(import_var, { import_var, import_path });
+    // For each component, overwrite previous entry with same render import var
+    flat.forEach(component_entry => {
+      all_components_flat_map.set(component_entry.render_import_var, component_entry);
     });
     deep_merge(all_components_nested, nested);
 
@@ -57,7 +57,13 @@ export function build_smart_env_config(dist_dir, roots) {
     .join('\n');
 
   const component_imports = all_components_flat
-    .map(({ import_var, import_path }) => `import { render as ${import_var} } from '${import_path}';`)
+    .map(({ render_import_var, settings_import_var, import_path }) => {
+      const specs = [`render as ${render_import_var}`];
+      if (settings_import_var) {
+        specs.push(`settings_config as ${settings_import_var}`);
+      }
+      return `import { ${specs.join(', ')} } from '${import_path}';`;
+    })
     .join('\n');
 
   // actions
@@ -171,7 +177,7 @@ ${actions_config}
 
   /**
    * Recursively walks components and builds:
-   *   - flat array of {import_var, import_path}   (for imports)
+   *   - flat array of {render_import_var, settings_import_var, import_path} (for imports)
    *   - nested object describing final config tree
    */
   function scan_components(base_dir) {
@@ -197,24 +203,23 @@ ${actions_config}
           }
           if (!validate_file_type(entry)) return;
 
-          // skip if no "function render" export
+          // skip if no named render export
           const content = fs.readFileSync(abs, 'utf-8');
-          if (
-            !content.includes('function render')
-            && !content.includes('render =')
-          ) return;
+          if (!has_named_export(content, 'render')) return;
+          const has_settings_config = has_named_export(content, 'settings_config');
 
           const comp_name = entry.replace('.js', '');
           const folder_snake = rel_parts.map(to_snake_case);
-          const import_var = [...folder_snake, comp_name, 'component'].join('_');
+          const render_import_var = [...folder_snake, comp_name, 'component'].join('_');
+          const settings_import_var = has_settings_config ? `${render_import_var}_settings_config` : null;
           const import_path = normalize_relative_path(abs);
 
-          // Remove previous entry with same import_var (keep newer)
-          const prevIdx = flat.findIndex(e => e.import_var === import_var);
+          // Remove previous entry with same render import var (keep newer)
+          const prevIdx = flat.findIndex(e => e.render_import_var === render_import_var);
           if (prevIdx !== -1) flat.splice(prevIdx, 1);
 
           /* flat list */
-          flat.push({ import_var, import_path });
+          flat.push({ render_import_var, settings_import_var, import_path });
 
           /* nested object */
           let node = nested;
@@ -222,7 +227,10 @@ ${actions_config}
             if (!node[part]) node[part] = {};
             node = node[part];
           }
-          node[comp_name] = { import_var };
+          node[comp_name] = { render_import_var };
+          if (settings_import_var) {
+            node[comp_name].settings_import_var = settings_import_var;
+          }
         });
       ;
     }
@@ -346,8 +354,10 @@ ${actions_config}
     const spacer = ' '.repeat(indent);
     const parts = [];
     Object.entries(node).forEach(([k, v]) => {
-      if (v.import_var) {
-        parts.push(`${spacer}${k}: ${v.import_var}`);
+      if (v.render_import_var) {
+        const inner = [`render: ${v.render_import_var}`];
+        if (v.settings_import_var) inner.push(`settings_config: ${v.settings_import_var}`);
+        parts.push(`${spacer}${k}: { ${inner.join(', ')} }`);
       } else {
         const inner = components_to_string(v, indent + 2);
         parts.push(`${spacer}${k}: {\n${inner}\n${spacer}}`);
