@@ -23,7 +23,7 @@ export function build_smart_env_config(dist_dir, roots) {
   const all_components_flat_map = new Map();
   const all_components_nested = {};
   // actions
-  const all_actions_by_path = new Map();
+  const all_actions_flat_map = new Map();
   const all_actions_nested = {};
 
   for (const root of roots) {
@@ -39,13 +39,13 @@ export function build_smart_env_config(dist_dir, roots) {
     // actions
     const { entries: action_entries, nested: a_nested } = scan_actions(root);
     action_entries.forEach(entry => {
-      all_actions_by_path.set(entry.import_path, entry);
+      all_actions_flat_map.set(entry.action_import_var, entry);
     });
     deep_merge(all_actions_nested, a_nested);
   }
 
   const all_components_flat = Array.from(all_components_flat_map.values());
-  const all_actions_flat = Array.from(all_actions_by_path.values());
+  const all_actions_flat = Array.from(all_actions_flat_map.values());
 
   /* ----------  IMPORT STRINGS ---------- */
   const collection_imports = Object.entries(all_collections)

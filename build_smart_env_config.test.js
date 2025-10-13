@@ -52,6 +52,7 @@ export const display_description = 'Send a note to publish';
 export const settings_config = { foo: 'bar' };
 `);
   write_file('src/actions/log.js', 'export function log(){}');
+  write_file('src/actions/smart-sources/sync.js', 'export function sync(){}');
 
 });
 
@@ -150,6 +151,13 @@ test('actions config includes display metadata when exported', async t => {
   t.is(publish.display_description, 'Send a note to publish');
   t.false(Object.prototype.hasOwnProperty.call(log, 'display_name'));
   t.false(Object.prototype.hasOwnProperty.call(log, 'display_description'));
+});
+
+test('actions nested folders are snake_cased in config', async t => {
+  const mod_path = path.join(tmp_root, 'smart_env.config.js');
+  const cfg = await import(pathToFileURL(mod_path).href);
+  const { actions } = cfg.smart_env_config;
+  t.is(typeof actions.smart_sources.sync.action, 'function');
 });
 
 
