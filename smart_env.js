@@ -7,7 +7,7 @@ import {
 import { SmartEnv as BaseSmartEnv } from 'smart-environment';
 import { merge_env_config } from 'smart-environment/utils/merge_env_config.js';
 import default_config from './default.config.js';
-import { add_smart_chat_icon, add_smart_connections_icon } from './utils/add_icons.js';
+import { add_smart_chat_icon, add_smart_connections_icon, add_smart_lookup_icon } from './utils/add_icons.js';
 import { SmartNotices } from "smart-notices/smart_notices.js"; // TODO: move to jsbrains
 import styles from './styles.css' with { type: 'css' };
 import { exchange_code_for_tokens, install_smart_plugins_plugin, get_smart_server_url, enable_plugin } from './utils/sc_oauth.js';
@@ -19,6 +19,7 @@ export class SmartEnv extends BaseSmartEnv {
   static async create(plugin, main_env_opts = null) {
     add_smart_chat_icon();
     add_smart_connections_icon();
+    add_smart_lookup_icon();
     if(!main_env_opts) main_env_opts = plugin.smart_env_config;
     // Special handling for old Obsidian smart environments
     // Detect if environment has 'init_main'
