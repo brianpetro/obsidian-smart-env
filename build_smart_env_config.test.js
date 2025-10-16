@@ -54,6 +54,22 @@ export const settings_config = { foo: 'bar' };
   write_file('src/actions/log.js', 'export function log(){}');
   write_file('src/actions/smart-sources/sync.js', 'export function sync(){}');
 
+  /* modules */
+  write_file(
+    'src/modules/activity_feed.js',
+    `export default {
+  key: 'activity_feed',
+  init(){ return 'activity'; }
+};`
+  );
+  write_file(
+    'src/modules/ConfigGuide.js',
+    `export default {
+  key: 'config_guide',
+  bootstrap(){ return 'config'; }
+};`
+  );
+
 });
 
 /** -------------------------------------------------------------------
@@ -158,6 +174,18 @@ test('actions nested folders are snake_cased in config', async t => {
   const cfg = await import(pathToFileURL(mod_path).href);
   const { actions } = cfg.smart_env_config;
   t.is(typeof actions.smart_sources.sync.action, 'function');
+});
+
+test('modules are collected and exposed on config', async t => {
+  const mod_path = path.join(tmp_root, 'smart_env.config.js');
+  const cfg = await import(pathToFileURL(mod_path).href);
+  const { modules } = cfg.smart_env_config;
+  t.truthy(modules.activity_feed);
+  t.is(modules.activity_feed.key, 'activity_feed');
+  t.is(typeof modules.activity_feed.init, 'function');
+  t.truthy(modules.config_guide);
+  t.is(modules.config_guide.key, 'config_guide');
+  t.is(typeof modules.config_guide.bootstrap, 'function');
 });
 
 

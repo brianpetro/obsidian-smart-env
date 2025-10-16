@@ -198,6 +198,41 @@ Smart Environment uses a configuration system based on two key concepts:
 
 The Smart Environment relies on a configuration object, `main_env_opts`, during initialization to set up the environment according to your specific needs. This configuration defines collections, modules, settings, and other options that the Smart Environment uses to orchestrate its components.
 
+### Config builder conventions
+
+The `build_smart_env_config.js` script embraces a "convention over configuration" approach so plugin authors only need to drop files inside `.smart-env/src/**`. The builder scans well-known folders and generates a deterministic config object:
+
+| Folder segment | Config path | Expected exports |
+| --- | --- | --- |
+| `collections/<KEY>.js` | `smart_env_config.collections.<key>` | default export `{ class, collection_key, item_type }` |
+| `items/<item_key>.js` | `smart_env_config.items.<item_key>.class` and `item_types.PascalCase` | named export (class or factory) |
+| `modules/<module_key>.js` | `smart_env_config.modules.<module_key>` | default export describing Smart Module |
+| `components/<scope>/component.js` | `smart_env_config.components.<scope>.component.render` | named `render` (+ optional `settings_config`) |
+| `actions/<scope>/<action>.js` | `smart_env_config.actions.<scope>.<action>.{action,settings_config?,display_*?,pre_process?}` | named export matching filename |
+
+```mermaid
+flowchart TD
+	A[.smart-env/src] --> B[Collections]
+	A --> C[Items]
+	A --> D[Modules]
+	A --> E[Components]
+	A --> F[Actions]
+	B --> G[Generate imports]
+	C --> G
+	D --> G
+	E --> H[Normalize snake_case keys]
+	F --> H
+	G --> I[smart_env_config object]
+	H --> I
+```
+
+**Key rules**
+
+- Folder and file names are converted to `snake_case` keys inside the config so hyphenated or camelCase folders map predictably.
+- Named exports must match the filename for actions; optional metadata exports (`display_name`, `display_description`, `settings_config`, `pre_process`) are injected automatically.
+- Modules live alongside collections/items and can expose helpers such as `init` or `bootstrap` without extra configuration.
+- Tests in `build_smart_env_config.test.js` enforce these conventions—extend the fixtures first when adding new surface areas.
+
 The `smart_env.config.js` file defines the core configuration for your Smart Environment instance. This file should export a configuration object that defines:
 
 ### Understanding `smart_env.config.js`
