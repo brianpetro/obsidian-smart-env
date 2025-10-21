@@ -44,6 +44,14 @@ export const settings_config = { theme: 'dark' };`
 
   /* components – one level */
   write_file('src/components/smart-sources/settings.js', 'export function render(){}');
+  write_file(
+    'src/components/ConnectionsListItem/V2Settings.js',
+    'export function render(){}'
+  );
+  write_file(
+    'src/components/connections-list-item/v3.js',
+    'export function render(){}'
+  );
 
   /* actions */
   write_file('src/actions/publish.js', `export function publish(){ return 'action'; }
@@ -53,6 +61,11 @@ export const settings_config = { foo: 'bar' };
 `);
   write_file('src/actions/log.js', 'export function log(){}');
   write_file('src/actions/smart-sources/sync.js', 'export function sync(){}');
+  write_file('src/actions/RankConnections.js', 'export function RankConnections(){}');
+  write_file(
+    'src/actions/connections-list/PreProcess.js',
+    'export function PreProcess(){}'
+  );
 
   /* modules */
   write_file(
@@ -111,6 +124,14 @@ test('nested component folder is snake_cased', t => {
   const file = read_generated_config();
   // smart-sources -> smart_sources
   t.regex(file, /smart_sources:[\s\S]*settings:/);
+});
+
+test('component file names are converted to snake_case keys', async t => {
+  const mod_path = path.join(tmp_root, 'smart_env.config.js');
+  const cfg = await import(pathToFileURL(mod_path).href);
+  const { components } = cfg.smart_env_config;
+  t.truthy(components.connections_list_item.v2_settings);
+  t.truthy(components.connections_list_item.v3);
 });
 
 test('generated module is importable', async t => {
@@ -174,6 +195,14 @@ test('actions nested folders are snake_cased in config', async t => {
   const cfg = await import(pathToFileURL(mod_path).href);
   const { actions } = cfg.smart_env_config;
   t.is(typeof actions.smart_sources.sync.action, 'function');
+});
+
+test('action filenames are sanitized to snake_case keys', async t => {
+  const mod_path = path.join(tmp_root, 'smart_env.config.js');
+  const cfg = await import(pathToFileURL(mod_path).href);
+  const { actions } = cfg.smart_env_config;
+  t.is(typeof actions.rank_connections.action, 'function');
+  t.is(typeof actions.connections_list.pre_process.action, 'function');
 });
 
 test('modules are collected and exposed on config', async t => {

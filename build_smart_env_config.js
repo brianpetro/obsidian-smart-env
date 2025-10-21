@@ -230,8 +230,9 @@ ${actions_config}
           const has_settings_config = has_named_export(content, 'settings_config');
 
           const comp_name = entry.replace('.js', '');
+          const comp_key = to_snake_case(comp_name);
           const folder_snake = rel_parts.map(to_snake_case);
-          const render_import_var = [...folder_snake, comp_name, 'component'].join('_');
+          const render_import_var = [...folder_snake, comp_key, 'component'].join('_');
           const settings_import_var = has_settings_config ? `${render_import_var}_settings_config` : null;
           const import_path = normalize_relative_path(abs);
 
@@ -248,9 +249,9 @@ ${actions_config}
             if (!node[part]) node[part] = {};
             node = node[part];
           }
-          node[comp_name] = { render_import_var };
+          node[comp_key] = { render_import_var };
           if (settings_import_var) {
-            node[comp_name].settings_import_var = settings_import_var;
+            node[comp_key].settings_import_var = settings_import_var;
           }
         });
       ;
@@ -288,6 +289,7 @@ ${actions_config}
         if (!validate_file_type(entry)) return;
 
         const action_name = entry.replace('.js', '');
+        const action_key = to_snake_case(action_name);
         const content = fs.readFileSync(abs, 'utf-8');
 
         // Require a named export matching the file name
@@ -301,7 +303,7 @@ ${actions_config}
         const has_pre_process = has_named_export(content, 'pre_process');
 
         const folder_snake = rel_parts.map(to_snake_case);
-        const import_var = [...folder_snake, action_name, 'action'].join('_');
+        const import_var = [...folder_snake, action_key, 'action'].join('_');
         const import_path = normalize_relative_path(abs);
         const export_name = action_name;
         const settings_import_var = has_settings_config ? `${import_var}_settings_config` : null;
@@ -333,18 +335,18 @@ ${actions_config}
           if (!node[part]) node[part] = {};
           node = node[part];
         }
-        node[action_name] = { action_import_var: import_var };
+        node[action_key] = { action_import_var: import_var };
         if (has_settings_config) {
-          node[action_name].settings_import_var = settings_import_var;
+          node[action_key].settings_import_var = settings_import_var;
         }
         if (has_display_name) {
-          node[action_name].display_name_import_var = display_name_import_var;
+          node[action_key].display_name_import_var = display_name_import_var;
         }
         if (has_display_description) {
-          node[action_name].display_description_import_var = display_description_import_var;
+          node[action_key].display_description_import_var = display_description_import_var;
         }
         if (has_pre_process) {
-          node[action_name].pre_process_import_var = pre_process_import_var;
+          node[action_key].pre_process_import_var = pre_process_import_var;
         }
       });
     }
