@@ -30,10 +30,13 @@ function read_generated_config() {
 test.before(() => {
   /* collections */
   write_file('src/collections/notes.js', 'export default class Notes {}');
+  write_file('src/collections/alpha.js', 'export default class Alpha {}');
+  write_file('src/collections/ZetaConnections.js', 'export default class ZetaConnections {}');
 
   /* items */
   write_file('src/items/awesome_block.js', 'export function AwesomeBlock(){}');
   write_file('src/items/awesome_block.test.js', 'export function AwesomeBlock(){}');
+  write_file('src/items/betaBlock.js', 'export function BetaBlock(){}');
 
   /* components – root level */
   write_file(
@@ -64,7 +67,8 @@ export const settings_config = { foo: 'bar' };
   write_file('src/actions/RankConnections.js', 'export function RankConnections(){}');
   write_file(
     'src/actions/connections-list/PreProcess.js',
-    'export function PreProcess(){}'
+    `export function PreProcess(){}
+export const pre_process = () => 'prep';`
   );
 
   /* modules */
@@ -80,6 +84,13 @@ export const settings_config = { foo: 'bar' };
     `export default {
   key: 'config_guide',
   bootstrap(){ return 'config'; }
+};`
+  );
+  write_file(
+    'src/modules/zeta-monitor.js',
+    `export default {
+  key: 'zeta_monitor',
+  init(){ return 'monitor'; }
 };`
   );
 
@@ -215,6 +226,58 @@ test('modules are collected and exposed on config', async t => {
   t.truthy(modules.config_guide);
   t.is(modules.config_guide.key, 'config_guide');
   t.is(typeof modules.config_guide.bootstrap, 'function');
+  t.truthy(modules.zeta_monitor);
+  t.is(typeof modules.zeta_monitor.init, 'function');
+});
+
+test('collections keys are sorted lexicographically', async t => {
+  const mod_path = path.join(tmp_root, 'smart_env.config.js');
+  const cfg = await import(pathToFileURL(mod_path).href);
+  const keys = Object.keys(cfg.smart_env_config.collections);
+  t.deepEqual(keys, [...keys].sort());
+});
+
+test('items config keys are sorted lexicographically', async t => {
+  const mod_path = path.join(tmp_root, 'smart_env.config.js');
+  const cfg = await import(pathToFileURL(mod_path).href);
+  const keys = Object.keys(cfg.smart_env_config.items);
+  t.deepEqual(keys, [...keys].sort());
+});
+
+test('modules config keys are sorted lexicographically', async t => {
+  const mod_path = path.join(tmp_root, 'smart_env.config.js');
+  const cfg = await import(pathToFileURL(mod_path).href);
+  const keys = Object.keys(cfg.smart_env_config.modules);
+  t.deepEqual(keys, [...keys].sort());
+});
+
+test('components keys are sorted lexicographically', async t => {
+  const mod_path = path.join(tmp_root, 'smart_env.config.js');
+  const cfg = await import(pathToFileURL(mod_path).href);
+  const keys = Object.keys(cfg.smart_env_config.components);
+  t.deepEqual(keys, [...keys].sort());
+});
+
+test('actions config keys are sorted lexicographically', async t => {
+  const mod_path = path.join(tmp_root, 'smart_env.config.js');
+  const cfg = await import(pathToFileURL(mod_path).href);
+  const keys = Object.keys(cfg.smart_env_config.actions);
+  t.deepEqual(keys, [...keys].sort());
+});
+
+test('nested action keys are sorted lexicographically', async t => {
+  const mod_path = path.join(tmp_root, 'smart_env.config.js');
+  const cfg = await import(pathToFileURL(mod_path).href);
+  const nested_keys = Object.keys(cfg.smart_env_config.actions.connections_list);
+  t.deepEqual(nested_keys, [...nested_keys].sort());
+});
+
+test('actions include pre_process export when provided', async t => {
+  const mod_path = path.join(tmp_root, 'smart_env.config.js');
+  const cfg = await import(pathToFileURL(mod_path).href);
+  const { pre_process } = cfg.smart_env_config.actions.connections_list.pre_process;
+  t.is(typeof pre_process, 'function');
+  t.is(pre_process(), 'prep');
 });
 
 

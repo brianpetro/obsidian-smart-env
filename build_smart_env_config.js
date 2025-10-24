@@ -12,6 +12,8 @@ import fs from 'fs';
 import path from 'path';
 import { to_pascal_case } from 'smart-utils/to_pascal_case.js';
 
+const compare_strings = (a, b) => a.localeCompare(b);
+
 export function build_smart_env_config(dist_dir, roots) {
   if (!fs.existsSync(dist_dir)) {
     fs.mkdirSync(dist_dir, { recursive: true });
@@ -46,19 +48,25 @@ export function build_smart_env_config(dist_dir, roots) {
     deep_merge(all_actions_nested, a_nested);
   }
 
-  const all_components_flat = Array.from(all_components_flat_map.values());
-  const all_actions_flat = Array.from(all_actions_flat_map.values());
+  const all_components_flat = Array.from(all_components_flat_map.values())
+    .sort((a, b) => compare_strings(a.render_import_var, b.render_import_var));
+  const all_actions_flat = Array.from(all_actions_flat_map.values())
+    .sort((a, b) => compare_strings(a.action_import_var, b.action_import_var));
 
   /* ----------  IMPORT STRINGS ---------- */
   const collection_imports = Object.entries(all_collections)
+    .sort(([a], [b]) => compare_strings(a, b))
     .map(([name, p]) => `import ${name} from '${p}';`)
     .join('\n');
 
-  const item_imports = Object.values(all_items)
-    .map(({ import_var, import_path }) => `import { ${import_var} } from '${import_path}';`)
+  const sorted_items = Object.entries(all_items).sort(([a], [b]) => compare_strings(a, b));
+
+  const item_imports = sorted_items
+    .map(([, { import_var, import_path }]) => `import { ${import_var} } from '${import_path}';`)
     .join('\n');
 
   const module_imports = Object.entries(all_modules)
+    .sort(([a], [b]) => compare_strings(a, b))
     .map(([name, p]) => `import ${name} from '${p}';`)
     .join('\n');
 
@@ -107,11 +115,11 @@ export function build_smart_env_config(dist_dir, roots) {
   /* ----------  CONFIG OBJECT STRINGS ---------- */
   const collections_config = obj_keys_to_lines(all_collections, 4).join(',\n');
 
-  const item_types_config = Object.values(all_items)
-    .map(({ import_var }) => `    ${import_var}`)
+  const item_types_config = sorted_items
+    .map(([, { import_var }]) => `    ${import_var}`)
     .join(',\n');
 
-  const items_config = Object.entries(all_items)
+  const items_config = sorted_items
     .map(([key, { import_var }]) => `    ${key}: { class: ${import_var} }`)
     .join(',\n');
 
@@ -162,11 +170,15 @@ ${actions_config}
     return rel;
   }
 
+  function read_dir_sorted(dir_path) {
+    return fs.readdirSync(dir_path).sort(compare_strings);
+  }
+
   function scan_collections(base_dir) {
     const dir = path.join(base_dir, 'collections');
     if (!fs.existsSync(dir)) return {};
     return Object.fromEntries(
-      fs.readdirSync(dir)
+      read_dir_sorted(dir)
         .filter(f => validate_file_type(f))
         .map(f => [to_snake_case(f.replace('.js', '')), normalize_relative_path(path.join(dir, f))])
     );
@@ -176,7 +188,7 @@ ${actions_config}
     const dir = path.join(base_dir, 'items');
     if (!fs.existsSync(dir)) return {};
     const items = {};
-    fs.readdirSync(dir)
+    read_dir_sorted(dir)
       .filter(f => validate_file_type(f))
       .forEach(f => {
         const key = to_snake_case(f.replace('.js', ''));
@@ -190,7 +202,7 @@ ${actions_config}
     const dir = path.join(base_dir, 'modules');
     if (!fs.existsSync(dir)) return {};
     return Object.fromEntries(
-      fs.readdirSync(dir)
+      read_dir_sorted(dir)
         .filter(f => validate_file_type(f))
         .map(f => [to_snake_case(f.replace('.js', '')), normalize_relative_path(path.join(dir, f))])
     );
@@ -214,7 +226,7 @@ ${actions_config}
 
     /* ----- local ----- */
     function walk(curr_dir, rel_parts) {
-      fs.readdirSync(curr_dir)
+      read_dir_sorted(curr_dir)
         .forEach(entry => {
           const abs = path.join(curr_dir, entry);
           const is_dir = fs.statSync(abs).isDirectory();
@@ -279,7 +291,7 @@ ${actions_config}
     return { entries, nested };
 
     function walk(curr_dir, rel_parts) {
-      fs.readdirSync(curr_dir).forEach(entry => {
+      read_dir_sorted(curr_dir).forEach(entry => {
         const abs = path.join(curr_dir, entry);
         const is_dir = fs.statSync(abs).isDirectory();
         if (is_dir) {
@@ -361,7 +373,9 @@ ${actions_config}
   }
   function obj_keys_to_lines(obj, indent = 2) {
     const spacer = ' '.repeat(indent);
-    return Object.keys(obj).map(k => `${spacer}${k}`);
+    return Object.keys(obj)
+      .sort(compare_strings)
+      .map(k => `${spacer}${k}`);
   }
   function deep_merge(target, src) {
     Object.entries(src).forEach(([k, v]) => {
@@ -376,34 +390,38 @@ ${actions_config}
   function components_to_string(node, indent = 2) {
     const spacer = ' '.repeat(indent);
     const parts = [];
-    Object.entries(node).forEach(([k, v]) => {
-      if (v.render_import_var) {
-        const inner = [`render: ${v.render_import_var}`];
-        if (v.settings_import_var) inner.push(`settings_config: ${v.settings_import_var}`);
-        parts.push(`${spacer}${k}: { ${inner.join(', ')} }`);
-      } else {
-        const inner = components_to_string(v, indent + 2);
-        parts.push(`${spacer}${k}: {\n${inner}\n${spacer}}`);
-      }
-    });
+    Object.entries(node)
+      .sort(([a], [b]) => compare_strings(a, b))
+      .forEach(([k, v]) => {
+        if (v.render_import_var) {
+          const inner = [`render: ${v.render_import_var}`];
+          if (v.settings_import_var) inner.push(`settings_config: ${v.settings_import_var}`);
+          parts.push(`${spacer}${k}: { ${inner.join(', ')} }`);
+        } else {
+          const inner = components_to_string(v, indent + 2);
+          parts.push(`${spacer}${k}: {\n${inner}\n${spacer}}`);
+        }
+      });
     return parts.join(',\n');
   }
   function actions_to_string(node, indent = 2) {
     const spacer = ' '.repeat(indent);
     const parts = [];
-    Object.entries(node).forEach(([k, v]) => {
-      if (v.action_import_var) {
-        const inner = [`action: ${v.action_import_var}`];
-        if (v.display_name_import_var) inner.push(`display_name: ${v.display_name_import_var}`);
-        if (v.display_description_import_var) inner.push(`display_description: ${v.display_description_import_var}`);
-        if (v.settings_import_var) inner.push(`settings_config: ${v.settings_import_var}`);
-        if (v.pre_process_import_var) inner.push(`pre_process: ${v.pre_process_import_var}`);
-        parts.push(`${spacer}${k}: { ${inner.join(', ')} }`);
-      } else {
-        const inner = actions_to_string(v, indent + 2);
-        parts.push(`${spacer}${k}: {\n${inner}\n${spacer}}`);
-      }
-    });
+    Object.entries(node)
+      .sort(([a], [b]) => compare_strings(a, b))
+      .forEach(([k, v]) => {
+        if (v.action_import_var) {
+          const inner = [`action: ${v.action_import_var}`];
+          if (v.display_name_import_var) inner.push(`display_name: ${v.display_name_import_var}`);
+          if (v.display_description_import_var) inner.push(`display_description: ${v.display_description_import_var}`);
+          if (v.settings_import_var) inner.push(`settings_config: ${v.settings_import_var}`);
+          if (v.pre_process_import_var) inner.push(`pre_process: ${v.pre_process_import_var}`);
+          parts.push(`${spacer}${k}: { ${inner.join(', ')} }`);
+        } else {
+          const inner = actions_to_string(v, indent + 2);
+          parts.push(`${spacer}${k}: {\n${inner}\n${spacer}}`);
+        }
+      });
     return parts.join(',\n');
   }
 }
