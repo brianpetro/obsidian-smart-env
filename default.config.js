@@ -46,6 +46,9 @@ import smart_block from "smart-blocks/smart_block.js";
 import smart_source from "smart-sources/smart_source.js";
 import { parse_blocks } from "smart-blocks/content_parsers/parse_blocks.js";
 import { merge_env_config } from 'smart-environment/utils/merge_env_config.js';
+// smart components
+import smart_components from 'smart-components';
+
 const smart_env_config = {
   env_path: '',
   modules: {
@@ -95,6 +98,7 @@ const smart_env_config = {
     },
   },
   collections: {
+    smart_components,
     smart_sources: {
       collection_key: 'smart_sources',
       class: SmartSources,
