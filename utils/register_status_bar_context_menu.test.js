@@ -1,5 +1,38 @@
+import fs from 'fs/promises';
+import os from 'os';
+import path from 'path';
+import { pathToFileURL } from 'url';
 import test from 'ava';
-import { register_status_bar_context_menu } from './register_status_bar_context_menu.js';
+
+let register_status_bar_context_menu;
+
+async function load_helper() {
+  const tmp_dir = await fs.mkdtemp(path.join(os.tmpdir(), 'status-bar-menu-'));
+  const src_url = new URL('./register_status_bar_context_menu.js', import.meta.url);
+  const original_src = await fs.readFile(src_url, 'utf8');
+  const patched_src = original_src
+    .replace('import { Menu, Notice } from "obsidian";', 'import { Menu, Notice } from "./obsidian_stub.js";')
+    .replace('../views/source_inspector.js', './source_inspector_stub.js')
+    .replace('../modals/env_stats.js', './env_stats_stub.js');
+  await fs.writeFile(path.join(tmp_dir, 'register_status_bar_context_menu.js'), patched_src, 'utf8');
+  const obsidian_stub = `export class Menu { constructor() {} addItem() {} addSeparator() {} showAtPosition() {} }
+export class Notice { constructor(message) { this.message = message; } }
+`;
+  await fs.writeFile(path.join(tmp_dir, 'obsidian_stub.js'), obsidian_stub, 'utf8');
+  const inspector_stub = `export class SmartNoteInspectModal { constructor() {} open() {} }
+`;
+  await fs.writeFile(path.join(tmp_dir, 'source_inspector_stub.js'), inspector_stub, 'utf8');
+  const stats_stub = `export class EnvStatsModal { constructor() {} open() {} }
+`;
+  await fs.writeFile(path.join(tmp_dir, 'env_stats_stub.js'), stats_stub, 'utf8');
+  const mod_url = pathToFileURL(path.join(tmp_dir, 'register_status_bar_context_menu.js')).href;
+  const mod = await import(mod_url);
+  return mod.register_status_bar_context_menu;
+}
+
+test.before(async () => {
+  register_status_bar_context_menu = await load_helper();
+});
 
 class StubItem {
   constructor() {

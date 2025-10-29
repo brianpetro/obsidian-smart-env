@@ -49,6 +49,7 @@ import { merge_env_config } from 'smart-environment/utils/merge_env_config.js';
 // smart components
 import smart_components from 'smart-components';
 import smart_contexts from 'smart-contexts';
+import { render as status_bar_component } from './components/status_bar.js';
 
 const smart_env_config = {
   env_path: '',
@@ -142,6 +143,7 @@ const smart_env_config = {
     smart_block,
   },
   components: {
+    status_bar: status_bar_component,
     smart_blocks: {
       settings: source_settings_component,
     },
