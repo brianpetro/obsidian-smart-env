@@ -48,6 +48,7 @@ import { parse_blocks } from "smart-blocks/content_parsers/parse_blocks.js";
 import { merge_env_config } from 'smart-environment/utils/merge_env_config.js';
 // smart components
 import smart_components from 'smart-components';
+import smart_contexts from 'smart-contexts';
 
 const smart_env_config = {
   env_path: '',
@@ -98,7 +99,9 @@ const smart_env_config = {
     },
   },
   collections: {
+    smart_completions,
     smart_components,
+    smart_contexts,
     smart_sources: {
       collection_key: 'smart_sources',
       class: SmartSources,
@@ -128,7 +131,6 @@ const smart_env_config = {
         // "canvas": MarkdownBlockContentAdapter,
       },
     },
-    smart_completions
   },
   item_types: {
     SmartSource,
