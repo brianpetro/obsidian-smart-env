@@ -131,18 +131,19 @@ test('root-level component appears in config', t => {
   t.regex(file, /components:[\s\S]*env_settings:/);
 });
 
-test('nested component folder is snake_cased', t => {
-  const file = read_generated_config();
-  // smart-sources -> smart_sources
-  t.regex(file, /smart_sources:[\s\S]*settings:/);
+test('nested component folder is flattened with snake_cased segments', async t => {
+  const mod_path = path.join(tmp_root, 'smart_env.config.js');
+  const cfg = await import(pathToFileURL(mod_path).href);
+  const { components } = cfg.smart_env_config;
+  t.truthy(components.smart_sources_settings);
 });
 
 test('component file names are converted to snake_case keys', async t => {
   const mod_path = path.join(tmp_root, 'smart_env.config.js');
   const cfg = await import(pathToFileURL(mod_path).href);
   const { components } = cfg.smart_env_config;
-  t.truthy(components.connections_list_item.v2_settings);
-  t.truthy(components.connections_list_item.v3);
+  t.truthy(components.connections_list_item_v2_settings);
+  t.truthy(components.connections_list_item_v3);
 });
 
 test('generated module is importable', async t => {
@@ -160,7 +161,7 @@ test('components config exposes render function on render property', async t => 
   const cfg = await import(pathToFileURL(mod_path).href);
   const { components } = cfg.smart_env_config;
   t.is(typeof components.env_settings.render, 'function');
-  t.is(typeof components.smart_sources.settings.render, 'function');
+  t.is(typeof components.smart_sources_settings.render, 'function');
 });
 
 test('components config includes settings_config when exported', async t => {
@@ -170,7 +171,7 @@ test('components config includes settings_config when exported', async t => {
   t.deepEqual(components.env_settings.settings_config, { theme: 'dark' });
   t.false(
     Object.prototype.hasOwnProperty.call(
-      components.smart_sources.settings,
+      components.smart_sources_settings,
       'settings_config'
     )
   );

@@ -24,7 +24,7 @@ export function build_smart_env_config(dist_dir, roots) {
   const all_modules = {};
   // Use a Map to ensure only the latest render import var is kept
   const all_components_flat_map = new Map();
-  const all_components_nested = {};
+  const all_components_config = {};
   // actions
   const all_actions_flat_map = new Map();
   const all_actions_nested = {};
@@ -33,12 +33,14 @@ export function build_smart_env_config(dist_dir, roots) {
     Object.assign(all_collections, scan_collections(root));
     Object.assign(all_items, scan_items(root));
     Object.assign(all_modules, scan_modules(root));
-    const { flat, nested } = scan_components(root);
+    const { flat, config } = scan_components(root);
     // For each component, overwrite previous entry with same render import var
     flat.forEach(component_entry => {
       all_components_flat_map.set(component_entry.render_import_var, component_entry);
     });
-    deep_merge(all_components_nested, nested);
+    Object.entries(config).forEach(([key, value]) => {
+      all_components_config[key] = value;
+    });
 
     // actions
     const { entries: action_entries, nested: a_nested } = scan_actions(root);
@@ -124,7 +126,7 @@ export function build_smart_env_config(dist_dir, roots) {
     .join(',\n');
 
   const modules_config = obj_keys_to_lines(all_modules, 4).join(',\n');
-  const components_config = components_to_string(all_components_nested, 4);
+  const components_config = components_to_string(all_components_config, 4);
   // actions
   const actions_config = actions_to_string(all_actions_nested, 4);
 
@@ -215,14 +217,14 @@ ${actions_config}
    */
   function scan_components(base_dir) {
     const dir = path.join(base_dir, 'components');
-    if (!fs.existsSync(dir)) return { flat: [], nested: {} };
+    if (!fs.existsSync(dir)) return { flat: [], config: {} };
 
     const flat = [];
-    const nested = {};
+    const config = {};
 
     walk(dir, []);
 
-    return { flat, nested };
+    return { flat, config };
 
     /* ----- local ----- */
     function walk(curr_dir, rel_parts) {
@@ -247,6 +249,8 @@ ${actions_config}
           const render_import_var = [...folder_snake, comp_key, 'component'].join('_');
           const settings_import_var = has_settings_config ? `${render_import_var}_settings_config` : null;
           const import_path = normalize_relative_path(abs);
+          const flattened_key = [...folder_snake, comp_key].filter(Boolean).join('_');
+          const config_key = flattened_key || comp_key;
 
           // Remove previous entry with same render import var (keep newer)
           const prevIdx = flat.findIndex(e => e.render_import_var === render_import_var);
@@ -255,15 +259,10 @@ ${actions_config}
           /* flat list */
           flat.push({ render_import_var, settings_import_var, import_path });
 
-          /* nested object */
-          let node = nested;
-          for (const part of folder_snake) {
-            if (!node[part]) node[part] = {};
-            node = node[part];
-          }
-          node[comp_key] = { render_import_var };
+          /* flattened config */
+          config[config_key] = { render_import_var };
           if (settings_import_var) {
-            node[comp_key].settings_import_var = settings_import_var;
+            config[config_key].settings_import_var = settings_import_var;
           }
         });
       ;
@@ -389,20 +388,14 @@ ${actions_config}
   }
   function components_to_string(node, indent = 2) {
     const spacer = ' '.repeat(indent);
-    const parts = [];
-    Object.entries(node)
+    return Object.entries(node)
       .sort(([a], [b]) => compare_strings(a, b))
-      .forEach(([k, v]) => {
-        if (v.render_import_var) {
-          const inner = [`render: ${v.render_import_var}`];
-          if (v.settings_import_var) inner.push(`settings_config: ${v.settings_import_var}`);
-          parts.push(`${spacer}${k}: { ${inner.join(', ')} }`);
-        } else {
-          const inner = components_to_string(v, indent + 2);
-          parts.push(`${spacer}${k}: {\n${inner}\n${spacer}}`);
-        }
-      });
-    return parts.join(',\n');
+      .map(([k, v]) => {
+        const inner = [`render: ${v.render_import_var}`];
+        if (v.settings_import_var) inner.push(`settings_config: ${v.settings_import_var}`);
+        return `${spacer}${k}: { ${inner.join(', ')} }`;
+      })
+      .join(',\n');
   }
   function actions_to_string(node, indent = 2) {
     const spacer = ' '.repeat(indent);
