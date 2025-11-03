@@ -6,7 +6,7 @@ import os from 'os';
 import path from 'path';
 import { pathToFileURL } from 'url';
 import test from 'ava';
-import { build_smart_env_config } from './build_smart_env_config.js';
+import { build_smart_env_config } from './build_env_config.js';
 
 /** -------------------------------------------------------------------
  * helpers – snake_case, two-space indent, no extra deps
@@ -214,7 +214,7 @@ test('action filenames are sanitized to snake_case keys', async t => {
   const cfg = await import(pathToFileURL(mod_path).href);
   const { actions } = cfg.smart_env_config;
   t.is(typeof actions.rank_connections.action, 'function');
-  t.is(typeof actions.connections_list.pre_process.action, 'function');
+  t.is(typeof actions.connections_list_pre_process.action, 'function');
 });
 
 test('modules are collected and exposed on config', async t => {
@@ -276,7 +276,7 @@ test('nested action keys are sorted lexicographically', async t => {
 test('actions include pre_process export when provided', async t => {
   const mod_path = path.join(tmp_root, 'smart_env.config.js');
   const cfg = await import(pathToFileURL(mod_path).href);
-  const { pre_process } = cfg.smart_env_config.actions.connections_list.pre_process;
+  const { pre_process } = cfg.smart_env_config.actions.connections_list_pre_process;
   t.is(typeof pre_process, 'function');
   t.is(pre_process(), 'prep');
 });
