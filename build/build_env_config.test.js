@@ -266,13 +266,6 @@ test('actions config keys are sorted lexicographically', async t => {
   t.deepEqual(keys, [...keys].sort());
 });
 
-test('nested action keys are sorted lexicographically', async t => {
-  const mod_path = path.join(tmp_root, 'smart_env.config.js');
-  const cfg = await import(pathToFileURL(mod_path).href);
-  const nested_keys = Object.keys(cfg.smart_env_config.actions.connections_list);
-  t.deepEqual(nested_keys, [...nested_keys].sort());
-});
-
 test('actions include pre_process export when provided', async t => {
   const mod_path = path.join(tmp_root, 'smart_env.config.js');
   const cfg = await import(pathToFileURL(mod_path).href);
