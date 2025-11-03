@@ -200,7 +200,7 @@ The Smart Environment relies on a configuration object, `main_env_opts`, during 
 
 ### Config builder conventions
 
-The `build_smart_env_config.js` script embraces a "convention over configuration" approach so plugin authors only need to drop files inside `.smart-env/src/**`. The builder scans well-known folders and generates a deterministic config object:
+The `obsidian-smart-env/build/build_env_config.js` script embraces a "convention over configuration" approach so plugin authors only need to drop files inside `.smart-env/src/**`. The builder scans well-known folders and generates a deterministic config object:
 
 | Folder segment | Config path | Expected exports |
 | --- | --- | --- |
