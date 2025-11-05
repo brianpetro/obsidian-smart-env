@@ -42,19 +42,82 @@ export class SmartItemView extends ItemView {
   }
 
   /**
+   * Registers this ItemView subclass against a plugin instance and
+   * installs ergonomic accessors, an open helper, and an `${view_type}:open` listener.
+   *
+   * Usage from a plugin class:
+   *   SubClass.register_item_view(this);
+   *
+   * This will:
+   * - call plugin.registerView(view_type, ...)
+   * - add a command "Open: <display_text> view"
+   * - define a getter on plugin: plugin[method_name] -> the view instance
+   * - define a method on plugin: plugin["open_" + method_name]() -> opens the view
+   * - listen for env events named `${view_type}:open` and open the view when emitted
+   *
+   * @param {import('obsidian').Plugin} plugin
+   * @returns {{method_name:string, open_method_name:string, event_name:string}}
+   */
+  static register_item_view(plugin) {
+    const View = /** @type {typeof SmartItemView} */ (this);
+
+    // Register the view with Obsidian
+    plugin.registerView(View.view_type, (leaf) => new View(leaf, plugin));
+
+    // Add a matching command for opening this view
+    plugin.addCommand({
+      id: View.view_type,
+      name: "Open: " + View.display_text + " view",
+      callback: () => {
+        View.open(plugin.app.workspace);
+      }
+    });
+
+    // Derive ergonomic API on the plugin instance
+    const method_name = View.view_type.replace(/^smart-/, "").replace(/-/g, "_");
+    const open_method_name = "open_" + method_name;
+
+    if (!Object.getOwnPropertyDescriptor(plugin, method_name)) {
+      Object.defineProperty(plugin, method_name, {
+        configurable: true,
+        enumerable: false,
+        get: () => View.get_view(plugin.app.workspace)
+      });
+    }
+
+    // Always (re)bind the open method to the latest View.open behavior
+    plugin[open_method_name] = () => View.open(plugin.app.workspace);
+
+    // Register `${view_type}:open` event listener on SmartEnv events, if available
+    const event_name = `${View.view_type}:open`;
+    const handler = (payload) => {
+      const active = typeof payload?.active === "boolean" ? payload.active : true;
+      View.open(plugin.app.workspace, active);
+    };
+    const unsubscribe = plugin?.env?.events.on(event_name, handler);
+
+    // Ensure cleanup on plugin unload
+    if (typeof plugin.register === "function" && typeof unsubscribe === "function") {
+      plugin.register(() => unsubscribe());
+    }
+
+    return { method_name, open_method_name, event_name };
+  }
+
+  /**
    * Retrieves the Leaf instance for this view type if it exists.
    * @param {import("obsidian").Workspace} workspace
    * @returns {import("obsidian").WorkspaceLeaf | undefined}
    */
   static get_leaf(workspace) {
     return workspace
-      .getLeavesOfType(this.view_type)[0]
+      .getLeavesOfType(this.view_type)[0];
   }
 
   /**
    * Retrieves the view instance if it exists.
    * @param {import("obsidian").Workspace} workspace
-   * @returns {SmartObsidianView | undefined}
+   * @returns {SmartItemView | undefined}
    */
   static get_view(workspace) {
     const leaf = this.get_leaf(workspace);
@@ -62,12 +125,11 @@ export class SmartItemView extends ItemView {
   }
 
   /**
-   * Opens the view. If `this.default_open_location` is `'root'`,
-   * it will open (or reveal) in a "root" leaf; otherwise, it will
-   * open (or reveal) in the right leaf.
+   * Opens the view. If `this.default_open_location` is "root",
+   * it opens (or reveals) in a root leaf; otherwise in the right leaf.
    *
    * @param {import("obsidian").Workspace} workspace
-   * @param {boolean} [active=true] - Whether the view should be focused when opened.
+   * @param {boolean} [active=true]
    */
   static open(workspace, active = true) {
     const existing_leaf = this.get_leaf(workspace);
