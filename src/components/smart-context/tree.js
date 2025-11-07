@@ -1,10 +1,8 @@
 import { build_tree_html } from '../../utils/smart-context/build_tree_html.js';
 
 export function build_html(ctx, opts = {}) {
-  const items = ctx.get_context_items();
-  const list_html = build_tree_html(items);
   return `<div>
-    <div class="sc-context-tree">${list_html || '<em>No items selected…</em>'}</div>
+    <div class="sc-context-tree"></div>
   </div>`;
 }
 
@@ -12,7 +10,7 @@ export async function render(ctx, opts = {}) {
   const html = build_html(ctx, opts);
   const frag = this.create_doc_fragment(html);
   const container = frag.querySelector('.sc-context-tree');
-  await post_process.call(this, ctx, container, opts);
+  post_process.call(this, ctx, container, opts);
   return container;
 }
 
@@ -26,7 +24,9 @@ export async function post_process(ctx, container, opts = {}) {
   const render_tree = () => {
     const items = ctx.get_context_items();
     const list_html = build_tree_html(items);
-    this.safe_inner_html(container, list_html || '<em>No items selected…</em>');
+    const frag = this.create_doc_fragment(list_html);
+    this.empty(container);
+    container.appendChild(frag);
 
     // Remove item -> SmartContext.remove_item (should emit context:updated)
     container.querySelectorAll('.sc-tree-remove').forEach(btn => {

@@ -19,7 +19,7 @@ export class SmartFuzzySuggestModal extends FuzzySuggestModal {
     const app = plugin.app;
     super(app);
     this.app = app;
-    this.env = env;
+    env.create_env_getter(this);
     this.plugin = plugin;
     this.item_or_collection = item_or_collection;
   }
@@ -59,7 +59,7 @@ export class SmartFuzzySuggestModal extends FuzzySuggestModal {
 
     const open_handler = (payload = {}) => {
       const item = Modal.resolve_item_from_payload(env, payload);
-      const modal = Modal.open(env, item, payload);
+      const modal = Modal.open(item, payload);
       return modal;
     };
     // const suggest_handler = async (payload = {}) => {
@@ -91,6 +91,10 @@ export class SmartFuzzySuggestModal extends FuzzySuggestModal {
   }
 
   static resolve_item_from_payload(env, payload) {
-    return env?.[payload.collection_key]?.items?.[payload.item_key];
+    const item = env?.[payload.collection_key]?.items?.[payload.item_key];
+    return item;
+  }
+  onClose() {
+    this.smart_context.emit_event(`${this.constructor.event_domain}:closed`);
   }
 }

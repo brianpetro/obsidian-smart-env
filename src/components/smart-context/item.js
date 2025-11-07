@@ -1,8 +1,3 @@
-/**
- * Compact Smart Context view (header widget)
- * Renders: actions (left), tree (middle), meta (right/bottom)
- */
-
 export function build_html(ctx, opts = {}) {
   return `<div>
     <div class="sc-context-view" data-context-key="${ctx.data.key}">
@@ -26,7 +21,7 @@ export async function render(ctx, opts = {}) {
   const html = build_html(ctx, opts);
   const frag = this.create_doc_fragment(html);
   const container = frag.querySelector('.sc-context-view');
-  await post_process.call(this, ctx, container, opts);
+  post_process.call(this, ctx, container, opts);
   return container;
 }
 

@@ -7,6 +7,10 @@ import { render as env_settings_component } from './src/components/env_settings.
 import { render as env_stats_component } from './src/components/env_stats.js';
 import { render as lean_coffee_callout_component } from './src/components/lean_coffee_callout.js';
 import { render as muted_notices_component } from './src/components/muted_notices.js';
+import { render as smart_context_actions_component } from './src/components/smart-context/actions.js';
+import { render as smart_context_item_component } from './src/components/smart-context/item.js';
+import { render as smart_context_meta_component } from './src/components/smart-context/meta.js';
+import { render as smart_context_tree_component } from './src/components/smart-context/tree.js';
 import { render as source_inspector_component } from './src/components/source_inspector.js';
 import { render as supporter_callout_component } from './src/components/supporter_callout.js';
 import { render as user_agreement_callout_component } from './src/components/user_agreement_callout.js';
@@ -32,6 +36,10 @@ export const smart_env_config = {
     env_stats: { render: env_stats_component },
     lean_coffee_callout: { render: lean_coffee_callout_component },
     muted_notices: { render: muted_notices_component },
+    smart_context_actions: { render: smart_context_actions_component },
+    smart_context_item: { render: smart_context_item_component },
+    smart_context_meta: { render: smart_context_meta_component },
+    smart_context_tree: { render: smart_context_tree_component },
     source_inspector: { render: source_inspector_component },
     supporter_callout: { render: supporter_callout_component },
     user_agreement_callout: { render: user_agreement_callout_component }

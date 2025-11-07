@@ -61,18 +61,15 @@ export class ContextModal extends SmartFuzzySuggestModal {
       ? this.suggestions
       : this.smart_context.actions.context_suggest_sources(this.params)
     ;
-    console.log('ContextModal suggestions', suggestions.length, suggestions);
     const filtered_suggestions = suggestions.filter(
       (s) => (s.key && !this.smart_context?.data?.context_items[s.key]) || s.select_action
     );
-    console.log('Filtered suggestions', filtered_suggestions.length, this.smart_context);
     return filtered_suggestions;
   }
 
   onChooseSuggestion(selected, evt) {
     this.prevent_close = true;
     const suggestion = selected.item;
-    console.log('Chosen suggestion', suggestion, evt);
     if (Keymap.isModifier(evt, 'Mod') || this.use_mod_select) {
       console.log('Mod key held for suggestion', suggestion);
       this.use_mod_select = false;
