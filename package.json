@@ -14,7 +14,7 @@
     "url": "https://github.com/brianpetro/jsbrains/issues"
   },
   "scripts": {
-    "build": "node build.js",
+    "build": "node build/build.js",
     "test": "npx ava --verbose"
   },
   "homepage": "https://jsbrains.org",

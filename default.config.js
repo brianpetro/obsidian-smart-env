@@ -50,6 +50,9 @@ import { merge_env_config } from 'smart-environment/utils/merge_env_config.js';
 import smart_components from 'smart-components';
 import smart_contexts from 'smart-contexts';
 import { render as status_bar_component } from './components/status_bar.js';
+import event_logs from 'smart-events/event_logs.js';
+// base context UX
+import { ContextModal } from './src/modals/context_modal.js';
 
 const smart_env_config = {
   env_path: '',
@@ -100,6 +103,7 @@ const smart_env_config = {
     },
   },
   collections: {
+    event_logs,
     smart_completions,
     smart_components,
     smart_contexts,
@@ -187,6 +191,10 @@ const smart_env_config = {
     },
     version: "",
   },
+  // begin obsidian-smart-env specific modules (need to update build_env_config.js to handle)
+  modals: {
+    context_modal: ContextModal,
+  }
 };
 import { smart_env_config as dist_config } from './smart_env.config.js';
 merge_env_config(smart_env_config, dist_config);

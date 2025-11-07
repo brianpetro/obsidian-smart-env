@@ -132,6 +132,9 @@ export class SmartEnv extends BaseSmartEnv {
     );
     this.refresh_status();
     register_completion_variable_adapter_replacements(this._config.collections.smart_completions.completion_adapters.SmartCompletionVariableAdapter);
+    // register modals
+    const ContextModal = this._config.modals.context_modal;
+    ContextModal.register_modal(this.main);
   }
   // queue re-import the file
   queue_source_re_import(source) {

@@ -13,7 +13,7 @@ async function load_helper() {
   const patched_src = original_src
     .replace('import { Menu, Notice } from "obsidian";', 'import { Menu, Notice } from "./obsidian_stub.js";')
     .replace('../views/source_inspector.js', './source_inspector_stub.js')
-    .replace('../modals/env_stats.js', './env_stats_stub.js');
+    .replace('../src/modals/env_stats.js', './env_stats_stub.js');
   await fs.writeFile(path.join(tmp_dir, 'register_status_bar_context_menu.js'), patched_src, 'utf8');
   const obsidian_stub = `export class Menu { constructor() {} addItem() {} addSeparator() {} showAtPosition() {} }
 export class Notice { constructor(message) { this.message = message; } }

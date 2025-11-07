@@ -18,7 +18,7 @@
 
 import { Menu, Notice } from "obsidian";
 import { SmartNoteInspectModal } from "../views/source_inspector.js";
-import { EnvStatsModal } from "../modals/env_stats.js";
+import { EnvStatsModal } from "../src/modals/env_stats.js";
 
 export function register_status_bar_context_menu(env, status_container, deps = {}) {
   const { Menu: MenuClass = Menu } = deps;
