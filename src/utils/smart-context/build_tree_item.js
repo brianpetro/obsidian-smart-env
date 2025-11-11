@@ -1,4 +1,5 @@
 /**
+ * @deprecated should return empty li that's populated by context_item_leaf component
  * @param {Object} item
  * @param {string} item.path
  * @param {string} item.name

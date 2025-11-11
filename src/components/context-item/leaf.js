@@ -1,7 +1,22 @@
+import { register_item_hover_popover } from 'obsidian-smart-env/src/utils/register_item_hover_popover.js';
 function build_html(context_item, params={}) {
+  let name;
+  if(context_item?.ref?.key.includes('#')) {
+    const name_pcs = context_item.ref.key.split('/').pop().split('#').filter(Boolean);
+    const last_pc = name_pcs.pop();
+    const segments = [];
+    if(last_pc && last_pc.startsWith('{')) {
+      segments.push(name_pcs.pop());
+      segments.push(context_item.ref.lines.join('-'));
+      name = segments.join(' > Lines: ');
+    }
+  }else{
+    name = context_item.ref.key.split('/').pop();
+  }
+
   return `<span>
   <span class="sc-context-item-remove" data-path="${context_item.key}">×</span>
-  <span class="sc-context-item-leaf">${context_item.key}</span>
+  <span class="sc-context-item-name">${name || context_item.key}</span>
   </span>`;
 }
 
@@ -21,4 +36,6 @@ async function post_process(context_item, container, params={}) {
       context_item.ctx.remove_item(context_item.key);
     });
   }
+  const name = container.querySelector('.sc-context-item-name');
+  register_item_hover_popover(name, context_item.ref);
 }
