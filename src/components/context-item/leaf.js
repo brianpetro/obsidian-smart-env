@@ -34,11 +34,16 @@ export async function render(context_item, params={}) {
 }
 
 async function post_process(context_item, container, params={}) {
-  const env = params.env;
+  const env = context_item.env;
   const remove_btn = container.querySelector('.sc-context-item-remove');
   if (remove_btn) {
-    remove_btn.addEventListener('click', () => {
-      context_item.ctx.remove_item(context_item.key);
+    remove_btn.addEventListener('click', (event) => {
+      // get from DOM to prevent storing in ContextItem instance
+      const target = event.currentTarget;
+      const tree_container = target.closest('[data-context-key]');
+      const ctx_key = tree_container?.getAttribute('data-context-key');
+      const ctx = env.smart_contexts.get(ctx_key);
+      ctx.remove_item(context_item.key);
     });
   }
   if(context_item.item_ref) {

@@ -4,7 +4,7 @@ export function build_html(ctx, opts = {}) {
   const items = ctx.get_context_items();
   const list_html = build_tree_html(items);
   return `<div>
-    <div class="sc-context-tree">
+    <div class="sc-context-tree" data-context-key="${ctx.data.key}">
     ${list_html}
     </div>
   </div>`;
@@ -31,9 +31,10 @@ export async function post_process(ctx, container, opts = {}) {
       console.warn(`Smart Context: Could not find tree item for path: ${item.key}`);
       continue;
     }
-    const leaf = await env.smart_components.render_component('context_item_leaf', item);
-    this.empty(li);
-    li.appendChild(leaf);
+    env.smart_components.render_component('context_item_leaf', item).then(leaf => {
+      this.empty(li);
+      li.appendChild(leaf);
+    });
   }
 
   // Expand/collapse directories in-tree

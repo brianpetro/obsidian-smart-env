@@ -18,8 +18,7 @@ export async function render(ctx, params = {}) {
 
 export async function post_process(ctx, container, params={}) {
   if (!ctx?.has_context_items) return container;
-  const { stats } = await ctx.compile({ link_depth: 0, calculating: true });
-  const chars  = stats?.char_count || 0;
+  const chars = ctx.size || 0;
   const tokens = estimate_tokens(chars);
   container.textContent = `≈ ${chars.toLocaleString()} chars · ${tokens.toLocaleString()} tokens`;
 
