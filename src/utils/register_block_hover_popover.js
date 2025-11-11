@@ -1,6 +1,7 @@
 import { HoverPopover, MarkdownRenderer, Keymap } from 'obsidian';
 
-export function register_block_hover_popover(parent, target, env, block_key, plugin) {
+export function register_block_hover_popover(parent, target, env, block_key) {
+  const app = env?.plugin?.app || window.app;
   target.addEventListener('mouseover', async (ev) => {
     if (Keymap.isModEvent(ev)) {
       const block = env.smart_blocks.get(block_key);
@@ -18,7 +19,7 @@ export function register_block_hover_popover(parent, target, env, block_key, plu
         popover.hoverEl.classList.add('smart-block-popover');
         popover.hoverEl.appendChild(frag);
         const sizer = popover.hoverEl.querySelector('.markdown-preview-sizer');
-        MarkdownRenderer.render(plugin.app, markdown, sizer, "/", popover);
+        MarkdownRenderer.render(app, markdown, sizer, "/", popover);
       }
     }
   });
