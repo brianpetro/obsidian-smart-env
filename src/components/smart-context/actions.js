@@ -34,7 +34,6 @@ export async function render(ctx, opts = {}) {
 }
 export async function post_process(ctx, container, opts = {}) {
   const env = ctx.env;
-  const disposers = [];
   const name_input = container.querySelector('.sc-context-name-input');
   const right_slot = container.querySelector('.sc-context-actions-right');
 
@@ -80,14 +79,5 @@ export async function post_process(ctx, container, opts = {}) {
     right_slot.appendChild(copy_btn);
   }
 
-  // Keep name field in sync if this context changes elsewhere
-  const on_updated = (e) => {
-    if (e?.item_key && e.item_key !== ctx.key) return;
-    refresh_name();
-  };
-  const disposer = ctx?.env?.events?.on?.('context:updated', on_updated);
-  if (disposer) disposers.push(disposer);
-
-  this.attach_disposer(container, disposers);
   return container;
 }

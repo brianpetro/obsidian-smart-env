@@ -26,6 +26,7 @@ export async function render(ctx, opts = {}) {
 }
 
 export async function post_process(ctx, container, opts = {}) {
+  const disposers = [];
   const actions_el = container.querySelector('.sc-context-view-actions');
   const tree_el    = container.querySelector('.sc-context-view-tree');
   const meta_el    = container.querySelector('.sc-context-view-meta');
@@ -45,5 +46,7 @@ export async function post_process(ctx, container, opts = {}) {
   };
 
   await render_children();
+  disposers.push(ctx.on_event('context:updated', render_children));
+  this.attach_disposer(container, disposers);
   return container;
 }

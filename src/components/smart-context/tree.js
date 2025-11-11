@@ -1,8 +1,12 @@
 import { build_tree_html } from '../../utils/smart-context/build_tree_html.js';
 
 export function build_html(ctx, opts = {}) {
+  const items = ctx.get_context_items();
+  const list_html = build_tree_html(items);
   return `<div>
-    <div class="sc-context-tree"></div>
+    <div class="sc-context-tree">
+    ${list_html}
+    </div>
   </div>`;
 }
 
@@ -19,49 +23,31 @@ function toggle_collapsed(li)  { li.classList.toggle('collapsed'); }
 
 export async function post_process(ctx, container, opts = {}) {
   const env = ctx.env;
-  const disposers = [];
+  const items = ctx.get_context_items();
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    const li = container.querySelector(`.sc-tree-item[data-path="${item.key}"]`);
+    if (!li){
+      console.warn(`Smart Context: Could not find tree item for path: ${item.key}`);
+      continue;
+    }
+    const leaf = await env.smart_components.render_component('context_item_leaf', item);
+    this.empty(li);
+    li.appendChild(leaf);
+  }
 
-  const render_tree = () => {
-    const items = ctx.get_context_items();
-    const list_html = build_tree_html(items);
-    const frag = this.create_doc_fragment(list_html);
-    this.empty(container);
-    container.appendChild(frag);
-
-    // Remove item -> SmartContext.remove_item (should emit context:updated)
-    container.querySelectorAll('.sc-tree-remove').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const path = btn.dataset.path;
-        if (!path) return;
-        if (typeof ctx.remove_item === 'function') ctx.remove_item(path);
-      });
+  // Expand/collapse directories in-tree
+  container.querySelectorAll('.sc-tree-item.dir').forEach(li => {
+    if (!test_has_children(li)) return;
+    li.classList.add('expandable');
+    const label = li.querySelector(':scope > .sc-tree-label');
+    if (!label) return;
+    label.addEventListener('click', ev => {
+      if (ev.metaKey || ev.ctrlKey) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      toggle_collapsed(li);
     });
-
-    // Expand/collapse directories in-tree
-    container.querySelectorAll('.sc-tree-item.dir').forEach(li => {
-      if (!test_has_children(li)) return;
-      li.classList.add('expandable');
-      const label = li.querySelector(':scope > .sc-tree-label');
-      if (!label) return;
-      label.addEventListener('click', ev => {
-        if (ev.metaKey || ev.ctrlKey) return;
-        ev.preventDefault();
-        ev.stopPropagation();
-        toggle_collapsed(li);
-      });
-    });
-  };
-
-  render_tree();
-
-  // Refresh when this context updates
-  const on_updated = (e) => {
-    if (e?.item_key && e.item_key !== ctx.key) return;
-    render_tree();
-  };
-  const disposer = env?.events?.on?.('context:updated', on_updated);
-  if (disposer) disposers.push(disposer);
-
-  this.attach_disposer(container, disposers);
+  });
   return container;
 }
