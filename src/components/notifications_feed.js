@@ -71,6 +71,8 @@ function append_entry(feed_container, entry) {
         message.style.display = 'none';
       }
     });
+  } else {
+    meta.textContent += '\n'; // IMPORTANT NOTE: trailing newline for spacing in copy to clipboard
   }
 
 
