@@ -1,0 +1,69 @@
+.status-bar-item:has(.smart-env-status-container) {
+  padding: 0 0.5em;
+
+  &:hover {
+    background-color: var(--background-modifier-hover);
+  }
+  &> .smart-env-status-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    text-decoration: none;
+    color: var(--status-bar-text-color);
+  }
+}
+
+.smart-env-status-indicator {
+  width: 0.6em;
+  height: 0.6em;
+  border-radius: 999px;
+  background-color: var(--interactive-accent);
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+
+.smart-env-status-indicator[data-count] {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.smart-env-notifications-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+}
+
+.smart-env-notifications-empty {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.smart-env-notification {
+  font-size: var(--font-smaller);
+  border-left: 3px solid var(--interactive-accent);
+  padding-left: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  cursor: pointer;
+}
+
+.smart-env-notification[data-level='warning'] {
+  border-color: var(--color-orange);
+}
+
+.smart-env-notification[data-level='error'] {
+  border-color: var(--color-red);
+}
+
+.smart-env-notification__message {
+  margin: 0;
+  font-weight: 500;
+  white-space: pre-wrap;
+}
+
+.smart-env-notification__meta {
+  color: var(--text-muted);
+}

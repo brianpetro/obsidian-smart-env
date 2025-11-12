@@ -10,15 +10,16 @@
  * returns (handy for tests).  It deliberately avoids new deps, follows
  * functional style, and uses `snake_case`.
  *
- * @param {import('../smart_env.js').SmartEnv} env – initialised Smart Env
+ * @param {import('../../smart_env.js').SmartEnv} env – initialised Smart Env
  * @param {HTMLElement} status_container – the anchor element created in
  *   `SmartEnv.refresh_status`
  * @returns {Function} – the bound `contextmenu` handler (for unit tests)
  */
 
 import { Menu, Notice } from "obsidian";
-import { SmartNoteInspectModal } from "../views/source_inspector.js";
-import { EnvStatsModal } from "../src/modals/env_stats.js";
+import { SmartNoteInspectModal } from "../../views/source_inspector.js";
+import { EnvStatsModal } from "../modals/env_stats.js";
+import { NotificationsFeedModal } from "../modals/notifications_feed_modal.js";
 
 export function register_status_bar_context_menu(env, status_container, deps = {}) {
   const { Menu: MenuClass = Menu } = deps;
@@ -64,6 +65,15 @@ export function register_status_bar_context_menu(env, status_container, deps = {
         .onClick(() => {
           env.export_json();
           new Notice("Smart Env exported");
+        }),
+    );
+    menu.addItem((item) =>
+      item
+        .setTitle('Notifications')
+        .setIcon('bell')
+        .onClick(() => {
+          const modal = new NotificationsFeedModal(plugin.app, env);
+          modal.open();
         }),
     );
     menu.addSeparator();
