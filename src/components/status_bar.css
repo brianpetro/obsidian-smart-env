@@ -31,7 +31,6 @@
 .smart-env-notifications-feed {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
   padding: 0.5rem 0;
 }
 
@@ -42,12 +41,10 @@
 
 .smart-env-notification {
   font-size: var(--font-smaller);
-  border-left: 3px solid var(--interactive-accent);
-  padding-left: 0.75rem;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  cursor: pointer;
+  border-left: 3px solid var(--interactive-accent);
+  padding-left: 0.75rem;
 }
 
 .smart-env-notification[data-level='warning'] {
@@ -66,4 +63,5 @@
 
 .smart-env-notification__meta {
   color: var(--text-muted);
+  padding-bottom: 0.75rem;
 }

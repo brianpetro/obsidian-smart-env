@@ -29,7 +29,7 @@ async function post_process(env, container, params = {}) {
   // add copy all button
   const copy_btn = container.querySelector('.copy-all-notifications-btn');
   copy_btn.addEventListener('click', () => {
-    const all_text = feed_container.textContent.replace(/\{/g, '\n{').replace(/\}/g, '}\n\n');
+    const all_text = feed_container.textContent;
     navigator.clipboard.writeText(all_text).then(() => {
       copy_btn.textContent = 'Copied!';
       setTimeout(() => {
@@ -43,34 +43,37 @@ function append_entry(feed_container, entry) {
   const row = feed_container.ownerDocument.createElement('div');
   row.className = 'smart-env-notification';
   row.dataset.level = entry.level || 'info';
+  feed_container.appendChild(row);
   
   const meta = feed_container.ownerDocument.createElement('div');
   meta.className = 'smart-env-notification__meta';
   const timestamp = typeof entry.event.at === 'number' ? entry.event.at : Date.now();
-  meta.textContent = `${entry.event_key} - ${to_time_ago(timestamp)}\n`; // trailing newline for spacing in copy to clipboard
+  meta.textContent = `${entry.event.collection_key ? entry.event.collection_key + ' - ' : ''}${entry.event_key} - ${to_time_ago(timestamp)}\n`; // IMPORTANT NOTE: trailing newline for spacing in copy to clipboard
+  row.appendChild(meta);
   
-  const message = feed_container.ownerDocument.createElement('pre');
-  message.className = 'smart-env-notification__message';
-  // message.textContent = JSON.stringify(entry.event, null, 2);
-  message.textContent = Object.entries(entry.event)
-    .filter(([k, v]) => k !== 'at')
-    .map(([k, v]) => `${k}: ${typeof v === 'string' ? v : JSON.stringify(v)}`)
+  const event_payload_content = Object.entries(entry.event)
+    .filter(([k, v]) => !['at', 'collection_key'].includes(k))
+    .map(([k, v]) => `  ${k}: ${typeof v === 'string' ? v : JSON.stringify(v)}`) // IMPORTANT NOTE: two prefix spaces for indentation
     .join('\n')
   ;
-  message.textContent += '\n\n'; // trailing newline for spacing in copy to clipboard
-  message.style.display = 'none';
+  if (event_payload_content.trim().length) {
+    row.style.cursor = 'pointer';
+    const message = feed_container.ownerDocument.createElement('pre');
+    message.className = 'smart-env-notification__message';
+    message.textContent = event_payload_content;
+    message.textContent += '\n\n'; // IMPORTANT NOTE: trailing newline for spacing in copy to clipboard
+    message.style.display = 'none';
+    row.appendChild(message);
+    row.addEventListener('click', () => {
+      if (message.style.display === 'none') {
+        message.style.display = 'block';
+      } else {
+        message.style.display = 'none';
+      }
+    });
+  }
 
-  row.appendChild(meta);
-  row.appendChild(message);
-  feed_container.appendChild(row);
 
-  row.addEventListener('click', () => {
-    if (message.style.display === 'none') {
-      message.style.display = 'block';
-    } else {
-      message.style.display = 'none';
-    }
-  });
 }
 
 function to_time_ago(ms) {
