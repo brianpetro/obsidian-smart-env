@@ -1,11 +1,15 @@
 import { Keymap } from 'obsidian';
+/**
+ * @deprecated use open_source instead
+ */
 export async function open_note(plugin, target_path, event = null, opts = {}) {
   const { new_tab = false } = opts;
   const env = plugin.env;
 
-  if (target_path.includes('.pdf#page=')) {
-    return plugin.app.workspace.openLinkText(target_path, '/');
-  }
+  // // DEPRECATED SINCE NO PDFS IN CONNECTIONS VIEW
+  // if (target_path.includes('.pdf#page=')) {
+  //   return plugin.app.workspace.openLinkText(target_path, '/');
+  // }
 
   if (target_path.endsWith('#')) target_path = target_path.slice(0, -1);
 

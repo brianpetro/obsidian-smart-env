@@ -22,6 +22,18 @@
   transform: scale(0.3);
   transition: opacity 150ms ease, transform 150ms ease;
 }
+.smart-env-status-indicator[data-level='info'] {
+  background-color: var(--interactive-accent);
+}
+.smart-env-status-indicator[data-level='attention'] {
+  background-color: var(--color-yellow);
+}
+.smart-env-status-indicator[data-level='warning'] {
+  background-color: var(--color-orange);
+}
+.smart-env-status-indicator[data-level='error'] {
+  background-color: var(--color-red);
+}
 
 .smart-env-status-indicator[data-count] {
   opacity: 1;
@@ -46,6 +58,10 @@
   flex-direction: column;
   border-left: 3px solid var(--interactive-accent);
   padding-left: 0.75rem;
+}
+
+.smart-env-notification[data-level='attention'] {
+  border-color: var(--color-yellow);
 }
 
 .smart-env-notification[data-level='warning'] {

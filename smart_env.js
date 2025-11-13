@@ -123,7 +123,7 @@ export class SmartEnv extends BaseSmartEnv {
         this.debounce_re_import_queue();
         const current_path = leaf.view?.file?.path;
         const current_source = this.smart_sources.get(current_path);
-        if(current_source) current_source.emit_event('sources:opened');
+        if(current_source) current_source.emit_event('sources:opened', { event_source: 'active-leaf-change'});
       })
     );
     plugin.registerEvent(
@@ -131,7 +131,7 @@ export class SmartEnv extends BaseSmartEnv {
         this.debounce_re_import_queue();
         const current_path = file?.path;
         const current_source = this.smart_sources.get(current_path);
-        if(current_source) current_source.emit_event('sources:opened');
+        if(current_source) current_source.emit_event('sources:opened', { event_source: 'file-open'});
       })
     );
     register_completion_variable_adapter_replacements(this._config.collections.smart_completions.completion_adapters.SmartCompletionVariableAdapter);

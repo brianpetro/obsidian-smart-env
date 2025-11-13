@@ -66,7 +66,7 @@ function post_process(env, container, opts = {}) {
     let message = `Smart Env${version ? ' ' + version : ''}`;
     let title = 'Smart Environment status';
     let indicator_count = get_session_event_count();
-    let indicator_level = 'info';
+    let indicator_level = env.event_logs?.notification_status || 'info';
     if(embed_queue > 0) {
       message = `Embed now (${embed_queue})`;
       title = 'Click to re-import.';
