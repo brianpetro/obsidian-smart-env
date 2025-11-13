@@ -19,7 +19,7 @@
   border-radius: 999px;
   background-color: var(--interactive-accent);
   opacity: 0;
-  transform: scale(0.6);
+  transform: scale(0.3);
   transition: opacity 150ms ease, transform 150ms ease;
 }
 

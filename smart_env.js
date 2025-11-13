@@ -8,7 +8,6 @@ import { merge_env_config } from 'smart-environment/utils/merge_env_config.js';
 import default_config from './default.config.js';
 import { add_smart_chat_icon, add_smart_connections_icon, add_smart_lookup_icon } from './utils/add_icons.js';
 import { SmartNotices } from "smart-notices/smart_notices.js"; // TODO: move to jsbrains
-import { ensure_status_bar_ready, update_status_bar } from './src/components/status_bar.js';
 import { exchange_code_for_tokens, install_smart_plugins_plugin, get_smart_server_url, enable_plugin } from './utils/sc_oauth.js';
 import { open_url_externally } from "./utils/open_url_externally.js";
 import { register_completion_variable_adapter_replacements } from './utils/register_completion_variable_adapter_replacements.js';
@@ -59,6 +58,7 @@ export class SmartEnv extends BaseSmartEnv {
         if(file instanceof TFile && this.smart_sources?.source_adapters?.[file.extension]){
           const source = this.smart_sources?.init_file_path(file.path);
           if(source) {
+            source.emit_event('sources:modified', { event_source: 'vault.on(create, (file) => {})' });
             this.queue_source_re_import(source);
           }else{
             console.warn("SmartEnv: Unable to init source for newly created file", file.path);
@@ -95,6 +95,7 @@ export class SmartEnv extends BaseSmartEnv {
         if(file instanceof TFile && this.smart_sources?.source_adapters?.[file.extension]){
           const source = this.smart_sources?.get(file.path);
           if(source){
+            source.emit_event('sources:modified', { event_source: 'vault.on(modify, (file) => {})' });
             this.queue_source_re_import(source);
           }else{
             console.warn("SmartEnv: Unable to get source for modified file", file.path);
@@ -103,8 +104,11 @@ export class SmartEnv extends BaseSmartEnv {
       })
     );
     plugin.registerEvent(
-      plugin.app.workspace.on('editor-change', () => {
-        this.debounce_re_import_queue();
+      plugin.app.workspace.on('editor-change', (editor, info) => {
+        const source = this.smart_sources?.get(info?.file?.path);
+        if(!source) return console.warn("SmartEnv: Unable to get source for editor change", {editor, info});
+        source?.emit_event('sources:modified', { event_source: 'workspace.on(editor-change)' });
+        this.queue_source_re_import(source);
       })
     );
     plugin.registerEvent(
@@ -130,11 +134,12 @@ export class SmartEnv extends BaseSmartEnv {
         if(current_source) current_source.emit_event('sources:opened');
       })
     );
-    this.refresh_status();
     register_completion_variable_adapter_replacements(this._config.collections.smart_completions.completion_adapters.SmartCompletionVariableAdapter);
     // register modals
     const ContextModal = this._config.modals.context_modal;
     ContextModal.register_modal(this.main);
+    // register status bar
+    this.register_status_bar();
   }
   // queue re-import the file
   queue_source_re_import(source) {
@@ -148,7 +153,6 @@ export class SmartEnv extends BaseSmartEnv {
 
   // prevent importing when user is acting within the workspace
   debounce_re_import_queue() {
-    this.refresh_status();
     this.sources_re_import_halted = true; // halt re-importing
     if (this.sources_re_import_timeout) clearTimeout(this.sources_re_import_timeout);
     if(!this.sources_re_import_queue || Object.keys(this.sources_re_import_queue).length === 0) {
@@ -187,16 +191,20 @@ export class SmartEnv extends BaseSmartEnv {
     }
     if(this.sources_re_import_timeout) clearTimeout(this.sources_re_import_timeout);
     this.sources_re_import_timeout = null;
-    this.refresh_status();
   }
 
-  refresh_status() {
-    if (!ensure_status_bar_ready(this)) {
-      return;
-    }
-    const queue_length = Object.keys(this.sources_re_import_queue || {}).length;
-    const indicator_count = this._notices ? Object.keys(this._notices.active || {}).length : 0;
-    update_status_bar(this, queue_length, indicator_count);
+  register_status_bar() {
+    const status_container = this.main?.app?.statusBar?.containerEl;
+    status_container
+      ?.querySelector?.('.smart-env-status-container')
+      ?.closest?.('.status-bar-item')
+      ?.remove?.()
+    ;
+    this.status_elm = this.main.addStatusBarItem();
+    this.smart_components?.render_component('status_bar', this).then((container) => {
+      this.status_elm.empty?.();
+      this.status_elm.appendChild(container);
+    });
   }
 
   /**
@@ -307,6 +315,15 @@ export class SmartEnv extends BaseSmartEnv {
     if(obsidian_sync_instance?.syncStatus.startsWith('Uploading')) return false; // if uploading, don't wait for obsidian sync
     if(obsidian_sync_instance?.syncStatus.startsWith('Fully synced')) return false; // if fully synced, don't wait for obsidian sync
     return obsidian_sync_instance?.syncing;
+  }
+  // get obsidian app instance
+  get obsidian_app() {
+    return this.plugin?.app ?? window.app;
+  }
+  // open notifications feed modal
+  open_notifications_feed_modal() {
+    const modal = new this.config.modals.notifications_feed_modal(this.obsidian_app, this);
+    modal.open();
   }
 }
 

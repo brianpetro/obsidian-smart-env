@@ -80,7 +80,6 @@ function append_entry(feed_container, entry) {
 
 function to_time_ago(ms) {
   const now_ms = Date.now();
-  console.log(now_ms, ms);
   const seconds = Math.floor((now_ms - ms) / 1000);
   if (seconds < 60) return `${seconds} seconds ago`;
   const minutes = Math.floor(seconds / 60);

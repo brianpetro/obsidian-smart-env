@@ -19,7 +19,6 @@
 import { Menu, Notice } from "obsidian";
 import { SmartNoteInspectModal } from "../../views/source_inspector.js";
 import { EnvStatsModal } from "../modals/env_stats.js";
-import { NotificationsFeedModal } from "../modals/notifications_feed_modal.js";
 
 export function register_status_bar_context_menu(env, status_container, deps = {}) {
   const { Menu: MenuClass = Menu } = deps;
@@ -72,8 +71,7 @@ export function register_status_bar_context_menu(env, status_container, deps = {
         .setTitle('Notifications')
         .setIcon('bell')
         .onClick(() => {
-          const modal = new NotificationsFeedModal(plugin.app, env);
-          modal.open();
+          env.open_notifications_feed_modal();
         }),
     );
     menu.addSeparator();

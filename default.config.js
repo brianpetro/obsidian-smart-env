@@ -52,6 +52,7 @@ import smart_contexts from 'smart-contexts';
 import event_logs from 'smart-events/event_logs.js';
 // base context UX
 import { ContextModal } from './src/modals/context_modal.js';
+import { NotificationsFeedModal } from './src/modals/notifications_feed_modal.js';
 
 const smart_env_config = {
   env_path: '',
@@ -192,6 +193,7 @@ const smart_env_config = {
   // begin obsidian-smart-env specific modules (need to update build_env_config.js to handle)
   modals: {
     context_modal: ContextModal,
+    notifications_feed_modal: NotificationsFeedModal,
   }
 };
 import { smart_env_config as dist_config } from './smart_env.config.js';
