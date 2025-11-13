@@ -42,7 +42,7 @@ async function post_process(env, container, params = {}) {
 function append_entry(feed_container, entry) {
   const row = feed_container.ownerDocument.createElement('div');
   row.className = 'smart-env-notification';
-  row.dataset.level = entry.level || 'info';
+  row.dataset.level = entry.event_key.endsWith('error') ? 'error' : entry.level || 'info';
   feed_container.appendChild(row);
   
   const meta = feed_container.ownerDocument.createElement('div');
