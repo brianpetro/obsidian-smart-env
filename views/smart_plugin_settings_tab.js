@@ -96,11 +96,18 @@ export class SmartPluginSettingsTab extends PluginSettingTab {
     if (env_fragment) this.global_settings_container.appendChild(env_fragment);
     const more_plugins_fragment = create_more_plugins_fragment(this.smart_view, this.plugin);
     if (more_plugins_fragment) this.global_settings_container.appendChild(more_plugins_fragment);
-    const supporter_callout = await this.render_component('supporter_callout', this.plugin);
-    if(supporter_callout) this.global_settings_container.appendChild(supporter_callout);
+    const supporter_callout = await this.render_component(
+      'supporter_callout',
+      this.plugin,
+      {
+        plugin_name: this.plugin.manifest.name
+      }
+    );
+    if (supporter_callout) this.global_settings_container.appendChild(supporter_callout);
   }
 
   async render_component(name, scope, params={}) {
     return await this.env?.render_component(name, scope, params);
   }
+
 }
