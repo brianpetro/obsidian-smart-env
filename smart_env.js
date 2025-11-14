@@ -51,76 +51,11 @@ export class SmartEnv extends BaseSmartEnv {
       return;
     }
     await super.load();
-    // register event listeners for file changes after load
+    this.smart_sources?.register_source_watchers?.(this.smart_sources);
     const plugin = this.main;
     plugin.registerEvent(
-      plugin.app.vault.on('create', (file) => {
-        if(file instanceof TFile && this.smart_sources?.source_adapters?.[file.extension]){
-          const source = this.smart_sources?.init_file_path(file.path);
-          if(source) {
-            source.emit_event('sources:modified', { event_source: 'vault.on(create, (file) => {})' });
-            this.queue_source_re_import(source);
-          }else{
-            console.warn("SmartEnv: Unable to init source for newly created file", file.path);
-          }
-        }
-      })
-    );
-    plugin.registerEvent(
-      plugin.app.vault.on('rename', (file, old_path) => {
-        if(file instanceof TFile && this.smart_sources?.source_adapters?.[file.extension]){
-          const source = this.smart_sources?.init_file_path(file.path);
-          if(source) {
-            this.queue_source_re_import(source);
-          }else{
-            console.warn("SmartEnv: Unable to init source for renamed file", file.path);
-          }
-        }
-        if(old_path){
-          const source = this.smart_sources?.get(old_path);
-          if(source) {
-            source.delete();
-            // debounce save queue
-            if (this.rename_debounce_timeout) clearTimeout(this.rename_debounce_timeout);
-            this.rename_debounce_timeout = setTimeout(() => {
-              this.smart_sources?.process_save_queue();
-              this.rename_debounce_timeout = null;
-            }, 1000);
-          }
-        }
-      })
-    );
-    plugin.registerEvent(
-      plugin.app.vault.on('modify', (file) => {
-        if(file instanceof TFile && this.smart_sources?.source_adapters?.[file.extension]){
-          const source = this.smart_sources?.get(file.path);
-          if(source){
-            source.emit_event('sources:modified', { event_source: 'vault.on(modify, (file) => {})' });
-            this.queue_source_re_import(source);
-          }else{
-            console.warn("SmartEnv: Unable to get source for modified file", file.path);
-          }
-        }
-      })
-    );
-    plugin.registerEvent(
-      plugin.app.workspace.on('editor-change', (editor, info) => {
-        const source = this.smart_sources?.get(info?.file?.path);
-        if(!source) return console.warn("SmartEnv: Unable to get source for editor change", {editor, info});
-        source?.emit_event('sources:modified', { event_source: 'workspace.on(editor-change)' });
-        this.queue_source_re_import(source);
-      })
-    );
-    plugin.registerEvent(
-      plugin.app.vault.on('delete', (file) => {
-        if(file instanceof TFile && this.smart_sources?.source_adapters?.[file.extension]){
-          delete this.smart_sources?.items[file.path];
-        }
-      })
-    );
-    plugin.registerEvent(
       plugin.app.workspace.on('active-leaf-change', (leaf) => {
-        this.debounce_re_import_queue();
+        this.smart_sources?.debounce_re_import_queue?.();
         const current_path = leaf.view?.file?.path;
         const current_source = this.smart_sources.get(current_path);
         if(current_source) current_source.emit_event('sources:opened', { event_source: 'active-leaf-change'});
@@ -128,7 +63,7 @@ export class SmartEnv extends BaseSmartEnv {
     );
     plugin.registerEvent(
       plugin.app.workspace.on('file-open', (file) => {
-        this.debounce_re_import_queue();
+        this.smart_sources?.debounce_re_import_queue?.();
         const current_path = file?.path;
         const current_source = this.smart_sources.get(current_path);
         if(current_source) current_source.emit_event('sources:opened', { event_source: 'file-open'});
@@ -143,54 +78,16 @@ export class SmartEnv extends BaseSmartEnv {
   }
   // queue re-import the file
   queue_source_re_import(source) {
-    if(!source || !source.key) return;
-    if(!this.sources_re_import_queue) this.sources_re_import_queue = {};
-    if(this.sources_re_import_queue?.[source.key]) return; // already in queue
-    source.data.last_import = { at: 0, hash: null, mtime: 0, size: 0 };
-    this.sources_re_import_queue[source.key] = source;
-    this.debounce_re_import_queue();
+    this.smart_sources?.queue_source_re_import?.(source);
   }
 
   // prevent importing when user is acting within the workspace
   debounce_re_import_queue() {
-    this.sources_re_import_halted = true; // halt re-importing
-    if (this.sources_re_import_timeout) clearTimeout(this.sources_re_import_timeout);
-    if(!this.sources_re_import_queue || Object.keys(this.sources_re_import_queue).length === 0) {
-      this.sources_re_import_timeout = null;
-      return; // nothing to re-import
-    }
-    this.sources_re_import_timeout = setTimeout(this.run_re_import.bind(this), this.settings.re_import_wait_time * 1000);
+    this.smart_sources?.debounce_re_import_queue?.();
   }
 
   async run_re_import() {
-    this.sources_re_import_halted = false;
-    const queue_length = Object.keys(this.sources_re_import_queue || {}).length;
-    if (queue_length) {
-      for (const [key, src] of Object.entries(this.sources_re_import_queue)) {
-        await src.import();
-        // Build embed queue to prevent scanning all sources on process_embed_queue
-        if (!this.smart_sources._embed_queue) this.smart_sources._embed_queue = [];
-        if (src.should_embed) this.smart_sources._embed_queue.push(src); // skip embedding if should not embed
-        if (this.smart_blocks.settings.embed_blocks) {
-          for (const block of src.blocks) {
-            if (block._queue_embed || (block.should_embed && block.is_unembedded)) {
-              this.smart_sources._embed_queue.push(block);
-              block._queue_embed = true; // mark for embedding
-            }
-          }
-        }
-        delete this.sources_re_import_queue[key];
-        if (this.sources_re_import_halted) {
-          this.debounce_re_import_queue();
-        }
-      }
-      // skip if no embed queue items (prevent scanning all for items to embed, takes a while)
-      if(this.smart_sources?._embed_queue?.length) {
-        await this.smart_sources.process_embed_queue();
-      }
-    }
-    if(this.sources_re_import_timeout) clearTimeout(this.sources_re_import_timeout);
-    this.sources_re_import_timeout = null;
+    await this.smart_sources?.run_re_import?.();
   }
 
   register_status_bar() {

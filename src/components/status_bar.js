@@ -59,7 +59,7 @@ function post_process(env, container, opts = {}) {
     return env.event_logs?.session_events?.length || 0;
   }
   const get_embed_queue = () => {
-    return Object.keys(env.sources_re_import_queue || {}).length;
+    return Object.keys(env.smart_sources.sources_re_import_queue || {}).length;
   }
   const render_status_elm = () => {
     const embed_queue = get_embed_queue();
