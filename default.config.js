@@ -1,5 +1,5 @@
 import { SmartFs } from 'smart-file-system';
-import { SmartFsObsidianAdapter } from 'smart-file-system/adapters/obsidian.js';
+import { ObsidianFsAdapter } from './src/adapters/smart-fs/obsidian.js';
 import { SmartView } from 'smart-view';
 import { SmartViewObsidianAdapter } from 'smart-view/adapters/obsidian.js';
 import { SmartSources, SmartSource } from 'smart-sources';
@@ -59,7 +59,7 @@ const smart_env_config = {
   modules: {
     smart_fs: {
       class: SmartFs,
-      adapter: SmartFsObsidianAdapter,
+      adapter: ObsidianFsAdapter,
     },
     smart_view: {
       class: SmartView,
