@@ -1,0 +1,64 @@
+import { Collection } from 'smart-collections';
+import { LookupList } from '../items/lookup_list.js';
+import { murmur_hash_32_alphanumeric } from 'smart-utils/create_hash.js';
+import { create_settings_section_heading } from '../utils/create_settings_section_heading.js';
+
+const lookup_lists_settings_config = {
+  section_lookup: create_settings_section_heading('Lookup queries'),
+  results_collection_key: {
+    name: "Results type",
+    type: "dropdown",
+    description: "Choose whether results should be sources or blocks.",
+    option_1: 'smart_sources|Sources',
+    option_2: 'smart_blocks|Blocks',
+  },
+}
+
+export class LookupLists extends Collection {
+  static version = 0.01;
+
+  new_item({query, filter}) {
+    if (!query || typeof query !== 'string' || !query.trim()) {
+      throw new Error('LookupLists.new_item requires a non-empty query string.');
+    }
+
+    const date = format_ymd(new Date());
+    const hash = murmur_hash_32_alphanumeric(query);
+    const key = `${date}+${hash}`;
+
+    // Reuse if exists
+    if (this.items[key]) return this.items[key];
+
+    // Create
+    const list = new LookupList(this.env, {
+      key,
+      query,
+      filter,
+    });
+    this.set(list);
+
+    return list;
+  }
+
+  get settings_config() {
+    return { ...lookup_lists_settings_config };
+  }
+
+  process_load_queue() { /* skip save/load for now */ }
+
+}
+
+/** @param {Date} d */
+function format_ymd(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+export default {
+  class: LookupLists,
+  collection_key: 'lookup_lists',
+  item_type: LookupList,
+};
+
