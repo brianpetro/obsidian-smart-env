@@ -49,6 +49,7 @@ import { merge_env_config } from 'smart-environment/utils/merge_env_config.js';
 // smart components
 import smart_components from 'smart-components';
 import smart_contexts from 'smart-contexts';
+import context_items from 'smart-contexts/context_items.js';
 import event_logs from 'smart-events/event_logs.js';
 // base context UX
 import { ContextModal } from './src/modals/context_modal.js';
@@ -103,6 +104,7 @@ const smart_env_config = {
     },
   },
   collections: {
+    context_items,
     event_logs,
     smart_completions,
     smart_components,
