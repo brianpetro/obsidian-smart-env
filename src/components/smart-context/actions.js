@@ -69,7 +69,7 @@ export async function post_process(ctx, container, opts = {}) {
   add_btn.type = 'button';
   add_btn.textContent = 'Add context';
   add_btn.addEventListener('click', () => {
-    env.events.emit('context_selector:open', { collection_key: 'smart_contexts', item_key: ctx.key });
+    ctx.emit_event('context_selector:open');
   });
   right_slot.appendChild(add_btn);
 
