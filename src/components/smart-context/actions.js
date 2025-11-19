@@ -81,7 +81,7 @@ export async function post_process(ctx, container, opts = {}) {
     copy_btn.textContent = 'Copy to clipboard';
     right_slot.appendChild(copy_btn);
     copy_btn.addEventListener('click', async () => {
-      ctx.actions.copy_to_clipboard();
+      ctx.actions.context_copy_to_clipboard();
     });
   }
 
