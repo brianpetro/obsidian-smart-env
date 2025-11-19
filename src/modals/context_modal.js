@@ -57,14 +57,23 @@ export class ContextModal extends SmartFuzzySuggestModal {
   }
 
   getItems() {
-    const suggestions = this.suggestions?.length
-      ? this.suggestions
-      : this.smart_context.actions.context_suggest_sources(this.params)
-    ;
+    const suggestions = this.get_suggestions();
     const filtered_suggestions = suggestions.filter(
       (s) => (s.key && !this.smart_context?.data?.context_items[s.key]) || s.select_action
     );
     return filtered_suggestions;
+  }
+
+  get_suggestions() {
+    if(this.params.suggestions_action_key) {
+      const suggestion_action = this.smart_context.actions[this.params.suggestions_action_key];
+      if(typeof suggestion_action === 'function') {
+        this.suggestions = suggestion_action(this.params);
+      }
+      this.params.suggestions_action_key = null; // only run once
+    }
+    if(this.suggestions?.length) return this.suggestions;
+    return this.smart_context.actions.context_suggest_sources(this.params);
   }
 
   onChooseSuggestion(selected, evt) {

@@ -75,8 +75,14 @@ export async function post_process(ctx, container, opts = {}) {
 
   // Copy to clipboard button (only when items exist)
   if (ctx.has_context_items) {
-    const copy_btn = await ctx.env.render_component('copy_to_clipboard_button', ctx, opts);
+    const copy_btn = document.createElement('button');
+    copy_btn.className = 'sc-copy-clipboard';
+    copy_btn.type = 'button';
+    copy_btn.textContent = 'Copy to clipboard';
     right_slot.appendChild(copy_btn);
+    copy_btn.addEventListener('click', async () => {
+      ctx.actions.copy_to_clipboard();
+    });
   }
 
   return container;

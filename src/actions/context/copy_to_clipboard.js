@@ -1,0 +1,35 @@
+import { Notice } from 'obsidian';
+import { copy_to_clipboard } from 'obsidian-smart-env/utils/copy_to_clipboard.js';
+
+export async function copy_to_clipboard(params = {}) {
+  // TODO: replace with get_text (needs new stats support)
+  const { context, stats, images } = await this.compile({ link_depth: 0 });
+  await copy_to_clipboard(context, images); // may replace with env.actions.copy_to_clipboard
+  show_stats_notice(this, stats);
+}
+
+/**
+ * Show user-facing notice summarizing stats.
+ */
+export function show_stats_notice(ctx, stats) {
+  const ctx_ct = `${Object.keys(ctx.data.context_items).length} file(s)`;
+  let msg = `Copied to clipboard! (${ctx_ct})`;
+  if (stats) {
+    const char_count = stats.char_count < 100000
+      ? stats.char_count
+      : `~${Math.round(stats.char_count / 1000)}k`
+    ;
+    msg += `, ${char_count} chars`;
+
+    if (stats.exclusions) {
+      const total_excluded = Object.values(stats.exclusions).reduce(
+        (p, c) => p + c,
+        0
+      );
+      if (total_excluded > 0) {
+        msg += `, ${total_excluded} section(s) excluded`;
+      }
+    }
+  }
+  new Notice(msg);
+}
