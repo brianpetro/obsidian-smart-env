@@ -17,6 +17,7 @@ import { render as source_inspector_component } from './src/components/source_in
 import { render as status_bar_component } from './src/components/status_bar.js';
 import { render as supporter_callout_component } from './src/components/supporter_callout.js';
 import { render as user_agreement_callout_component } from './src/components/user_agreement_callout.js';
+import { copy_to_clipboard as context_copy_to_clipboard_action } from './src/actions/context/copy_to_clipboard.js';
 import { context_suggest_blocks as context_suggest_blocks_action } from './src/actions/context-suggest/blocks.js';
 import { context_suggest_sources as context_suggest_sources_action } from './src/actions/context-suggest/sources.js';
 import { pre_process as lookup_list_pre_process_action, pre_process as lookup_list_pre_process_action_pre_process } from './src/actions/lookup-list/pre_process.js';
@@ -53,6 +54,7 @@ export const smart_env_config = {
     user_agreement_callout: { render: user_agreement_callout_component }
   },
   actions: {
+    context_copy_to_clipboard: { action: context_copy_to_clipboard_action },
     context_suggest_blocks: { action: context_suggest_blocks_action },
     context_suggest_sources: { action: context_suggest_sources_action },
     lookup_list_pre_process: { action: lookup_list_pre_process_action, pre_process: lookup_list_pre_process_action_pre_process },
