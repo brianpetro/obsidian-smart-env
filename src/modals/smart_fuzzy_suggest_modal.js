@@ -59,7 +59,7 @@ export class SmartFuzzySuggestModal extends FuzzySuggestModal {
 
     const open_handler = (payload = {}) => {
       const item = Modal.resolve_item_from_payload(env, payload);
-      const modal = Modal.open(item, payload);
+      const modal = Modal.open(item, {...payload}); // spread since event payload is locked
       return modal;
     };
     // const suggest_handler = async (payload = {}) => {

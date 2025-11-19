@@ -69,6 +69,8 @@ export class ContextModal extends SmartFuzzySuggestModal {
       const suggestion_action = this.smart_context.actions[this.params.suggestions_action_key];
       if(typeof suggestion_action === 'function') {
         this.suggestions = suggestion_action(this.params);
+      }else{
+        console.warn('missing suggest action', this.params.suggestions_action_key)
       }
       this.params.suggestions_action_key = null; // only run once
     }
