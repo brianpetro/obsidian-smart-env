@@ -131,7 +131,10 @@ export class SmartItemView extends ItemView {
    * @param {import("obsidian").Workspace} workspace
    * @param {boolean} [active=true]
    */
-  static open(workspace, active = true) {
+  static open(workspace, params = {}) {
+    const {
+      active = true,
+    } = params;
     const existing_leaf = this.get_leaf(workspace);
 
     if (this.default_open_location === "root") {
@@ -162,7 +165,7 @@ export class SmartItemView extends ItemView {
 
     // trigger render
     setTimeout(() => {
-      this.get_view(workspace)?.render_view();
+      this.get_view(workspace)?.render_view(params);
     }, 100);
   }
 
@@ -182,7 +185,7 @@ export class SmartItemView extends ItemView {
     this.render_view();
   }
   register_plugin_events() { /* OVERRIDE AS NEEDED */ }
-  render_view() { throw new Error("render_view must be implemented in subclass"); }
+  render_view(params = {}) { throw new Error("render_view must be implemented in subclass"); }
   get container() { return this.containerEl.children[1]; }
   get env() { return this.plugin.env; }
   async open_settings(){
