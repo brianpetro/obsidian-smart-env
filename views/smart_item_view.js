@@ -89,7 +89,7 @@ export class SmartItemView extends ItemView {
     plugin[open_method_name] = () => View.open(plugin.app.workspace);
 
     // Register `${view_type}:open` event listener on SmartEnv events, if available
-    const event_name = `${View.view_type}:open`;
+    const event_name = `${method_name}:open`;
     const handler = (payload) => {
       const active = typeof payload?.active === "boolean" ? payload.active : true;
       View.open(plugin.app.workspace, active);
