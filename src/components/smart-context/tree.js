@@ -1,4 +1,5 @@
 import { build_tree_html } from '../../utils/smart-context/build_tree_html.js';
+import styles from './tree.css';
 
 export function build_html(ctx, opts = {}) {
   const items = ctx.get_context_items();
@@ -11,6 +12,7 @@ export function build_html(ctx, opts = {}) {
 }
 
 export async function render(ctx, opts = {}) {
+  this.apply_style_sheet(styles);
   const html = build_html(ctx, opts);
   const frag = this.create_doc_fragment(html);
   const container = frag.querySelector('.sc-context-tree');

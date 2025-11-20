@@ -1,26 +1,48 @@
 import { register_item_hover_popover } from 'obsidian-smart-env/src/utils/register_item_hover_popover.js';
 import { Platform } from 'obsidian';
-function build_html(context_item, params={}) {
+
+/**
+ * Format a context item score for display.
+ * @param {number|string|null|undefined} score
+ * @returns {string|null}
+ */
+export function format_score(score) {
+  const numeric_score = typeof score === 'number' ? score : Number.parseFloat(score);
+  if (!Number.isFinite(numeric_score)) return null;
+  return Number.parseFloat(numeric_score.toFixed(2)).toString();
+}
+
+/**
+ * Build the HTML string for a context tree leaf.
+ * @param {object} context_item
+ * @param {object} params
+ * @returns {string}
+ */
+export function build_html(context_item, params = {}) {
   let name;
-  if(context_item.item_ref) {
-    if(context_item.item_ref.key.includes('#')) {
+  if (context_item.item_ref) {
+    if (context_item.item_ref.key.includes('#')) {
       const name_pcs = context_item.item_ref.key.split('/').pop().split('#').filter(Boolean);
       const last_pc = name_pcs.pop();
       const segments = [];
-      if(last_pc && last_pc.startsWith('{')) {
+      if (last_pc && last_pc.startsWith('{')) {
         segments.push(name_pcs.pop());
         segments.push(context_item.item_ref.lines.join('-'));
         name = segments.join(' > Lines: ');
       }
-    }else{
+    } else {
       name = context_item.item_ref.key.split('/').pop();
     }
-  }else{
+  } else {
     name = context_item.key.split('/').pop();
   }
 
-  return `<span>
+  const score = format_score(context_item?.data?.score);
+  const score_html = score ? `<span class="sc-context-item-score">${score}</span>` : '';
+
+  return `<span class="sc-context-item-leaf">
   <span class="sc-context-item-remove" data-path="${context_item.key}">×</span>
+  ${score_html}
   <span class="sc-context-item-name">${name || context_item.key}</span>
   </span>`;
 }
