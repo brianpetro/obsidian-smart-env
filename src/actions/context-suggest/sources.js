@@ -11,3 +11,4 @@ export function context_suggest_sources(params={}) {
   ;
   return unselected;
 }
+export const display_name = 'Add sources';

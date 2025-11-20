@@ -71,7 +71,7 @@ export class SmartEnv extends BaseSmartEnv {
     );
     register_completion_variable_adapter_replacements(this._config.collections.smart_completions.completion_adapters.SmartCompletionVariableAdapter);
     // register modals
-    const ContextModal = this._config.modals.context_modal;
+    const ContextModal = this._config.modals.context_modal.class;
     ContextModal.register_modal(this.main);
     // register status bar
     this.register_status_bar();
@@ -219,7 +219,8 @@ export class SmartEnv extends BaseSmartEnv {
   }
   // open notifications feed modal
   open_notifications_feed_modal() {
-    const modal = new this.config.modals.notifications_feed_modal(this.obsidian_app, this);
+    const NotificationsModalClass = this.config.modals.notifications_feed_modal.class;
+    const modal = new NotificationsModalClass(this.obsidian_app, this);
     modal.open();
   }
 }

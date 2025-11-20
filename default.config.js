@@ -194,8 +194,15 @@ const smart_env_config = {
   },
   // begin obsidian-smart-env specific modules (need to update build_env_config.js to handle)
   modals: {
-    context_modal: ContextModal,
-    notifications_feed_modal: NotificationsFeedModal,
+    context_modal: {
+      class: ContextModal,
+      default_suggest_action_keys: [
+        'context_suggest_sources',
+      ]
+    },
+    notifications_feed_modal: {
+      class: NotificationsFeedModal,
+    },
   }
 };
 import { smart_env_config as dist_config } from './smart_env.config.js';

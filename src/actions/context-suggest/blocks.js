@@ -35,3 +35,4 @@ function get_block_display_name(item, settings = {}) {
   }
   return pcs.filter(Boolean).join(' > ');
 }
+export const display_name = 'Add blocks';

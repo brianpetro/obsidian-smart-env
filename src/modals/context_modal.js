@@ -75,7 +75,31 @@ export class ContextModal extends SmartFuzzySuggestModal {
       this.params.suggestions_action_key = null; // only run once
     }
     if(this.suggestions?.length) return this.suggestions;
+    if(this.default_suggest_action_keys?.length) {
+      // run suggest actions directly if only one default action
+      if(this.default_suggest_action_keys.length === 1) {
+        return this.handle_choose_action(this.default_suggest_action_keys[0]);
+      }
+      return this.default_suggest_action_keys
+        .map(action_key => {
+          const action_config = this.env.config.actions[action_key];
+          if(!action_config) return null;
+          const display_name = action_config.display_name || action_key;
+          return {
+            select_action: () => {
+              this.handle_choose_action(action_key);
+            },
+            key: action_key,
+            display: display_name,
+          };
+        })
+        .filter(Boolean)
+      ;
+    }
     return this.smart_context.actions.context_suggest_sources(this.params);
+  }
+  get default_suggest_action_keys() {
+    return this.env.config.modals.context_modal.default_suggest_action_keys || [];
   }
 
   onChooseSuggestion(selected, evt) {
@@ -100,6 +124,14 @@ export class ContextModal extends SmartFuzzySuggestModal {
   }
 
   async handle_choose_action(suggestion_action) {
+    if(typeof suggestion_action === 'string') {
+      suggestion_action = this.smart_context.actions[suggestion_action];
+    }
+    if (typeof suggestion_action !== 'function') {
+      this.env.events.emit('notification:error', {message: 'Invalid suggestion action'});
+      console.warn('Invalid suggestion action', suggestion_action);
+      return;
+    }
     const result = await suggestion_action();
     console.log('Suggestion action result', result);
     if(Array.isArray(result)) {
