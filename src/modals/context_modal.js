@@ -28,13 +28,14 @@ export class ContextModal extends SmartFuzzySuggestModal {
       if (e.key === 'Enter') this.selectActiveSuggestion(e);
       if (e.target !== this.inputEl || !this.inputEl.value || Keymap.isModEvent(e)) {
         if (e.key === 'ArrowLeft') {
-          this.suggestions = null;
-          this.updateSuggestions();
+          this.use_arrow_left = true;
+          this.selectActiveSuggestion(e);
           return;
         }
         if (e.key === 'ArrowRight') {
           e.preventDefault();
           this.use_mod_select = true;
+          this.use_arrow_right = true;
           this.selectActiveSuggestion(e);
           return;
         }
@@ -65,15 +66,6 @@ export class ContextModal extends SmartFuzzySuggestModal {
   }
 
   get_suggestions() {
-    if(this.params.suggestions_action_key) {
-      const suggestion_action = this.smart_context.actions[this.params.suggestions_action_key];
-      if(typeof suggestion_action === 'function') {
-        this.suggestions = suggestion_action(this.params);
-      }else{
-        console.warn('missing suggest action', this.params.suggestions_action_key)
-      }
-      this.params.suggestions_action_key = null; // only run once
-    }
     if(this.suggestions?.length) return this.suggestions;
     if(this.default_suggest_action_keys?.length) {
       // run suggest actions directly if only one default action
@@ -103,29 +95,45 @@ export class ContextModal extends SmartFuzzySuggestModal {
       .filter(Boolean)
     ;
   }
-
   get default_suggest_action_keys() {
+    if (Array.isArray(this.params?.default_suggest_action_keys)) {
+      return this.params.default_suggest_action_keys;
+    }
     return this.env.config.modals.context_modal.default_suggest_action_keys || [];
   }
 
   onChooseSuggestion(selected, evt) {
     this.prevent_close = true;
     const suggestion = selected.item;
-    if (Keymap.isModifier(evt, 'Mod') || this.use_mod_select) {
-      console.log('Mod key held for suggestion', suggestion);
-      this.use_mod_select = false;
-      if(typeof suggestion.mod_select_action === 'function') {
-        this.handle_choose_action(suggestion.mod_select_action);
-      }
-    } else {
-      if(typeof suggestion.select_action === 'function') {
-        this.handle_choose_action(suggestion.select_action);
+    const is_arrow_left = this.use_arrow_left;
+    const is_arrow_right = this.use_arrow_right;
+    const is_mod_select = Keymap.isModifier(evt, 'Mod')
+      || this.use_mod_select
+    ;
+    // reset flags
+    this.use_arrow_right = false;
+    this.use_mod_select = false;
+    this.use_arrow_left = false;
+    if (is_arrow_left) {
+      if (typeof suggestion.arrow_left_action === 'function') {
+        this.handle_choose_action(suggestion.arrow_left_action);
       } else {
-        this.smart_context.add_item(suggestion.key);
-        setTimeout(() => {
-          this.updateSuggestions();
-        }, 100);
+        this.suggestions = null;
+        this.params.default_suggest_action_keys = null; // reset to config default
+        this.updateSuggestions();
       }
+    } else if (is_arrow_right && typeof suggestion.arrow_right_action === 'function') {
+      this.handle_choose_action(suggestion.arrow_right_action);
+    } else if (is_mod_select && typeof suggestion.mod_select_action === 'function') {
+      console.log('Mod key held for suggestion', suggestion);
+      this.handle_choose_action(suggestion.mod_select_action);
+    } else if(typeof suggestion.select_action === 'function') {
+      this.handle_choose_action(suggestion.select_action);
+    } else {
+      this.smart_context.add_item(suggestion.key);
+      setTimeout(() => {
+        this.updateSuggestions();
+      }, 100);
     }
   }
 
@@ -140,7 +148,7 @@ export class ContextModal extends SmartFuzzySuggestModal {
     }
     const result = await suggestion_action();
     console.log('Suggestion action result', result);
-    if(Array.isArray(result)) {
+    if(Array.isArray(result) && result.length) {
       this.suggestions = result;
       this.updateSuggestions();
       return;

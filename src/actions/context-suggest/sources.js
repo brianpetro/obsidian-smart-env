@@ -5,6 +5,10 @@ export function context_suggest_sources(params={}) {
       key: src.key,
       display: src.key,
       mod_select_action: () => {
+        // DO: decedied: replace with adding all blocks?
+        return context_suggest_blocks.call(this, { source_key: src.key });
+      },
+      arrow_right_action: () => {
         return context_suggest_blocks.call(this, { source_key: src.key });
       }
     }))
