@@ -1,3 +1,4 @@
+import styles from './styles.css';
 import { copy_to_clipboard } from 'obsidian-smart-env/utils/copy_to_clipboard.js';
 export function build_html(ctx, opts = {}) {
   return `<div>
@@ -20,6 +21,7 @@ export function build_html(ctx, opts = {}) {
  */
 export async function render(ctx, opts = {}) {
   const html = build_html(ctx, opts);
+  this.apply_style_sheet(styles);
   const frag = this.create_doc_fragment(html);
   const container = frag.querySelector('.sc-context-view');
   post_process.call(this, ctx, container, opts);

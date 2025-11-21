@@ -13,3 +13,16 @@
   background: var(--background-modifier-hover);
   border-radius: 6px;
 }
+
+/* Modal view adjustments */
+.modal-container .sc-context-view {
+  max-height: 60%;
+  display: flex;
+  flex-direction: column;
+  .sc-context-view-body {
+    overflow: auto;
+  }
+  .sc-add-context-btn {
+    display: none;
+  }
+}
