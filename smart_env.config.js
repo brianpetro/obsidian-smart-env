@@ -18,6 +18,8 @@ import { render as status_bar_component } from './src/components/status_bar.js';
 import { render as supporter_callout_component } from './src/components/supporter_callout.js';
 import { render as user_agreement_callout_component } from './src/components/user_agreement_callout.js';
 import { copy_to_clipboard as context_copy_to_clipboard_action } from './src/actions/context/copy_to_clipboard.js';
+import { merge_template as context_item_merge_template_action, settings_config as context_item_merge_template_action_settings_config, default_settings as context_item_merge_template_action_default_settings } from './src/actions/context-item/merge_template.js';
+import { merge_template as context_merge_template_action, settings_config as context_merge_template_action_settings_config, default_settings as context_merge_template_action_default_settings } from './src/actions/context/merge_template.js';
 import { context_suggest_blocks as context_suggest_blocks_action, display_name as context_suggest_blocks_action_display_name } from './src/actions/context-suggest/blocks.js';
 import { context_suggest_sources as context_suggest_sources_action, display_name as context_suggest_sources_action_display_name } from './src/actions/context-suggest/sources.js';
 import { pre_process as lookup_list_pre_process_action, pre_process as lookup_list_pre_process_action_pre_process } from './src/actions/lookup-list/pre_process.js';
@@ -55,6 +57,8 @@ export const smart_env_config = {
   },
   actions: {
     context_copy_to_clipboard: { action: context_copy_to_clipboard_action },
+    context_item_merge_template: { action: context_item_merge_template_action, settings_config: context_item_merge_template_action_settings_config, default_settings: context_item_merge_template_action_default_settings },
+    context_merge_template: { action: context_merge_template_action, settings_config: context_merge_template_action_settings_config, default_settings: context_merge_template_action_default_settings },
     context_suggest_blocks: { action: context_suggest_blocks_action, display_name: context_suggest_blocks_action_display_name },
     context_suggest_sources: { action: context_suggest_sources_action, display_name: context_suggest_sources_action_display_name },
     lookup_list_pre_process: { action: lookup_list_pre_process_action, pre_process: lookup_list_pre_process_action_pre_process },
