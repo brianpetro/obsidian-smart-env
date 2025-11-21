@@ -97,6 +97,8 @@ export function build_smart_env_config(dist_dir, roots) {
     .map(({
       action_export_name,
       action_import_var,
+      default_settings_export_name,
+      default_settings_import_var,
       settings_export_name,
       settings_import_var,
       display_name_export_name,
@@ -116,6 +118,9 @@ export function build_smart_env_config(dist_dir, roots) {
       }
       if (settings_export_name) {
         specs.push(`${settings_export_name} as ${settings_import_var}`);
+      }
+      if (default_settings_export_name) {
+        specs.push(`${default_settings_export_name} as ${default_settings_import_var}`);
       }
       if (pre_process_export_name) {
         specs.push(`${pre_process_export_name} as ${pre_process_import_var}`);
@@ -316,6 +321,8 @@ ${actions_config}
 
         const action_export_name = has_flat_named_export ? flattened_key : action_name;
 
+        // add default_settings export detection
+        const has_default_settings = has_named_export(content, 'default_settings');
         const has_settings_config = has_named_export(content, 'settings_config');
         const has_display_name = has_named_export(content, 'display_name');
         const has_display_description = has_named_export(content, 'display_description');
@@ -324,6 +331,7 @@ ${actions_config}
         const import_var = [...folder_snake, action_key, 'action'].join('_');
         const import_path = normalize_relative_path(abs);
 
+        const default_settings_import_var = has_default_settings ? `${import_var}_default_settings` : null;
         const settings_import_var = has_settings_config ? `${import_var}_settings_config` : null;
         const display_name_import_var = has_display_name ? `${import_var}_display_name` : null;
         const display_description_import_var = has_display_description ? `${import_var}_display_description` : null;
@@ -335,6 +343,8 @@ ${actions_config}
         flat.push({
           action_export_name,
           action_import_var: import_var,
+          default_settings_export_name: has_default_settings ? 'default_settings' : null,
+          default_settings_import_var,
           settings_export_name: has_settings_config ? 'settings_config' : null,
           settings_import_var,
           display_name_export_name: has_display_name ? 'display_name' : null,
@@ -347,6 +357,9 @@ ${actions_config}
         });
 
         config[flattened_key] = { action_import_var: import_var };
+        if (has_default_settings) {
+          config[flattened_key].default_settings_import_var = default_settings_import_var;
+        }
         if (has_display_name) {
           config[flattened_key].display_name_import_var = display_name_import_var;
         }
@@ -399,6 +412,7 @@ ${actions_config}
         if (v.display_name_import_var) inner.push(`display_name: ${v.display_name_import_var}`);
         if (v.display_description_import_var) inner.push(`display_description: ${v.display_description_import_var}`);
         if (v.settings_import_var) inner.push(`settings_config: ${v.settings_import_var}`);
+        if (v.default_settings_import_var) inner.push(`default_settings: ${v.default_settings_import_var}`);
         if (v.pre_process_import_var) inner.push(`pre_process: ${v.pre_process_import_var}`);
         return `${spacer}${k}: { ${inner.join(', ')} }`;
       })

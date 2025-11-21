@@ -58,6 +58,7 @@ export const settings_config = { theme: 'dark' };`
 
   /* actions */
   write_file('src/actions/publish.js', `export function publish(){ return 'action'; }
+export const default_settings = { baz: 'qux' };
 export const display_name = 'Publish Action';
 export const display_description = 'Send a note to publish';
 export const settings_config = { foo: 'bar' };
@@ -192,6 +193,13 @@ test('actions config includes settings_config when exported', async t => {
   t.deepEqual(publish.settings_config, { foo: 'bar' });
 });
 
+test('actions config includes default_settings when exported', async t => {
+  const mod_path = path.join(tmp_root, 'smart_env.config.js');
+  const cfg = await import(pathToFileURL(mod_path).href);
+  const { publish } = cfg.smart_env_config.actions;
+  t.deepEqual(publish.default_settings, { baz: 'qux' });
+});
+
 test('actions config includes display metadata when exported', async t => {
   const mod_path = path.join(tmp_root, 'smart_env.config.js');
   const cfg = await import(pathToFileURL(mod_path).href);
@@ -206,7 +214,7 @@ test('actions nested folders are snake_cased in config', async t => {
   const mod_path = path.join(tmp_root, 'smart_env.config.js');
   const cfg = await import(pathToFileURL(mod_path).href);
   const { actions } = cfg.smart_env_config;
-  t.is(typeof actions.smart_sources.sync.action, 'function');
+  t.is(typeof actions.smart_sources_sync.action, 'function');
 });
 
 test('action filenames are sanitized to snake_case keys', async t => {
