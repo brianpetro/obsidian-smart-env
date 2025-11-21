@@ -10,6 +10,9 @@ export function context_suggest_blocks(params={}) {
   return blocks.map(block => ({
     key: block.key,
     display: get_block_display_name(block, { show_full_path: false }),
+    select_action: () => {
+      this.add_item(block.key);
+    },
   }));
 }
 

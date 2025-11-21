@@ -58,24 +58,32 @@ export class ContextModal extends SmartFuzzySuggestModal {
   }
 
   getItems() {
-    const suggestions = this.get_suggestions();
-    const filtered_suggestions = suggestions.filter(
-      (s) => (s.key && !this.smart_context?.data?.context_items[s.key]) || s.select_action
-    );
-    return filtered_suggestions;
+    return this.get_suggestions();
+  }
+
+  filter_suggestions(suggestions) {
+    return suggestions.filter((s) => {
+      if (s.key && this.smart_context?.data?.context_items[s.key]) return false;
+      return true;
+    });
   }
 
   get_suggestions() {
-    if(this.suggestions?.length) return this.suggestions;
+    if(this.suggestions?.length) {
+      this.suggestions = this.filter_suggestions(this.suggestions);
+      if(this.suggestions.length > 0) {
+        return this.suggestions;
+      }
+    }
     if(this.default_suggest_action_keys?.length) {
       // run suggest actions directly if only one default action
       if(this.default_suggest_action_keys.length === 1) {
-        this.handle_choose_action(this.default_suggest_action_keys[0]);
+        this.update_suggestions(this.default_suggest_action_keys[0]);
         return [];
       }
-      return this.get_suggest_scopes()
-      ;
+      return this.get_suggest_scopes();
     }
+    // can below be removed since default_suggest_action_keys?
     return this.smart_context.actions.context_suggest_sources(this.params);
   }
   get_suggest_scopes() {
@@ -86,7 +94,7 @@ export class ContextModal extends SmartFuzzySuggestModal {
         const display_name = action_config.display_name || action_key;
         return {
           select_action: () => {
-            this.handle_choose_action(action_key);
+            this.update_suggestions(action_key);
           },
           key: action_key,
           display: display_name,
@@ -102,7 +110,8 @@ export class ContextModal extends SmartFuzzySuggestModal {
     return this.env.config.modals.context_modal.default_suggest_action_keys || [];
   }
 
-  onChooseSuggestion(selected, evt) {
+  onChooseSuggestion(selected, evt, ...other) {
+    console.log('Chosen suggestion', selected, evt, other);
     this.prevent_close = true;
     const suggestion = selected.item;
     const is_arrow_left = this.use_arrow_left;
@@ -116,44 +125,59 @@ export class ContextModal extends SmartFuzzySuggestModal {
     this.use_arrow_left = false;
     if (is_arrow_left) {
       if (typeof suggestion.arrow_left_action === 'function') {
-        this.handle_choose_action(suggestion.arrow_left_action);
+        this.handle_choose_action(suggestion, 'arrow_left_action');
       } else {
         this.suggestions = null;
         this.params.default_suggest_action_keys = null; // reset to config default
         this.updateSuggestions();
+        return; // resets suggestions
       }
     } else if (is_arrow_right && typeof suggestion.arrow_right_action === 'function') {
-      this.handle_choose_action(suggestion.arrow_right_action);
+      this.handle_choose_action(suggestion, 'arrow_right_action');
     } else if (is_mod_select && typeof suggestion.mod_select_action === 'function') {
       console.log('Mod key held for suggestion', suggestion);
-      this.handle_choose_action(suggestion.mod_select_action);
+      this.handle_choose_action(suggestion, 'mod_select_action');
     } else if(typeof suggestion.select_action === 'function') {
-      this.handle_choose_action(suggestion.select_action);
+      this.handle_choose_action(suggestion, 'select_action');
     } else {
-      this.smart_context.add_item(suggestion.key);
-      setTimeout(() => {
-        this.updateSuggestions();
-      }, 100);
+      this.env.events.emit('notification:warning', {selection_display: suggestion.display, message: 'No action defined for this suggestion'});
     }
   }
 
-  async handle_choose_action(suggestion_action) {
-    if(typeof suggestion_action === 'string') {
-      suggestion_action = this.smart_context.actions[suggestion_action];
-    }
-    if (typeof suggestion_action !== 'function') {
-      this.env.events.emit('notification:error', {message: 'Invalid suggestion action'});
-      console.warn('Invalid suggestion action', suggestion_action);
-      return;
-    }
-    const result = await suggestion_action();
-    console.log('Suggestion action result', result);
+  async handle_choose_action(suggestion, action_key) {
+    let chosen_action = suggestion[action_key];
+    const result = await chosen_action({context_modal: this});
     if(Array.isArray(result) && result.length) {
       this.suggestions = result;
+    } else if (Array.isArray(result)) {
+      this.env.events.emit('notification:info', {message: 'No suggestions returned from action'});
+    }
+    const idx = this.chooser.values.findIndex(i => i.item?.display === suggestion.display);
+    setTimeout(() => {
       this.updateSuggestions();
-      return;
+      if(idx !== -1) {
+        this.chooser.setSelectedItem(idx);
+      }
+    }, 100);
+  }
+  async update_suggestions(context_suggest) {
+    if(typeof context_suggest === 'string') {
+      context_suggest = this.smart_context.actions[context_suggest];
+    }
+    if (typeof context_suggest === 'function') {
+      const result = await context_suggest({context_modal: this});
+      console.log('Suggestion action result', result);
+      if(Array.isArray(result) && result.length) {
+        this.suggestions = result;
+      }
+    } else if (Array.isArray(context_suggest)) {
+      this.suggestions = context_suggest;
+    }
+    if(Array.isArray(this.suggestions) && this.suggestions.length) {
+      this.updateSuggestions();
     } else {
-      this.suggestions = null;
+      this.env.events.emit('notification:error', {message: 'Invalid suggestion action'});
+      console.warn('Invalid suggestion action', context_suggest);
     }
   }
   close() {
