@@ -39,10 +39,18 @@ async function post_process(env, container, params = {}) {
   });
 }
 
+function get_level (entry) {
+  const [event_domain, event_type] = entry.event_key.split(':');
+  if (event_domain === 'notification') {
+    return event_type;
+  }
+  return 'info';
+}
+
 function append_entry(feed_container, entry) {
   const row = feed_container.ownerDocument.createElement('div');
   row.className = 'smart-env-notification';
-  row.dataset.level = entry.event_key.endsWith('error') ? 'error' : entry.level || 'info';
+  row.dataset.level = get_level(entry);
   feed_container.appendChild(row);
   
   const meta = feed_container.ownerDocument.createElement('div');

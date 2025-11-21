@@ -2,10 +2,10 @@ import { Notice } from 'obsidian';
 import { copy_to_clipboard as base_copy } from 'obsidian-smart-env/utils/copy_to_clipboard.js';
 
 export async function copy_to_clipboard(params = {}) {
-  // TODO: replace with get_text (needs new stats support)
-  // const { context, stats, images } = await this.compile({ link_depth: 0 });
-  // await base_copy(context, images); // may replace with env.actions.copy_to_clipboard
-  // show_stats_notice(this, stats);
+  if (!this.has_context_items) {
+    this.emit_event('notification:warning', { message: 'No context items to copy.' });
+    return new Notice('No context items to copy.');
+  }
   const content = await this.get_text();
   show_stats_notice(this, {
     char_count: content.length,
