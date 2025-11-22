@@ -2,12 +2,14 @@ import { Notice } from 'obsidian';
 import { copy_to_clipboard as base_copy } from 'obsidian-smart-env/utils/copy_to_clipboard.js';
 
 export async function copy_to_clipboard(params = {}) {
-  if (!this.has_context_items) {
+  const context_items = this.context_items.filter(params.filter);
+  if (!context_items.length) {
     this.emit_event('notification:warning', { message: 'No context items to copy.' });
     return new Notice('No context items to copy.');
   }
   const content = await this.get_text(params);
-  show_stats_notice(this, {
+  show_stats_notice({
+    item_count: context_items.length,
     char_count: content.length,
   });
   await base_copy(content);
@@ -16,8 +18,8 @@ export async function copy_to_clipboard(params = {}) {
 /**
  * Show user-facing notice summarizing stats.
  */
-function show_stats_notice(ctx, stats) {
-  const ctx_ct = `${Object.keys(ctx.data.context_items).length} file(s)`;
+function show_stats_notice(stats) {
+  const ctx_ct = `${stats.item_count} file(s)`;
   let msg = `Copied to clipboard! (${ctx_ct})`;
   if (stats) {
     const char_count = stats.char_count < 100000
