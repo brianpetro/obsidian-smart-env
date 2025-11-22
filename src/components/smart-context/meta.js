@@ -17,10 +17,18 @@ export async function render(ctx, params = {}) {
 }
 
 export async function post_process(ctx, container, params={}) {
-  if (!ctx?.has_context_items) return container;
-  const chars = ctx.size || 0;
-  const tokens = estimate_tokens(chars);
-  container.textContent = `≈ ${chars.toLocaleString()} chars · ${tokens.toLocaleString()} tokens`;
-
+  const render_meta = () => {
+    if (ctx?.has_context_items) {
+      const chars = ctx.size || 0;
+      const tokens = estimate_tokens(chars);
+      container.textContent = `≈ ${chars.toLocaleString()} chars · ${tokens.toLocaleString()} tokens`;
+    } else {
+      container.textContent = 'No context items selected';
+    }
+  }
+  render_meta();
+  const disposers = [];
+  disposers.push(ctx.on_event('context:updated', render_meta));
+  this.attach_disposer(container, disposers);
   return container;
 }
