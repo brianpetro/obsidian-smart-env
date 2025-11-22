@@ -1,5 +1,6 @@
 import { register_item_hover_popover } from 'obsidian-smart-env/src/utils/register_item_hover_popover.js';
 import { Platform } from 'obsidian';
+import styles from './leaf.css';
 
 /**
  * Format a context item score for display.
@@ -48,6 +49,7 @@ export function build_html(context_item, params = {}) {
 }
 
 export async function render(context_item, params={}) {
+  this.apply_style_sheet(styles);
   const html = build_html(context_item, params);
   const frag = this.create_doc_fragment(html);
   const container = frag.firstElementChild;
@@ -73,4 +75,10 @@ async function post_process(context_item, container, params={}) {
     name.setAttribute('title', `Hold ${Platform.isMacOS ? '⌘' : 'Ctrl'} to preview`);
     register_item_hover_popover(name, context_item.item_ref);
   }
+  const name = container.querySelector('.sc-context-item-name');
+  name.addEventListener('click', (event) => {
+    context_item.open(event);
+  });
+
+  return container;
 }

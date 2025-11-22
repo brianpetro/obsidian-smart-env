@@ -24,6 +24,7 @@ import { context_suggest_blocks as context_suggest_blocks_action, display_name a
 import { context_suggest_sources as context_suggest_sources_action, display_name as context_suggest_sources_action_display_name } from './src/actions/context-suggest/sources.js';
 import { pre_process as lookup_list_pre_process_action, pre_process as lookup_list_pre_process_action_pre_process } from './src/actions/lookup-list/pre_process.js';
 import { similarity as similarity_action, display_name as similarity_action_display_name, display_description as similarity_action_display_description, settings_config as similarity_action_settings_config } from './src/actions/similarity.js';
+import { source_open as source_open_action } from './src/actions/source/open.js';
 
 export const smart_env_config = {
   collections: {
@@ -62,6 +63,7 @@ export const smart_env_config = {
     context_suggest_blocks: { action: context_suggest_blocks_action, display_name: context_suggest_blocks_action_display_name },
     context_suggest_sources: { action: context_suggest_sources_action, display_name: context_suggest_sources_action_display_name },
     lookup_list_pre_process: { action: lookup_list_pre_process_action, pre_process: lookup_list_pre_process_action_pre_process },
-    similarity: { action: similarity_action, display_name: similarity_action_display_name, display_description: similarity_action_display_description, settings_config: similarity_action_settings_config }
+    similarity: { action: similarity_action, display_name: similarity_action_display_name, display_description: similarity_action_display_description, settings_config: similarity_action_settings_config },
+    source_open: { action: source_open_action }
   }
 };
