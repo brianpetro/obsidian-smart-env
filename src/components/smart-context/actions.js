@@ -9,6 +9,7 @@ export function build_html() {
       />
       <span class="sc-context-actions-right">
         <button class="sc-add-context-btn" type="button">Add context</button>
+        <button class="sc-clear-context-btn" type="button" style="display:none;">Clear</button>
         <button class="sc-copy-clipboard" type="button" style="display:none;">Copy to clipboard</button>
       </span>
     </div>
@@ -77,6 +78,11 @@ async function post_process(ctx, container, opts = {}) {
       copy_btn.style.display = 'inline-block';
       copy_btn.addEventListener('click', async () => {
         ctx.actions.context_copy_to_clipboard();
+      });
+      const clear_btn = container.querySelector('.sc-clear-context-btn');
+      clear_btn.style.display = 'inline-block';
+      clear_btn.addEventListener('click', () => {
+        ctx.clear_all();
       });
     }
   }
