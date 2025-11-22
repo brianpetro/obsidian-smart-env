@@ -6,7 +6,7 @@ export async function copy_to_clipboard(params = {}) {
     this.emit_event('notification:warning', { message: 'No context items to copy.' });
     return new Notice('No context items to copy.');
   }
-  const content = await this.get_text();
+  const content = await this.get_text(params);
   show_stats_notice(this, {
     char_count: content.length,
   });
