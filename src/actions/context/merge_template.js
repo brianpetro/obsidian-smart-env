@@ -22,6 +22,17 @@ export async function merge_template(context_items_text, context_items) {
   return [before, context_items_text, after].join('\n');
 }
 export const settings_config = {
+  context_explanation: {
+    type: 'html',
+    value: `
+      <div class="setting-explanation">
+        <h5>Context templates</h5>
+        <ul>
+          <li><code>{{FILE_TREE}}</code> - Shows hierarchical view of all files</li>
+        </ul>
+      </div>
+    `
+  },
   template_before: {
     type: 'textarea',
     name: 'Template Before',
@@ -31,21 +42,6 @@ export const settings_config = {
     type: 'textarea',
     name: 'Template After',
     description: 'Template to wrap after the context.',
-  },
-  context_explanation: {
-    type: 'html',
-    value: `
-      <div class="setting-explanation">
-        <h5>Context templates</h5>
-        <span>Included once in the final output at the beginning (before_context) and end (after_context).</span>
-        <br>
-        <br>
-        <span>Available variables:</span>
-        <ul>
-          <li><code>{{FILE_TREE}}</code> - Shows hierarchical view of all files</li>
-        </ul>
-      </div>
-    `
   },
 };
 export const default_settings = {

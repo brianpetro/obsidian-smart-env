@@ -23,6 +23,19 @@ export async function merge_template(context_items_text, context_items) {
 }
 
 export const settings_config = {
+  item_explanation: {
+    type: 'html',
+    value: `
+      <div class="setting-explanation">
+        <h5>Item templates</h5>
+        <ul>
+          <li><code>{{KEY}}</code> - Full path of the item</li>
+          <li><code>{{TIME_AGO}}</code> - Time since the item was last modified</li>
+          <li><code>{{LINK_DEPTH}}</code> - Depth level of the item</li>
+        </ul>
+      </div>
+    `
+  },
   template_before: {
     type: 'textarea',
     name: 'Template Before',
@@ -32,23 +45,6 @@ export const settings_config = {
     type: 'textarea',
     name: 'Template After',
     description: 'Template to wrap after the context item content.',
-  },
-  item_explanation: {
-    type: 'html',
-    value: `
-      <div class="setting-explanation">
-        <h5>Item templates</h5>
-        <span>Included once for each item (before_item and after_item).</span>
-        <br>
-        <br>
-        <span>Available variables:</span>
-        <ul>
-          <li><code>{{KEY}}</code> - Full path of the item</li>
-          <li><code>{{TIME_AGO}}</code> - Time since the item was last modified</li>
-          <li><code>{{LINK_DEPTH}}</code> - Depth level of the item</li>
-        </ul>
-      </div>
-    `
   },
 };  
 
