@@ -56,6 +56,14 @@ export const settings_config = { theme: 'dark' };`
     'export function render(){}'
   );
 
+  /* components – extra metadata (to prove COMPONENT_EXPORT_PROPS drives exposure) */
+  write_file(
+    'src/components/debug/dashboard.js',
+    `export function render(){}
+export const settings_config = { mode: 'debug' };
+export const debug_label = 'Debug Dashboard';`
+  );
+
   /* actions */
   write_file('src/actions/publish.js', `export function publish(){ return 'action'; }
 export const default_settings = { baz: 'qux' };
@@ -70,6 +78,14 @@ export const settings_config = { foo: 'bar' };
     'src/actions/connections-list/PreProcess.js',
     `export function PreProcess(){}
 export const pre_process = () => 'prep';`
+  );
+
+  /* actions – extra metadata (to prove ACTION_EXPORT_PROPS drives exposure) */
+  write_file(
+    'src/actions/track.js',
+    `export function track(){}
+export const display_name = 'Track Action';
+export const internal_flag = true;`
   );
 
   /* modules */
@@ -122,6 +138,7 @@ test('items are imported with PascalCase vars', t => {
   t.regex(file, /import { AwesomeBlock } from/);
   t.regex(file, /item_types:[\s\S]*AwesomeBlock/);
 });
+
 test('should skip .test.js files', t => {
   const file = read_generated_config();
   t.false(file.includes('AwesomeBlock.test.js'));
@@ -282,6 +299,57 @@ test('actions include pre_process export when provided', async t => {
   t.is(pre_process(), 'prep');
 });
 
+/** -------------------------------------------------------------------
+ * New tests: prove COMPONENT_EXPORT_PROPS / ACTION_EXPORT_PROPS gate metadata
+ * ------------------------------------------------------------------*/
+
+test('components only expose metadata exports defined by COMPONENT_EXPORT_PROPS', async t => {
+  const mod_path = path.join(tmp_root, 'smart_env.config.js');
+  const cfg = await import(pathToFileURL(mod_path).href);
+  const { components } = cfg.smart_env_config;
+
+  const debug_component = components.debug_dashboard;
+  t.truthy(debug_component);
+
+  /* render should always be present */
+  t.is(typeof debug_component.render, 'function');
+
+  /* settings_config is in COMPONENT_EXPORT_PROPS and is exported, so it appears */
+  t.deepEqual(debug_component.settings_config, { mode: 'debug' });
+
+  /* debug_label is exported from the component file but NOT in COMPONENT_EXPORT_PROPS,
+     so it must NOT appear on the config object */
+  t.false(
+    Object.prototype.hasOwnProperty.call(
+      debug_component,
+      'debug_label'
+    )
+  );
+});
+
+test('actions only expose metadata exports defined by ACTION_EXPORT_PROPS', async t => {
+  const mod_path = path.join(tmp_root, 'smart_env.config.js');
+  const cfg = await import(pathToFileURL(mod_path).href);
+  const { actions } = cfg.smart_env_config;
+
+  const track_action = actions.track;
+  t.truthy(track_action);
+
+  /* action should always be present */
+  t.is(typeof track_action.action, 'function');
+
+  /* display_name is in ACTION_EXPORT_PROPS and is exported, so it appears */
+  t.is(track_action.display_name, 'Track Action');
+
+  /* internal_flag is exported from the action file but NOT in ACTION_EXPORT_PROPS,
+     so it must NOT appear on the config object */
+  t.false(
+    Object.prototype.hasOwnProperty.call(
+      track_action,
+      'internal_flag'
+    )
+  );
+});
 
 test.after.always(() => {
   fs.rmSync(tmp_root, { recursive: true, force: true });
