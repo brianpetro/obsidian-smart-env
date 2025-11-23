@@ -1,5 +1,9 @@
 import {SmartFuzzySuggestModal} from "./smart_fuzzy_suggest_modal.js";
-import { Keymap, Platform } from 'obsidian';
+import {
+  Keymap,
+  setIcon,
+  Platform
+} from 'obsidian';
 
 export class ContextModal extends SmartFuzzySuggestModal {
   /** Modal identity */
@@ -187,5 +191,13 @@ export class ContextModal extends SmartFuzzySuggestModal {
       this.prevent_close = false;
     }, 10);
   }
-
+  renderSuggestion(sug, el) {
+    super.renderSuggestion(sug, el);
+    if (sug.item.icon) {
+      el.addClass('sc-modal-suggestion-has-icon');
+      const icon_el = el.createEl('span');
+      setIcon(icon_el, sug.item.icon);
+    }
+    return el;
+  }
 }
