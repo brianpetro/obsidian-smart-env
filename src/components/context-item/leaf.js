@@ -14,6 +14,34 @@ export function format_score(score) {
 }
 
 /**
+ * Format a size in bytes into a readable label.
+ * @param {number|string|null|undefined} size
+ * @returns {string|null}
+ */
+export function format_size(size) {
+  const numeric_size = typeof size === 'number' ? size : Number.parseFloat(size);
+  if (!Number.isFinite(numeric_size) || numeric_size < 0) return null;
+
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let size_value = numeric_size;
+  let unit_index = 0;
+
+  while (size_value >= 1024 && unit_index < units.length - 1) {
+    size_value /= 1024;
+    unit_index += 1;
+  }
+
+  const precision = size_value >= 10 || Number.isInteger(size_value) ? 0 : 1;
+  const rounded_value = Number.parseFloat(size_value.toFixed(precision));
+  return `${rounded_value.toString()} ${units[unit_index]}`;
+}
+
+function build_badge_html(label, class_name) {
+  if (!label) return '';
+  return `<span class="${class_name}">${label}</span>`;
+}
+
+/**
  * Build the HTML string for a context tree leaf.
  * @param {object} context_item
  * @param {object} params
@@ -39,12 +67,15 @@ export function build_html(context_item, params = {}) {
   }
 
   const score = format_score(context_item?.data?.score);
-  const score_html = score ? `<span class="sc-context-item-score">${score}</span>` : '';
+  const size = format_size(context_item?.size ?? context_item?.data?.size);
+  const score_html = build_badge_html(score, 'sc-context-item-score');
+  const size_html = build_badge_html(size, 'sc-context-item-size');
 
   return `<span class="sc-context-item-leaf">
   <span class="sc-context-item-remove" data-path="${context_item.key}">×</span>
   ${score_html}
   <span class="sc-context-item-name">${name || context_item.key}</span>
+  ${size_html}
   </span>`;
 }
 
