@@ -21,13 +21,14 @@ import { to_pascal_case } from 'smart-utils/to_pascal_case.js';
 
 const compare_strings = (a, b) => a.localeCompare(b);
 
-const COMPONENT_EXPORT_PROPS = ['settings_config'];
+const COMPONENT_EXPORT_PROPS = ['settings_config', 'version'];
 const ACTION_EXPORT_PROPS = [
   'settings_config',
   'default_settings',
   'display_name',
   'display_description',
-  'pre_process'
+  'pre_process',
+  'version'
 ];
 
 export function build_smart_env_config(dist_dir, roots) {

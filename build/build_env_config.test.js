@@ -13,6 +13,16 @@ import { build_smart_env_config } from './build_env_config.js';
  * ------------------------------------------------------------------*/
 const tmp_root = fs.mkdtempSync(path.join(os.tmpdir(), 'smart-env-test-'));
 
+const COMPONENT_EXPORT_PROPS = ['settings_config', 'version'];
+const ACTION_EXPORT_PROPS = [
+  'settings_config',
+  'default_settings',
+  'display_name',
+  'display_description',
+  'pre_process',
+  'version'
+];
+
 function write_file(rel, contents = '') {
   const abs = path.join(tmp_root, rel);
   fs.mkdirSync(path.dirname(abs), { recursive: true });
@@ -42,7 +52,9 @@ test.before(() => {
   write_file(
     'src/components/env_settings.js',
     `export function render(){}
-export const settings_config = { theme: 'dark' };`
+export const settings_config = { theme: 'dark' };
+export const debug_meta = { source: 'env_settings' };
+export const version = '1.0.0';`
   );
 
   /* components – one level */
@@ -65,12 +77,17 @@ export const debug_label = 'Debug Dashboard';`
   );
 
   /* actions */
-  write_file('src/actions/publish.js', `export function publish(){ return 'action'; }
+  write_file(
+    'src/actions/publish.js',
+    `export function publish(){ return 'action'; }
 export const default_settings = { baz: 'qux' };
 export const display_name = 'Publish Action';
 export const display_description = 'Send a note to publish';
 export const settings_config = { foo: 'bar' };
-`);
+export const debug_flag = true;
+export const version = '1.0.0';
+`
+  );
   write_file('src/actions/log.js', 'export function log(){}');
   write_file('src/actions/smart-sources/sync.js', 'export function sync(){}');
   write_file('src/actions/RankConnections.js', 'export function RankConnections(){}');
@@ -138,7 +155,6 @@ test('items are imported with PascalCase vars', t => {
   t.regex(file, /import { AwesomeBlock } from/);
   t.regex(file, /item_types:[\s\S]*AwesomeBlock/);
 });
-
 test('should skip .test.js files', t => {
   const file = read_generated_config();
   t.false(file.includes('AwesomeBlock.test.js'));
@@ -195,6 +211,40 @@ test('components config includes settings_config when exported', async t => {
   );
 });
 
+test('components config includes version when exported and whitelisted', async t => {
+  const mod_path = path.join(tmp_root, 'smart_env.config.js');
+  const cfg = await import(pathToFileURL(mod_path).href);
+  const { components } = cfg.smart_env_config;
+  t.is(components.env_settings.version, '1.0.0');
+  t.false(
+    Object.prototype.hasOwnProperty.call(
+      components.smart_sources_settings,
+      'version'
+    )
+  );
+});
+
+test('components extras are limited to COMPONENT_EXPORT_PROPS', async t => {
+  const mod_path = path.join(tmp_root, 'smart_env.config.js');
+  const cfg = await import(pathToFileURL(mod_path).href);
+  const { components } = cfg.smart_env_config;
+  const env_settings = components.env_settings;
+
+  const extra_keys = Object.keys(env_settings).filter(k => k !== 'render');
+  extra_keys.forEach(k => {
+    t.true(
+      COMPONENT_EXPORT_PROPS.includes(k),
+      `env_settings extra key ${k} should be listed in COMPONENT_EXPORT_PROPS`
+    );
+  });
+
+  // debug_meta is exported from the file but should not appear on config
+  t.false(
+    Object.prototype.hasOwnProperty.call(env_settings, 'debug_meta'),
+    'env_settings.debug_meta should not be exposed because it is not whitelisted'
+  );
+});
+
 test('actions config stores action export on action property', async t => {
   const mod_path = path.join(tmp_root, 'smart_env.config.js');
   const cfg = await import(pathToFileURL(mod_path).href);
@@ -225,6 +275,36 @@ test('actions config includes display metadata when exported', async t => {
   t.is(publish.display_description, 'Send a note to publish');
   t.false(Object.prototype.hasOwnProperty.call(log, 'display_name'));
   t.false(Object.prototype.hasOwnProperty.call(log, 'display_description'));
+});
+
+test('actions config includes version when exported and whitelisted', async t => {
+  const mod_path = path.join(tmp_root, 'smart_env.config.js');
+  const cfg = await import(pathToFileURL(mod_path).href);
+  const { publish, log } = cfg.smart_env_config.actions;
+  t.is(publish.version, '1.0.0');
+  t.false(Object.prototype.hasOwnProperty.call(log, 'version'));
+});
+
+test('actions extras are limited to ACTION_EXPORT_PROPS', async t => {
+  const mod_path = path.join(tmp_root, 'smart_env.config.js');
+  const cfg = await import(pathToFileURL(mod_path).href);
+  const { actions } = cfg.smart_env_config;
+
+  const publish = actions.publish;
+  const extra_keys = Object.keys(publish).filter(k => k !== 'action');
+
+  extra_keys.forEach(k => {
+    t.true(
+      ACTION_EXPORT_PROPS.includes(k),
+      `publish extra key ${k} should be listed in ACTION_EXPORT_PROPS`
+    );
+  });
+
+  // debug_flag is exported from the file but should not appear on config
+  t.false(
+    Object.prototype.hasOwnProperty.call(publish, 'debug_flag'),
+    'publish.debug_flag should not be exposed because it is not whitelisted'
+  );
 });
 
 test('actions nested folders are snake_cased in config', async t => {
@@ -298,11 +378,6 @@ test('actions include pre_process export when provided', async t => {
   t.is(typeof pre_process, 'function');
   t.is(pre_process(), 'prep');
 });
-
-/** -------------------------------------------------------------------
- * New tests: prove COMPONENT_EXPORT_PROPS / ACTION_EXPORT_PROPS gate metadata
- * ------------------------------------------------------------------*/
-
 test('components only expose metadata exports defined by COMPONENT_EXPORT_PROPS', async t => {
   const mod_path = path.join(tmp_root, 'smart_env.config.js');
   const cfg = await import(pathToFileURL(mod_path).href);
@@ -350,7 +425,6 @@ test('actions only expose metadata exports defined by ACTION_EXPORT_PROPS', asyn
     )
   );
 });
-
 test.after.always(() => {
   fs.rmSync(tmp_root, { recursive: true, force: true });
 });
