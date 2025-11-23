@@ -53,13 +53,14 @@ async function post_process(ctx, container, opts = {}) {
     refresh_name();
   
     name_input.addEventListener('keydown', (e) => {
+      // Intentionally allow default keydown behavior (e.g., text input, navigation)
+      // Prevent event bubbling to avoid parent handlers interfering
+      e.stopPropagation();
       if (e.key === 'Enter') {
-        e.preventDefault();
         save_name();
         name_input.blur();
       }
       if (e.key === 'Escape') {
-        e.preventDefault();
         refresh_name();
         name_input.blur();
       }
