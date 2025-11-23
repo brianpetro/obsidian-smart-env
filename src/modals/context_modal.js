@@ -115,7 +115,6 @@ export class ContextModal extends SmartFuzzySuggestModal {
   }
 
   onChooseSuggestion(selected, evt, ...other) {
-    console.log('Chosen suggestion', selected, evt, other);
     this.prevent_close = true;
     const suggestion = selected.item;
     const is_arrow_left = this.use_arrow_left;
@@ -139,7 +138,6 @@ export class ContextModal extends SmartFuzzySuggestModal {
     } else if (is_arrow_right && typeof suggestion.arrow_right_action === 'function') {
       this.handle_choose_action(suggestion, 'arrow_right_action');
     } else if (is_mod_select && typeof suggestion.mod_select_action === 'function') {
-      console.log('Mod key held for suggestion', suggestion);
       this.handle_choose_action(suggestion, 'mod_select_action');
     } else if(typeof suggestion.select_action === 'function') {
       this.handle_choose_action(suggestion, 'select_action');
