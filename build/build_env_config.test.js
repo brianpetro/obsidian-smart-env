@@ -6,22 +6,13 @@ import os from 'os';
 import path from 'path';
 import { pathToFileURL } from 'url';
 import test from 'ava';
+import { ACTION_EXPORT_PROPS, COMPONENT_EXPORT_PROPS } from 'smart-environment/loaders/index.js';
 import { build_smart_env_config } from './build_env_config.js';
 
 /** -------------------------------------------------------------------
  * helpers – snake_case, two-space indent, no extra deps
  * ------------------------------------------------------------------*/
 const tmp_root = fs.mkdtempSync(path.join(os.tmpdir(), 'smart-env-test-'));
-
-const COMPONENT_EXPORT_PROPS = ['settings_config', 'version'];
-const ACTION_EXPORT_PROPS = [
-  'settings_config',
-  'default_settings',
-  'display_name',
-  'display_description',
-  'pre_process',
-  'version'
-];
 
 function write_file(rel, contents = '') {
   const abs = path.join(tmp_root, rel);
