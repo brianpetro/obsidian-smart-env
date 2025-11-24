@@ -2,7 +2,6 @@ import { getIcon } from "obsidian";
 export function build_html(plugin, opts={}) {
   const {plugin_name = plugin.manifest.name} = opts;
   return `<div class="wrapper">
-    ${render_sign_in_or_open_smart_plugins(plugin)}
     <div id="footer-callout" data-callout-metadata="" data-callout-fold="" data-callout="info" class="callout" style="mix-blend-mode: unset;">
       <div class="callout-title" style="align-items: center;">
         <div class="callout-icon">
@@ -77,23 +76,4 @@ async function post_process(plugin, container) {
   const is_logged_in = !!localStorage.getItem(oauth_storage_prefix+'token');
   if (is_logged_in) container.querySelector('#footer-callout').style.display = 'none';
   await this.render_setting_components(container, { scope: plugin.env });
-}
-
-
-function render_sign_in_or_open_smart_plugins(plugin) {
-  const oauth_storage_prefix = plugin.app.vault.getName().toLowerCase().replace(/[^a-z0-9]/g, '_') + '_smart_plugins_oauth_';
-  const isLoggedIn = !!localStorage.getItem(oauth_storage_prefix+'token');
-  const buttonLabel = isLoggedIn ? 'Open Smart Plugins' : 'Sign in';
-  const buttonCallback = isLoggedIn ? 'open_smart_plugins_settings' : 'initiate_smart_plugins_oauth';
-
-  return `
-    <h2>Supporter perks</h2>
-    <div class="setting-component"
-      data-name="Smart Plugins - Early Access"
-      data-type="button"
-      data-btn-text="${buttonLabel}"
-      data-description="Supporters can sign in to access early-release Smart Plugins"
-      data-callback="${buttonCallback}"
-    ></div>
-  `;
 }

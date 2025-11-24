@@ -104,6 +104,8 @@ export class SmartPluginSettingsTab extends PluginSettingTab {
       }
     );
     if (supporter_callout) this.global_settings_container.appendChild(supporter_callout);
+    const smart_plugins_settings = await this.render_component('smart_plugins', this.plugin);
+    if (smart_plugins_settings) this.global_settings_container.appendChild(smart_plugins_settings);
   }
 
   async render_component(name, scope, params={}) {

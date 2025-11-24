@@ -13,6 +13,7 @@ import { render as smart_context_actions_component } from './src/components/smar
 import { render as smart_context_item_component } from './src/components/smart-context/item.js';
 import { render as smart_context_meta_component } from './src/components/smart-context/meta.js';
 import { render as smart_context_tree_component } from './src/components/smart-context/tree.js';
+import { render as smart_plugins_component } from './src/components/smart_plugins.js';
 import { render as source_inspector_component } from './src/components/source_inspector.js';
 import { render as status_bar_component } from './src/components/status_bar.js';
 import { render as supporter_callout_component } from './src/components/supporter_callout.js';
@@ -23,7 +24,7 @@ import { merge_template as context_merge_template_action, settings_config as con
 import { context_suggest_blocks as context_suggest_blocks_action, display_name as context_suggest_blocks_action_display_name } from './src/actions/context-suggest/blocks.js';
 import { context_suggest_sources as context_suggest_sources_action, display_name as context_suggest_sources_action_display_name } from './src/actions/context-suggest/sources.js';
 import { pre_process as lookup_list_pre_process_action, pre_process as lookup_list_pre_process_action_pre_process } from './src/actions/lookup-list/pre_process.js';
-import { similarity as similarity_action, display_name as similarity_action_display_name, display_description as similarity_action_display_description, settings_config as similarity_action_settings_config } from './src/actions/similarity.js';
+import { similarity as similarity_action, settings_config as similarity_action_settings_config, display_name as similarity_action_display_name, display_description as similarity_action_display_description } from './src/actions/similarity.js';
 import { source_open as source_open_action } from './src/actions/source/open.js';
 
 export const smart_env_config = {
@@ -51,6 +52,7 @@ export const smart_env_config = {
     smart_context_item: { render: smart_context_item_component },
     smart_context_meta: { render: smart_context_meta_component },
     smart_context_tree: { render: smart_context_tree_component },
+    smart_plugins: { render: smart_plugins_component },
     source_inspector: { render: source_inspector_component },
     status_bar: { render: status_bar_component },
     supporter_callout: { render: supporter_callout_component },
@@ -63,7 +65,7 @@ export const smart_env_config = {
     context_suggest_blocks: { action: context_suggest_blocks_action, display_name: context_suggest_blocks_action_display_name },
     context_suggest_sources: { action: context_suggest_sources_action, display_name: context_suggest_sources_action_display_name },
     lookup_list_pre_process: { action: lookup_list_pre_process_action, pre_process: lookup_list_pre_process_action_pre_process },
-    similarity: { action: similarity_action, display_name: similarity_action_display_name, display_description: similarity_action_display_description, settings_config: similarity_action_settings_config },
+    similarity: { action: similarity_action, settings_config: similarity_action_settings_config, display_name: similarity_action_display_name, display_description: similarity_action_display_description },
     source_open: { action: source_open_action }
   }
 };
