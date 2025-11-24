@@ -11,7 +11,7 @@
  *  - calculate_embed_coverage(itemArr) => { needed, embedded, percent, display }
  */
 
-import { format_collection_name } from "../utils/format_collection_name";
+import { format_collection_name } from "../utils/format_collection_name.js";
 
 export async function build_html(env, opts = {}) {
   const lines = [];
