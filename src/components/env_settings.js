@@ -2,6 +2,7 @@ import { ExcludedFoldersFuzzy } from '../modals/exclude_folders_fuzzy.js';
 import { ExcludedSourcesModal } from '../modals/excluded_sources.js';
 import { EnvStatsModal } from '../modals/env_stats.js';
 import { ExcludedFilesFuzzy } from '../modals/exclude_files_fuzzy.js';
+import { ensure_smart_sources_settings, parse_exclusions_csv, remove_exclusion } from '../utils/exclusions.js';
 import env_settings_css from './env_settings.css' with { type: 'css' };
 
 /**
@@ -246,17 +247,16 @@ function render_excluded_dir_list(env, container) {
   if (!list_container) return;
   list_container.empty();
   const ul = list_container.createEl('ul');
-  const excluded_csv = env.settings.smart_sources?.folder_exclusions || '';
-  const arr = excluded_csv.split(',').map(s => s.trim()).filter(Boolean);
+  const smart_sources_settings = ensure_smart_sources_settings(env);
+  const excluded_csv = smart_sources_settings.folder_exclusions;
+  const arr = parse_exclusions_csv(excluded_csv);
 
   arr.forEach(folder => {
     const li = ul.createEl('li', { cls: 'excluded-folder-item' });
     li.setText(folder + '  ');
     const remove_btn = li.createEl('button', { text: '(x)', cls: 'remove-folder-btn' });
     remove_btn.addEventListener('click', () => {
-      const splitted = excluded_csv.split(',').map(x => x.trim()).filter(Boolean);
-      const new_arr = splitted.filter(f => f !== folder);
-      env.settings.smart_sources.folder_exclusions = new_arr.join(',');
+      smart_sources_settings.folder_exclusions = remove_exclusion(smart_sources_settings.folder_exclusions, folder);
       render_excluded_dir_list(env, container);
     });
   });
@@ -273,17 +273,16 @@ function render_excluded_file_list(env, container) {
   if (!list_container) return;
   list_container.empty();
   const ul = list_container.createEl('ul');
-  const excluded_csv = env.settings.smart_sources?.file_exclusions || '';
-  const arr = excluded_csv.split(',').map(s => s.trim()).filter(Boolean);
+  const smart_sources_settings = ensure_smart_sources_settings(env);
+  const excluded_csv = smart_sources_settings.file_exclusions;
+  const arr = parse_exclusions_csv(excluded_csv);
 
   arr.forEach(file_path => {
     const li = ul.createEl('li', { cls: 'excluded-file-item' });
     li.setText(file_path + '  ');
     const remove_btn = li.createEl('button', { text: '(x)', cls: 'remove-file-btn' });
     remove_btn.addEventListener('click', () => {
-      const splitted = excluded_csv.split(',').map(s => s.trim()).filter(Boolean);
-      const new_arr = splitted.filter(f => f !== file_path);
-      env.settings.smart_sources.file_exclusions = new_arr.join(',');
+      smart_sources_settings.file_exclusions = remove_exclusion(smart_sources_settings.file_exclusions, file_path);
       render_excluded_file_list(env, container);
     });
   });

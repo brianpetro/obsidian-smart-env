@@ -3,6 +3,7 @@
  * @description An Obsidian FuzzySuggestModal to pick a single folder from env.fs.folder_paths and add it to env.settings.smart_sources.folder_exclusions (CSV).
  */
 import { FuzzySuggestModal } from 'obsidian';
+import { add_exclusion, ensure_smart_sources_settings } from '../utils/exclusions.js';
 
 export class ExcludedFoldersFuzzy extends FuzzySuggestModal {
   /**
@@ -31,12 +32,9 @@ export class ExcludedFoldersFuzzy extends FuzzySuggestModal {
 
   onChooseItem(item) {
     if (!item) return;
-    // If empty, set it to item. Otherwise, CSV append.
-    const oldVal = this.env.settings.smart_sources?.folder_exclusions || '';
-    const splitted = oldVal.split(',').map(s => s.trim()).filter(Boolean);
-    if (!splitted.includes(item)) splitted.push(item);
-    this.env.settings.smart_sources.folder_exclusions = splitted.join(',');
-    
+    const smart_sources_settings = ensure_smart_sources_settings(this.env);
+    smart_sources_settings.folder_exclusions = add_exclusion(smart_sources_settings.folder_exclusions, item);
+
     this.callback?.();
   }
 }
