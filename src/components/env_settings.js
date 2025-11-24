@@ -2,7 +2,6 @@ import { ExcludedFoldersFuzzy } from '../modals/exclude_folders_fuzzy.js';
 import { ExcludedSourcesModal } from '../modals/excluded_sources.js';
 import { EnvStatsModal } from '../modals/env_stats.js';
 import { ExcludedFilesFuzzy } from '../modals/exclude_files_fuzzy.js';
-import { ensure_smart_sources_settings, parse_exclusions_csv, remove_exclusion } from '../utils/exclusions.js';
 import env_settings_css from './env_settings.css' with { type: 'css' };
 
 /**
@@ -18,20 +17,17 @@ export async function build_html(env, opts = {}) {
   }).filter(Boolean).join('\n');
 
   const add_excluded_folders_btn = `
-    <button class="sc-add-excluded-folder-btn" type="button">Add excluded folder</button>
+    <button class="sc-add-excluded-folder-btn" type="button">Edit excluded folders</button>
   `;
   const add_excluded_files_btn = `
-    <button class="sc-add-excluded-file-btn" type="button">Add excluded file</button>
+    <button class="sc-add-excluded-file-btn" type="button">Edit excluded files</button>
   `;
-
-  const excluded_folders_list = `<div class="sc-excluded-folders-list"></div>`;
-  const excluded_files_list = `<div class="sc-excluded-files-list"></div>`;
 
   // Outer container + heading
   // sc-env-settings-body is hidden/shown by the toggle button
   return `
     <div class="sc-env-settings-container">
-      <div class="sc-env-settings-header">
+      <div class="smart-env-settings-header">
         <h2>Smart Environment</h2>
         <button type="button" class="toggle-env-settings-btn">Show environment settings</button>
       </div>
@@ -41,23 +37,20 @@ export async function build_html(env, opts = {}) {
           <button class="smart-env_reload-sources-btn" type="button">Reload sources</button>
           <button class="smart-env_clean-up-data-btn" type="button">Clean-up data</button>
           <button class="smart-env_clear-sources-data-btn" type="button">Clear sources data</button>
+          <button class="sc-excluded-sources-btn" type="button">Show all excluded</button>
         </div>
-
-        ${env_settings_html}
 
         <div class="smart-env-settings-header">
           <h2>Excluded folders</h2>
           ${add_excluded_folders_btn}
         </div>
-        ${excluded_folders_list}
 
         <div class="smart-env-settings-header">
           <h2>Excluded files</h2>
           ${add_excluded_files_btn}
         </div>
-        ${excluded_files_list}
 
-        <button class="sc-excluded-sources-btn" type="button">Show excluded</button>
+        ${env_settings_html}
 
         <div data-smart-settings="smart_sources"></div>
         <div data-smart-settings="smart_blocks"></div>
@@ -97,7 +90,7 @@ export async function render(env, opts = {}) {
 }
 
 /**
- * Sets up event listeners for toggling, fuzzy modals, re-rendering exclusion lists, etc.
+ * Sets up event listeners for toggling, fuzzy modals, etc.
  */
 export async function post_process(env, container, opts = {}) {
   const heading_btn = container.querySelector('.toggle-env-settings-btn');
@@ -122,7 +115,6 @@ export async function post_process(env, container, opts = {}) {
     add_folder_btn.addEventListener('click', () => {
       const fuzzy = new ExcludedFoldersFuzzy(env.main.app, env);
       fuzzy.open(() => {
-        render_excluded_dir_list(env, container);
         env.update_exclusions();
       });
     });
@@ -134,7 +126,6 @@ export async function post_process(env, container, opts = {}) {
     add_file_btn.addEventListener('click', () => {
       const fuzzy = new ExcludedFilesFuzzy(env.main.app, env);
       fuzzy.open(() => {
-        render_excluded_file_list(env, container);
         env.update_exclusions();
       });
     });
@@ -232,61 +223,5 @@ export async function post_process(env, container, opts = {}) {
     if (!collection) continue;
     const collection_settings_frag = await env.render_component('collection_settings', collection);
     el.appendChild(collection_settings_frag);
-  }
-
-  // Finally, render current lists
-  render_excluded_dir_list(env, container);
-  render_excluded_file_list(env, container);
-}
-
-/**
- * Render the list of excluded folders as <li> items with a remove button.
- */
-function render_excluded_dir_list(env, container) {
-  const list_container = container.querySelector('.sc-excluded-folders-list');
-  if (!list_container) return;
-  list_container.empty();
-  const ul = list_container.createEl('ul');
-  const smart_sources_settings = ensure_smart_sources_settings(env);
-  const excluded_csv = smart_sources_settings.folder_exclusions;
-  const arr = parse_exclusions_csv(excluded_csv);
-
-  arr.forEach(folder => {
-    const li = ul.createEl('li', { cls: 'excluded-folder-item' });
-    li.setText(folder + '  ');
-    const remove_btn = li.createEl('button', { text: '(x)', cls: 'remove-folder-btn' });
-    remove_btn.addEventListener('click', () => {
-      smart_sources_settings.folder_exclusions = remove_exclusion(smart_sources_settings.folder_exclusions, folder);
-      render_excluded_dir_list(env, container);
-    });
-  });
-  if (!arr.length) {
-    ul.createEl('li', { text: 'No folders excluded yet.' });
-  }
-}
-
-/**
- * Render the list of excluded files as <li> items with a remove button.
- */
-function render_excluded_file_list(env, container) {
-  const list_container = container.querySelector('.sc-excluded-files-list');
-  if (!list_container) return;
-  list_container.empty();
-  const ul = list_container.createEl('ul');
-  const smart_sources_settings = ensure_smart_sources_settings(env);
-  const excluded_csv = smart_sources_settings.file_exclusions;
-  const arr = parse_exclusions_csv(excluded_csv);
-
-  arr.forEach(file_path => {
-    const li = ul.createEl('li', { cls: 'excluded-file-item' });
-    li.setText(file_path + '  ');
-    const remove_btn = li.createEl('button', { text: '(x)', cls: 'remove-file-btn' });
-    remove_btn.addEventListener('click', () => {
-      smart_sources_settings.file_exclusions = remove_exclusion(smart_sources_settings.file_exclusions, file_path);
-      render_excluded_file_list(env, container);
-    });
-  });
-  if (!arr.length) {
-    ul.createEl('li', { text: 'No files excluded yet.' });
   }
 }
