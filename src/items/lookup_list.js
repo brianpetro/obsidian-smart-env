@@ -27,7 +27,7 @@ export class LookupList extends CollectionItem {
   }
 
   filter_and_score (params = {}) {
-    const collection = this.env[params.results_collection_key || this.results_collection_key];
+    const collection = this.env[params.results_collection_key] || this.env[this.collection.results_collection_key];
     const score_errors = [];
     const { results: raw_results } = Object.values(collection.items)
       .reduce((acc, target) => {
@@ -55,9 +55,6 @@ export class LookupList extends CollectionItem {
     return this.settings.lookup_post_process
       && this.settings.lookup_post_process !== 'none'
     ;
-  }
-  get results_collection_key () {
-    return this.data.results_collection_key || this.settings?.results_collection_key || 'smart_sources';
   }
 
   // for compatibility with v3 connections list item

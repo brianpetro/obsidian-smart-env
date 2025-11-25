@@ -46,6 +46,11 @@ export class LookupLists extends Collection {
 
   process_load_queue() { /* skip save/load for now */ }
 
+  get results_collection_key () {
+    const stored_key = this.settings?.results_collection_key;
+    if(this.env.collections?.[stored_key]) return stored_key;
+    return 'smart_sources'; // default
+  }
 }
 
 /** @param {Date} d */
