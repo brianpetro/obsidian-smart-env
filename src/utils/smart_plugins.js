@@ -8,6 +8,10 @@
 
 import { requestUrl } from 'obsidian';
 
+export const SMART_CHAT_REPO = 'brianpetro/smart-chat-obsidian';
+export const SMART_CHAT_RELEASE_BASE_URL = `https://github.com/${SMART_CHAT_REPO}/releases`;
+export const SMART_CHAT_RELEASE_API_URL = `https://api.github.com/repos/${SMART_CHAT_REPO}/releases/latest`;
+
 /**
  * If the user or test code sets window.SMART_SERVER_URL_OVERRIDE,
  * we use that as the base URL. Otherwise, default to production.
@@ -18,6 +22,63 @@ export function get_smart_server_url() {
     return window.SMART_SERVER_URL_OVERRIDE;
   }
   return 'https://connect.smartconnections.app';
+}
+
+/**
+ * Resolve latest Smart Chat release asset URL with a versioned zip name.
+ *
+ * @param {Function} request_fn
+ * @returns {Promise<string>}
+ */
+export async function resolve_smart_chat_release_url(request_fn = requestUrl) {
+  const resp = await request_fn({
+    url: SMART_CHAT_RELEASE_API_URL,
+    method: 'GET',
+    headers: { Accept: 'application/vnd.github+json' },
+  });
+  if (resp.status && resp.status !== 200) {
+    throw new Error(`Release lookup error ${resp.status}`);
+  }
+  const zip_url = resp.json?.assets?.find(a => a.name.endsWith('.zip'))?.browser_download_url;
+  return zip_url;
+}
+
+/**
+ * Provide a fallback list of plugins when Smart Plugins auth is missing.
+ *
+ * Includes a public Smart Chat download plus placeholders for Pro plugins
+ * that require authentication.
+ *
+ * @returns {Array<{name:string, repo:string, manifest_id?:string, description?:string, download_url?:string, resolve_download_url?:Function, locked?:boolean}>}
+ */
+export function derive_fallback_plugins() {
+  const public_plugins = [
+    {
+      name: 'Smart Chat (GitHub)',
+      repo: SMART_CHAT_REPO,
+      manifest_id: 'smart-chat-obsidian',
+      description: 'Install the public Smart Chat build from the latest GitHub release.',
+      resolve_download_url: resolve_smart_chat_release_url,
+      locked: false,
+    },
+  ];
+
+  const pro_placeholders = [
+    {
+      name: 'Connections Pro',
+      repo: 'smart-connections-pro',
+      description: 'Login with your supporter key to unlock Pro plugins.',
+      locked: true,
+    },
+    {
+      name: 'Context Pro',
+      repo: 'smart-context-pro',
+      description: 'Login with your supporter key to unlock Pro plugins.',
+      locked: true,
+    },
+  ];
+
+  return [...public_plugins, ...pro_placeholders];
 }
 
 /**
@@ -176,6 +237,25 @@ export async function parse_zip_into_files(zipBuffer) {
 }
 
 /**
+ * Ensure a response buffer contains a valid ZIP signature.
+ *
+ * @param {ArrayBuffer} zip_buffer
+ * @param {string} source_label
+ * @returns {ArrayBuffer}
+ */
+export function validate_zip_buffer(zip_buffer, source_label = 'Response') {
+  if (!zip_buffer || zip_buffer.byteLength < 4) {
+    throw new Error(`${source_label} returned too few bytes, not a valid ZIP.`);
+  }
+  const dv = new DataView(zip_buffer);
+  if (dv.getUint32(0, true) !== 0x04034b50) {
+    const txt = new TextDecoder().decode(new Uint8Array(zip_buffer));
+    throw new Error(`${source_label} did not return a valid ZIP. Text:\n${txt}`);
+  }
+  return zip_buffer;
+}
+
+/**
  * Writes {fileName, data} to vault's baseFolder. Creates subfolders as needed.
  * @param {import('obsidian').DataAdapter} adapter
  * @param {string} baseFolder
@@ -241,16 +321,29 @@ export async function fetch_plugin_zip(repoName, token) {
     throw new Error(`plugin_download error ${resp.status}: ${resp.text}`);
   }
 
-  const ab = resp.arrayBuffer;
-  if (ab.byteLength < 4) {
-    throw new Error('Server returned too few bytes, not a valid ZIP.');
+  return validate_zip_buffer(resp.arrayBuffer, 'Smart Plugins server');
+}
+
+/**
+ * Fetch a plugin zip from an arbitrary URL (e.g., GitHub releases).
+ *
+ * @param {string} download_url
+ * @param {Function} request_fn
+ * @returns {Promise<ArrayBuffer>}
+ */
+export async function fetch_zip_from_url(download_url, request_fn = requestUrl) {
+  console.log(`[smart_plugins] download plugin from URL: ${download_url}`);
+  const resp = await request_fn({
+    url: download_url,
+    method: 'GET',
+    headers: { Accept: 'application/zip' },
+  });
+
+  if (resp.status && resp.status !== 200) {
+    throw new Error(`Download error ${resp.status}: ${resp.text || ''}`);
   }
-  const dv = new DataView(ab);
-  if (dv.getUint32(0, true) !== 0x04034b50) {
-    const txt = new TextDecoder().decode(new Uint8Array(ab));
-    throw new Error(`Server did not return a valid ZIP. Text:\n${txt}`);
-  }
-  return ab;
+
+  return validate_zip_buffer(resp.arrayBuffer, 'Download');
 }
 
 /**

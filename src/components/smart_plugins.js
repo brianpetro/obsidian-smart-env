@@ -8,6 +8,8 @@ import {
   fetch_plugin_readme,
   enable_plugin,
   derive_unauthorized_display,
+  fetch_zip_from_url,
+  derive_fallback_plugins,
 } from '../utils/smart_plugins.js';
 import { open_url_externally } from '../../utils/open_url_externally.js';
 
@@ -113,6 +115,7 @@ export async function post_process(scope, container, opts = {}) { // eslint-disa
   const oauth_storage_prefix = get_oauth_storage_prefix(app);
   const login_container = container.querySelector('.sc-smart-plugins-login');
   const list_container = container.querySelector('.sc-smart-plugins-list');
+  const fallback_plugins = derive_fallback_plugins();
 
   /**
    * Read installed plugin info from Obsidian.
@@ -192,15 +195,28 @@ export async function post_process(scope, container, opts = {}) { // eslint-disa
   /**
    * Install or update a plugin from Smart Plugins server.
    *
-   * @param {{repo:string, name?:string, version?:string, manifest_id?:string, description?:string}} item
+   * @param {{repo:string, name?:string, version?:string, manifest_id?:string, description?:string, resolve_download_url?:Function, download_url?:string}} item
    * @param {string} token
    */
+  const download_plugin_zip = async (item, token) => {
+    const resolved_download_url = typeof item.resolve_download_url === 'function'
+      ? await item.resolve_download_url()
+      : item.download_url;
+    if (resolved_download_url) {
+      return fetch_zip_from_url(resolved_download_url);
+    }
+    if (!token) {
+      throw new Error('Login required to install this plugin.');
+    }
+    return fetch_plugin_zip(item.repo, token);
+  };
+
   const install_plugin = async (item, token) => {
     try {
       const repo_name = item.repo;
       new Notice(`Installing "${repo_name}" ...`);
 
-      const zip_data = await fetch_plugin_zip(repo_name, token);
+      const zip_data = await download_plugin_zip(item, token);
       const { files, pluginManifest } = await parse_zip_into_files(zip_data);
 
       let folder_name = '';
@@ -260,10 +276,49 @@ export async function post_process(scope, container, opts = {}) { // eslint-disa
    * - Lists installable / updatable plugins with Install/Update/Installed buttons.
    * - Shows locked plugins section from `unauthorized`.
    */
+  const render_fallback_plugin_list = async () => {
+    list_container.empty();
+
+    const public_plugins = fallback_plugins.filter((item) => !item.locked);
+    if (public_plugins.length > 0) {
+      list_container.createEl('h3', { text: 'Available Plugins' });
+      for (const item of public_plugins) {
+        const row = new Setting(list_container)
+          .setName(item.name || item.repo)
+          .setDesc(item.description || 'Install without logging in.');
+
+        row.addButton((btn) => {
+          btn.setButtonText('Install');
+          btn.onClick(() => install_plugin(item, ''));
+        });
+      }
+    }
+
+    const placeholders = fallback_plugins.filter((item) => item.locked);
+    if (placeholders.length > 0) {
+      list_container.createEl('h3', { text: 'Pro Plugins' });
+      for (const item of placeholders) {
+        const row = new Setting(list_container)
+          .setName(item.name)
+          .setDesc(item.description || 'Login to unlock Pro plugins.');
+
+        row.addButton((btn) => {
+          btn.setButtonText('Login to unlock');
+          btn.onClick(() => initiate_oauth_login());
+        });
+      }
+    }
+
+    list_container.createEl('p', { text: 'Log in to access the full Smart Plugins catalog.' });
+  };
+
   const render_plugin_list_section = async () => {
     list_container.empty();
     const token = localStorage.getItem(oauth_storage_prefix + 'token') || '';
-    if (!token) return; // no token → no list
+    if (!token) {
+      await render_fallback_plugin_list();
+      return;
+    }
 
     let loading_el = list_container.createEl('p', { text: 'Loading available plugins...' });
 
