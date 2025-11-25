@@ -28,30 +28,6 @@ export class ExcludedSourcesModal extends Modal {
   async render_excluded_list() {
     this.contentEl.empty();
     const list_el = this.contentEl.createEl('ul');
-
-    // const file_exclusions = (this.env.settings.file_exclusions || '')
-    //   .split(',')
-    //   .map(s => s.trim())
-    //   .filter(Boolean);
-
-    // const folder_exclusions = (this.env.settings.folder_exclusions || '')
-    //   .split(',')
-    //   .map(s => s.trim())
-    //   .filter(Boolean);
-
-    // We'll gather from env.smart_sources => check if path is excluded
-    // const all_sources = Object.values(this.env.smart_sources?.items || {});
-    // for (const source of all_sources) {
-    //   const path = source.path || '';
-    //   // naive check: if any folderExclusions is a prefix of path, or path includes fileExclusions
-    //   if (
-    //     folder_exclusions.some(fe => path.startsWith(fe)) ||
-    //     file_exclusions.some(e => path.includes(e))
-    //   ) {
-    //     const li = list_el.createEl('li');
-    //     li.setText(path);
-    //   }
-    // }
     const excluded_file_paths = this.env.smart_sources.excluded_file_paths;
     for (const file_path of excluded_file_paths) {
       const li = list_el.createEl('li');
