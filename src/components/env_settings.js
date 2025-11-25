@@ -33,7 +33,6 @@ export async function build_html(env, opts = {}) {
       </div>
       <div class="sc-env-settings-body" style="display: none;">
         <div class="smart-env-settings-header" id="smart-env-buttons">
-          <button class="sc-collection-stats-btn" type="button">Show stats</button>
           <button class="smart-env_reload-sources-btn" type="button">Reload sources</button>
           <button class="smart-env_clean-up-data-btn" type="button">Clean-up data</button>
           <button class="smart-env_clear-sources-data-btn" type="button">Clear sources data</button>
@@ -136,15 +135,6 @@ export async function post_process(env, container, opts = {}) {
   if (show_excluded_btn) {
     show_excluded_btn.addEventListener('click', () => {
       const modal = new ExcludedSourcesModal(env.main.app, env);
-      modal.open();
-    });
-  }
-
-  // Show stats
-  const show_stats_btn = container.querySelector('.sc-collection-stats-btn');
-  if (show_stats_btn) {
-    show_stats_btn.addEventListener('click', () => {
-      const modal = new EnvStatsModal(env.main.app, env);
       modal.open();
     });
   }

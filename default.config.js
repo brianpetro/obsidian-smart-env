@@ -160,10 +160,10 @@ const smart_env_config = {
     is_obsidian_vault: true,
     smart_blocks: {
       embed_blocks: true,
-      min_chars: 200,
+      min_chars: 100,
     },
     smart_sources: {
-      min_chars: 200,
+      min_chars: 100,
       embed_model: {
         adapter: "transformers",
         transformers: {
