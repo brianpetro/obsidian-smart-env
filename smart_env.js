@@ -11,6 +11,7 @@ import { SmartNotices } from "smart-notices/smart_notices.js"; // TODO: move to 
 import { exchange_code_for_tokens, install_smart_plugins_plugin, get_smart_server_url, enable_plugin } from './utils/sc_oauth.js';
 import { open_url_externally } from "./utils/open_url_externally.js";
 import { register_completion_variable_adapter_replacements } from './utils/register_completion_variable_adapter_replacements.js';
+import { remove_smart_plugins_plugin } from './migrations/remove_smart_plugins_plugin.js';
 
 export class SmartEnv extends BaseSmartEnv {
   static async create(plugin, main_env_opts = null) {
@@ -35,6 +36,7 @@ export class SmartEnv extends BaseSmartEnv {
     return await super.create(plugin, opts);
   }
   async load(force_load = false) {
+    this.run_migrations();
     if(!Platform.isMobile && !this.plugin.app.workspace.protocolHandlers.has('smart-plugins/callback')) {
       // Register protocol handler for obsidian://smart-plugins/callback
       this.plugin.registerObsidianProtocolHandler("smart-plugins/callback", async (params) => {
@@ -196,6 +198,10 @@ export class SmartEnv extends BaseSmartEnv {
     const NotificationsModalClass = this.config.modals.notifications_feed_modal.class;
     const modal = new NotificationsModalClass(this.obsidian_app, this);
     modal.open();
+  }
+  run_migrations () {
+    // remove old smart-plugins plugin if present
+    remove_smart_plugins_plugin({ app: this.plugin.app, plugin_ids: ['smart-plugins'] });
   }
 }
 
