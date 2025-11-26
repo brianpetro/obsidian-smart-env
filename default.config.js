@@ -54,6 +54,9 @@ import event_logs from 'smart-events/event_logs.js';
 // base context UX
 import { ContextModal } from './src/modals/context_modal.js';
 import { NotificationsFeedModal } from './src/modals/notifications_feed_modal.js';
+// 2025-11-26
+import transformers from "smart-models/adapters/embedding/transformers_iframe.js";
+import ollama from "smart-models/adapters/embedding/ollama.js";
 
 const smart_env_config = {
   env_path: '',
@@ -101,6 +104,11 @@ const smart_env_config = {
         adapter: SmartHttpObsidianRequestAdapter,
         obsidian_request_url: requestUrl,
       }),
+    },
+    http_adapter: {
+      class: SmartHttpRequest,
+      adapter: SmartHttpObsidianRequestAdapter,
+      obsidian_request_url: requestUrl,
     },
   },
   collections: {
@@ -191,6 +199,14 @@ const smart_env_config = {
       show_full_path: false,
     },
     version: "",
+    // 2025-11-26
+    models: {
+      embedding_platform: 'transformers',
+    },
+  },
+  embedding_models: {
+    transformers,
+    ollama,
   },
   // begin obsidian-smart-env specific modules (need to update build_env_config.js to handle)
   modals: {
@@ -203,7 +219,7 @@ const smart_env_config = {
     notifications_feed_modal: {
       class: NotificationsFeedModal,
     },
-  }
+  },
 };
 import { smart_env_config as dist_config } from './smart_env.config.js';
 merge_env_config(smart_env_config, dist_config);
