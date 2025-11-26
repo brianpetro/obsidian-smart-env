@@ -67,7 +67,7 @@ export function build_html(context_item, params = {}) {
   }
 
   const score = format_score(context_item?.data?.score);
-  const size = format_size(context_item?.size ?? context_item?.data?.size);
+  const size = format_size(context_item?.size || context_item?.data?.size);
   const score_html = build_badge_html(score, 'sc-context-item-score');
   const size_html = build_badge_html(size, 'sc-context-item-size');
 
