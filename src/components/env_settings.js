@@ -214,4 +214,8 @@ export async function post_process(env, container, opts = {}) {
     const collection_settings_frag = await env.render_component('collection_settings', collection);
     el.appendChild(collection_settings_frag);
   }
+  
+  // v2
+  const embedding_settings = await env.smart_components.render_component('embedding_settings', env);
+  container.appendChild(embedding_settings);
 }
