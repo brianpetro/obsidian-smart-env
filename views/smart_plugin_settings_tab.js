@@ -106,6 +106,9 @@ export class SmartPluginSettingsTab extends PluginSettingTab {
     if (supporter_callout) this.global_settings_container.appendChild(supporter_callout);
     const smart_plugins_settings = await this.render_component('smart_plugins', this.plugin);
     if (smart_plugins_settings) this.global_settings_container.appendChild(smart_plugins_settings);
+    // BEGIN v2 replaces above
+    const settings_smart_env = await this.env.smart_components.render_component('settings_smart_env', this.env);
+    if (settings_smart_env) this.global_settings_container.appendChild(settings_smart_env);
   }
 
   async render_component(name, scope, params={}) {
