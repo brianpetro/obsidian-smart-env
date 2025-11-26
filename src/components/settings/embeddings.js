@@ -15,9 +15,17 @@ export async function render (env, params) {
 
 
 async function post_process (env, container, params) {
-  const settings_config = env.smart_sources.embed_model.adapter.settings_config;
+  const platform = env.platforms.new_platform({
+    adapter_key: 'transformers',
+  });
+  const model = platform.new_model({
+    model_type: 'embedding',
+  });
+  // const settings_config = env.smart_sources.embed_model.adapter.settings_config;
+  const settings_config = env.smart_sources.embed_model.settings_config;
   const settings = await this.render_settings(settings_config, {
-    scope: env.smart_sources.embed_model,
+    // scope: env.smart_sources.embed_model,
+    scope: model.model_instance,
   });
   const inputs_container = container.querySelector('.inputs-container');
   inputs_container.appendChild(settings);

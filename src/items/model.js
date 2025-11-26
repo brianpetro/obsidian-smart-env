@@ -1,0 +1,1 @@
+export * from 'smart-models/items/model.js';

@@ -31,6 +31,7 @@
     "smart-file-system": "file:../jsbrains/smart-fs",
     "smart-http-request": "file:../jsbrains/smart-http-request",
     "smart-model": "file:../jsbrains/smart-model",
+    "smart-models": "file:../jsbrains/smart-models",
     "smart-notices": "file:../jsbrains/smart-notices",
     "smart-plugins-obsidian": "file:../smart-plugins-obsidian",
     "smart-settings": "file:../jsbrains/smart-settings",
@@ -44,6 +45,7 @@
     "js-tiktoken": "^1.0.19"
   },
   "workspaces": [
-    "../smart-plugins-obsidian"
+    "../smart-plugins-obsidian",
+    "../jsbrains/*"
   ]
 }
