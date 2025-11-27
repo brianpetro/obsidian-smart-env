@@ -57,6 +57,7 @@ import { NotificationsFeedModal } from './src/modals/notifications_feed_modal.js
 // 2025-11-26
 import transformers from "smart-models/adapters/embedding/transformers_iframe.js";
 import ollama from "smart-models/adapters/embedding/ollama.js";
+import { default_settings } from './default.settings.js';
 
 const smart_env_config = {
   env_path: '',
@@ -164,46 +165,7 @@ const smart_env_config = {
       settings: model_settings_component,
     },
   },
-  default_settings: {
-    is_obsidian_vault: true,
-    smart_blocks: {
-      embed_blocks: true,
-      min_chars: 100,
-    },
-    smart_sources: {
-      min_chars: 100,
-      embed_model: {
-        adapter: "transformers",
-        transformers: {
-          legacy_transformers: false,
-          model_key: 'TaylorAI/bge-micro-v2',
-        },
-      },
-      excluded_headings: '',
-      file_exclusions: 'Untitled',
-      folder_exclusions: '',
-    },
-    language: 'en',
-    new_user: true, // DEPRECATED: 2025-06-05 (use localStorage instead)
-    re_import_wait_time: 13,
-    smart_chat_threads: {
-      chat_model: {
-        adapter: "ollama",
-        ollama: {}
-      },
-    },
-    smart_notices: {},
-    smart_view_filter: {
-      expanded_view: false,
-      render_markdown: true,
-      show_full_path: false,
-    },
-    version: "",
-    // 2025-11-26
-    models: {
-      embedding_platform: 'transformers',
-    },
-  },
+  default_settings,
   embedding_models: {
     transformers,
     ollama,
