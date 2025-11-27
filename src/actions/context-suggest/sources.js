@@ -1,6 +1,5 @@
 import { context_suggest_blocks } from "./blocks.js";
 export function context_suggest_sources(params={}) {
-  const context_modal = params.context_modal;
   const unselected = Object.values(this.env.smart_sources.items)
     .map(src => ({
       key: src.key, // DEPRECATED???

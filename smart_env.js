@@ -73,7 +73,7 @@ export class SmartEnv extends BaseSmartEnv {
     );
     register_completion_variable_adapter_replacements(this._config.collections.smart_completions.completion_adapters.SmartCompletionVariableAdapter);
     // register modals
-    const ContextModal = this._config.modals.context_modal.class;
+    const ContextModal = this._config.modals.context_selector.class;
     ContextModal.register_modal(this.main);
     // register status bar
     this.register_status_bar();
