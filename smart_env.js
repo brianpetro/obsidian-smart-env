@@ -60,16 +60,14 @@ export class SmartEnv extends BaseSmartEnv {
       plugin.app.workspace.on('active-leaf-change', (leaf) => {
         this.smart_sources?.debounce_re_import_queue?.();
         const current_path = leaf.view?.file?.path;
-        const current_source = this.smart_sources.get(current_path);
-        if(current_source) current_source.emit_event('sources:opened', { event_source: 'active-leaf-change'});
+        this.emit_source_opened(current_path, 'active-leaf-change');
       })
     );
     plugin.registerEvent(
       plugin.app.workspace.on('file-open', (file) => {
         this.smart_sources?.debounce_re_import_queue?.();
         const current_path = file?.path;
-        const current_source = this.smart_sources.get(current_path);
-        if(current_source) current_source.emit_event('sources:opened', { event_source: 'file-open'});
+        this.emit_source_opened(current_path, 'file-open');
       })
     );
     register_completion_variable_adapter_replacements(this._config.collections.smart_completions.completion_adapters.SmartCompletionVariableAdapter);
@@ -78,6 +76,14 @@ export class SmartEnv extends BaseSmartEnv {
     ContextModal.register_modal(this.main);
     // register status bar
     this.register_status_bar();
+  }
+  emit_source_opened(current_path, event_source=null) {
+    if (this._current_opened_source === current_path) return; // prevent duplicate events
+    const current_source = this.smart_sources.get(current_path);
+    if(current_source) {
+      this._current_opened_source = current_path;
+      current_source.emit_event('sources:opened', { event_source });
+    }
   }
   // queue re-import the file
   queue_source_re_import(source) {

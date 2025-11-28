@@ -53,6 +53,7 @@ export async function open_source(item, event = null) {
       editor.setCursor(pos);
       editor.scrollIntoView({ to: pos, from: pos }, true);
     }
+    // TODO: should this be replaced with env.emit_source_opened?
     item.emit_event('sources:opened', { event_source: 'open_source method' });
   }catch(e){
     console.error("Error in open_source:", e);
