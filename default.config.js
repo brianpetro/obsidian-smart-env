@@ -10,10 +10,6 @@ import { ExcalidrawSourceContentAdapter } from "./adapters/smart-sources/excalid
 import { SmartBlocks, SmartBlock } from 'smart-blocks';
 import { AjsonMultiFileBlocksDataAdapter } from "smart-blocks/adapters/data/ajson_multi_file.js";
 import { MarkdownBlockContentAdapter } from "smart-blocks/adapters/markdown_block.js";
-// import { Notice } from 'obsidian';
-// import { SmartNotices } from "smart-notices/smart_notices.js"; // TODO: move to jsbrains
-import { render as source_settings_component } from 'smart-sources/components/settings.js';
-import { render as model_settings_component } from "smart-model/components/settings.js";
 // smart model
 import { SmartEmbedModel } from "smart-embed-model";
 import { SmartEmbedOpenAIAdapter } from "smart-embed-model/adapters/openai.js";
@@ -156,14 +152,6 @@ const smart_env_config = {
   items: {
     smart_source,
     smart_block,
-  },
-  components: {
-    smart_blocks: {
-      settings: source_settings_component,
-    },
-    smart_embed_model: {
-      settings: model_settings_component,
-    },
   },
   default_settings,
   embedding_models: {

@@ -71,7 +71,7 @@ function get_oauth_storage_prefix(app) {
 export function build_html(_scope, _opts = {}) {
   return `
     <div class="sc-smart-plugins-settings">
-      <h2>Smart Plugins Settings</h2>
+      <h2>Pro plugins</h2>
       <div class="sc-smart-plugins-login"></div>
       <div class="sc-smart-plugins-list"></div>
     </div>
