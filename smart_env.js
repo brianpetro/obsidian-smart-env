@@ -33,6 +33,7 @@ export class SmartEnv extends BaseSmartEnv {
     }
 
     const opts = merge_env_config(main_env_opts, default_config);
+    opts.env_path = ''; // scope handled by Obsidian FS methods
     return await super.create(plugin, opts);
   }
   async load(force_load = false) {
