@@ -23,7 +23,7 @@ import { open_url_externally } from '../../utils/open_url_externally.js';
  * @param {any} scope
  * @returns {{ env: any|null, plugin: any|null }}
  */
-function resolve_env_plugin(scope) {
+export function resolve_env_plugin(scope) {
   // SmartEnv instance: has smart_view + plugin
   if (scope && scope.smart_view && scope.plugin) {
     return {
@@ -55,10 +55,44 @@ function resolve_env_plugin(scope) {
  * @param {import('obsidian').App} app
  * @returns {string}
  */
-function get_oauth_storage_prefix(app) {
+export function get_oauth_storage_prefix(app) {
   const vault_name = app?.vault?.getName?.() || '';
   const safe = vault_name.toLowerCase().replace(/[^a-z0-9]/g, '_');
   return `${safe}_smart_plugins_oauth_`;
+}
+
+/**
+ * Show/hide an element, using Obsidian's toggleClass when available.
+ *
+ * @param {HTMLElement|null} el
+ * @param {boolean} hidden
+ */
+function set_element_hidden(el, hidden) {
+  if (!el) return;
+  if (typeof el.toggleClass === 'function') {
+    el.toggleClass('is-hidden', hidden);
+  } else if (el.classList) {
+    if (hidden) {
+      el.classList.add('is-hidden');
+    } else {
+      el.classList.remove('is-hidden');
+    }
+  }
+}
+
+/**
+ * Set text on an element, using Obsidian's setText when present.
+ *
+ * @param {HTMLElement|null} el
+ * @param {string} text
+ */
+function set_element_text(el, text) {
+  if (!el) return;
+  if (typeof el.setText === 'function') {
+    el.setText(text);
+  } else {
+    el.textContent = text;
+  }
 }
 
 /**
@@ -71,9 +105,34 @@ function get_oauth_storage_prefix(app) {
 export function build_html(_scope, _opts = {}) {
   return `
     <div class="sc-smart-plugins-settings">
-      <h2>Pro plugins</h2>
-      <div class="sc-smart-plugins-login"></div>
-      <div class="sc-smart-plugins-list"></div>
+      <h2>Smart Plugins Settings</h2>
+
+      <section class="sc-smart-plugins-login">
+        <h3 class="sc-smart-plugins-login-title">Account</h3>
+        <div class="sc-smart-plugins-login-body"></div>
+      </section>
+
+      <section class="sc-smart-plugins-list">
+        <div class="sc-smart-plugins-loading is-hidden" aria-live="polite">
+          Loading available plugins...
+        </div>
+        <div class="sc-smart-plugins-message is-hidden"></div>
+
+        <section class="sc-smart-plugins-available is-hidden">
+          <h3>Available Plugins</h3>
+          <div class="sc-smart-plugins-available-list"></div>
+        </section>
+
+        <section class="sc-smart-plugins-pro is-hidden">
+          <h3>Pro Plugins</h3>
+          <div class="sc-smart-plugins-pro-list"></div>
+        </section>
+
+        <section class="sc-smart-plugins-locked is-hidden">
+          <h3>Locked Plugins</h3>
+          <div class="sc-smart-plugins-locked-list"></div>
+        </section>
+      </section>
     </div>
   `;
 }
@@ -85,14 +144,14 @@ export function build_html(_scope, _opts = {}) {
  *
  * @param {any} scope
  * @param {object} [opts]
- * @returns {Promise<DocumentFragment>}
+ * @returns {DocumentFragment}
  */
 export async function render(scope, opts = {}) {
   const html = build_html(scope, opts);
   const frag = this.create_doc_fragment(html);
   const container = frag.firstElementChild;
-  await post_process.call(this, scope, container, opts);
-  return frag;
+  post_process.call(this, scope, container, opts);
+  return container;
 }
 
 /**
@@ -103,7 +162,12 @@ export async function render(scope, opts = {}) {
  * @param {object} [opts]
  * @returns {Promise<void>}
  */
-export async function post_process(scope, container, opts = {}) { // eslint-disable-line no-unused-vars
+export async function post_process(scope, container, params = {}) { // eslint-disable-line no-unused-vars
+  if (!container) {
+    console.warn('[smart_plugins] post_process called without container.');
+    return;
+  }
+
   const { env, plugin } = resolve_env_plugin(scope);
 
   if (!plugin) {
@@ -113,8 +177,23 @@ export async function post_process(scope, container, opts = {}) { // eslint-disa
 
   const app = plugin.app || window.app;
   const oauth_storage_prefix = get_oauth_storage_prefix(app);
-  const login_container = container.querySelector('.sc-smart-plugins-login');
-  const list_container = container.querySelector('.sc-smart-plugins-list');
+
+  const login_section = container.querySelector('.sc-smart-plugins-login');
+  const login_container = (login_section && login_section.querySelector('.sc-smart-plugins-login-body')) || login_section || container;
+
+  const list_section = container.querySelector('.sc-smart-plugins-list');
+  const loading_el = list_section?.querySelector('.sc-smart-plugins-loading') || null;
+  const message_el = list_section?.querySelector('.sc-smart-plugins-message') || null;
+
+  const available_section = list_section?.querySelector('.sc-smart-plugins-available') || null;
+  const available_list_el = list_section?.querySelector('.sc-smart-plugins-available-list') || null;
+
+  const pro_section = list_section?.querySelector('.sc-smart-plugins-pro') || null;
+  const pro_list_el = list_section?.querySelector('.sc-smart-plugins-pro-list') || null;
+
+  const locked_section = list_section?.querySelector('.sc-smart-plugins-locked') || null;
+  const locked_list_el = list_section?.querySelector('.sc-smart-plugins-locked-list') || null;
+
   const fallback_plugins = derive_fallback_plugins();
 
   /**
@@ -128,6 +207,7 @@ export async function post_process(scope, container, opts = {}) { // eslint-disa
     // Wait for manifests to be loaded if needed
     while (Object.keys(manifests).length === 0) {
       manifests = app.plugins.manifests;
+      // eslint-disable-next-line no-await-in-loop
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
     for (const plugin_id in manifests) {
@@ -160,7 +240,9 @@ export async function post_process(scope, container, opts = {}) { // eslint-disa
    * Render login / logout controls into the login_container.
    */
   const render_oauth_login_section = () => {
-    login_container.empty();
+    if (!login_container) return;
+
+    this.empty(login_container);
     const token = localStorage.getItem(oauth_storage_prefix + 'token') || '';
 
     if (!token) {
@@ -186,7 +268,7 @@ export async function post_process(scope, container, opts = {}) { // eslint-disa
           localStorage.removeItem(oauth_storage_prefix + 'refresh');
           new Notice('Logged out of Smart Plugins');
           render_oauth_login_section();
-          list_container.empty();
+          render_plugin_list_section();
         });
       });
     }
@@ -202,12 +284,15 @@ export async function post_process(scope, container, opts = {}) { // eslint-disa
     const resolved_download_url = typeof item.resolve_download_url === 'function'
       ? await item.resolve_download_url()
       : item.download_url;
+
     if (resolved_download_url) {
       return fetch_zip_from_url(resolved_download_url);
     }
+
     if (!token) {
       throw new Error('Login required to install this plugin.');
     }
+
     return fetch_plugin_zip(item.repo, token);
   };
 
@@ -249,6 +334,7 @@ export async function post_process(scope, container, opts = {}) { // eslint-disa
     }
   };
 
+
   /**
    * Fetch and display a plugin README in a modal.
    *
@@ -270,20 +356,30 @@ export async function post_process(scope, container, opts = {}) { // eslint-disa
   };
 
   /**
-   * Render the Smart Plugins list section.
+   * Render the fallback Smart Plugins list section when no token is present.
    *
-   * - Shows "Loading available plugins..." while fetching.
-   * - Lists installable / updatable plugins with Install/Update/Installed buttons.
-   * - Shows locked plugins section from `unauthorized`.
+   * - Uses static HTML skeleton from build_html (available + pro sections).
+   * - Shows a message prompting user to log in for full catalog.
    */
   const render_fallback_plugin_list = async () => {
-    list_container.empty();
+    if (!list_section) return;
+
+    this.empty(available_list_el);
+    this.empty(pro_list_el);
+    this.empty(locked_list_el);
+
+    set_element_hidden(available_section, true);
+    set_element_hidden(pro_section, true);
+    set_element_hidden(locked_section, true);
+    set_element_hidden(loading_el, true);
 
     const public_plugins = fallback_plugins.filter((item) => !item.locked);
-    if (public_plugins.length > 0) {
-      list_container.createEl('h3', { text: 'Available Plugins' });
+    const placeholders = fallback_plugins.filter((item) => item.locked);
+
+    if (public_plugins.length > 0 && available_list_el) {
+      set_element_hidden(available_section, false);
       for (const item of public_plugins) {
-        const row = new Setting(list_container)
+        const row = new Setting(available_list_el)
           .setName(item.name || item.repo)
           .setDesc(item.description || 'Install without logging in.');
 
@@ -294,11 +390,10 @@ export async function post_process(scope, container, opts = {}) { // eslint-disa
       }
     }
 
-    const placeholders = fallback_plugins.filter((item) => item.locked);
-    if (placeholders.length > 0) {
-      list_container.createEl('h3', { text: 'Pro Plugins' });
+    if (placeholders.length > 0 && pro_list_el) {
+      set_element_hidden(pro_section, false);
       for (const item of placeholders) {
-        const row = new Setting(list_container)
+        const row = new Setting(pro_list_el)
           .setName(item.name)
           .setDesc(item.description || 'Login to unlock Pro plugins.');
 
@@ -309,18 +404,46 @@ export async function post_process(scope, container, opts = {}) { // eslint-disa
       }
     }
 
-    list_container.createEl('p', { text: 'Log in to access the full Smart Plugins catalog.' });
+    if (message_el) {
+      set_element_text(message_el, 'Log in to access the full Smart Plugins catalog.');
+      set_element_hidden(message_el, false);
+    }
   };
 
+  /**
+   * Render the Smart Plugins list section.
+   *
+   * - Shows "Loading available plugins..." while fetching.
+   * - Lists installable / updatable plugins with Install/Update/Installed buttons.
+   * - Shows locked plugins section from `unauthorized`.
+   * - Falls back to static plugin list when user is not logged in.
+   */
   const render_plugin_list_section = async () => {
-    list_container.empty();
+    if (!list_section) return;
+
+    this.empty(available_list_el);
+    this.empty(pro_list_el);
+    this.empty(locked_list_el);
+
+    set_element_hidden(available_section, true);
+    set_element_hidden(pro_section, true);
+    set_element_hidden(locked_section, true);
+
+    if (message_el) {
+      set_element_text(message_el, '');
+      set_element_hidden(message_el, true);
+    }
+
     const token = localStorage.getItem(oauth_storage_prefix + 'token') || '';
     if (!token) {
       await render_fallback_plugin_list();
       return;
     }
 
-    let loading_el = list_container.createEl('p', { text: 'Loading available plugins...' });
+    if (loading_el) {
+      set_element_text(loading_el, 'Loading available plugins...');
+      set_element_hidden(loading_el, false);
+    }
 
     try {
       const installed_map = await get_installed_info();
@@ -339,14 +462,20 @@ export async function post_process(scope, container, opts = {}) { // eslint-disa
         throw new Error(`Failed to fetch plugin list: ${resp.status} ${resp.text}`);
       }
 
-      loading_el.remove();
-      loading_el = null;
+      if (loading_el) {
+        set_element_hidden(loading_el, true);
+      }
 
       const { list = [], unauthorized = [] } = resp.json || {};
+
       if (!Array.isArray(list) || list.length === 0) {
-        list_container.createEl('p', { text: 'No plugins found.' });
-      } else {
-        list_container.createEl('h3', { text: 'Available Plugins' });
+        if (message_el) {
+          set_element_text(message_el, 'No plugins found.');
+          set_element_hidden(message_el, false);
+        }
+        set_element_hidden(available_section, true);
+      } else if (available_list_el) {
+        set_element_hidden(available_section, false);
 
         for (const item of list) {
           const repo_name = item.repo;
@@ -382,7 +511,7 @@ export async function post_process(scope, container, opts = {}) { // eslint-disa
             desc += `\n${item.description}`;
           }
 
-          const row = new Setting(list_container)
+          const row = new Setting(available_list_el)
             .setName(display_name)
             .setDesc(desc);
 
@@ -400,22 +529,27 @@ export async function post_process(scope, container, opts = {}) { // eslint-disa
       }
 
       const unauthorized_items = derive_unauthorized_display(unauthorized);
-      if (unauthorized_items.length > 0) {
-        list_container.createEl('h3', { text: 'Locked Plugins' });
+      if (unauthorized_items.length > 0 && locked_list_el) {
+        set_element_hidden(locked_section, false);
         for (const item of unauthorized_items) {
-          const setting = new Setting(list_container).setName(item.name);
+          const setting = new Setting(locked_list_el).setName(item.name);
           setting.addButton((btn) => {
             btn.setButtonText('Learn more');
             btn.onClick(() => open_url_externally(plugin, item.link));
           });
         }
+      } else {
+        set_element_hidden(locked_section, true);
       }
     } catch (err) {
       console.error('[smart_plugins] Failed to fetch plugin list:', err);
-      list_container.createEl('p', { text: 'Error fetching plugin list. Check console.' });
+      if (message_el) {
+        set_element_text(message_el, 'Error fetching plugin list. Check console.');
+        set_element_hidden(message_el, false);
+      }
     } finally {
       if (loading_el) {
-        loading_el.remove();
+        set_element_hidden(loading_el, true);
       }
     }
   };
@@ -425,10 +559,12 @@ export async function post_process(scope, container, opts = {}) { // eslint-disa
     render_oauth_login_section();
     await render_plugin_list_section();
   };
+
   env.events.on('smart_plugins_oauth_completed', async () => {
     console.log('smart_plugins_oauth_completed event received');
     await render_smart_plugins();
   });
   console.log('registered smart_plugins_oauth_completed listener');
+
   await render_smart_plugins();
 }
