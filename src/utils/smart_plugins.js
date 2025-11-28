@@ -49,36 +49,30 @@ export async function resolve_smart_chat_release_url(request_fn = requestUrl) {
  * Includes a public Smart Chat download plus placeholders for Pro plugins
  * that require authentication.
  *
- * @returns {Array<{name:string, repo:string, manifest_id?:string, description?:string, download_url?:string, resolve_download_url?:Function, locked?:boolean}>}
+ * @returns {Array<{name:string, repo:string, manifest_id?:string, description?:string, download_url?:string, resolve_download_url?:Function}>}
  */
 export function derive_fallback_plugins() {
-  const public_plugins = [
+  const pro_placeholders = [
     {
-      name: 'Smart Chat (GitHub)',
+      name: 'Smart Chat',
       repo: SMART_CHAT_REPO,
       manifest_id: 'smart-chat-obsidian',
       description: 'Install the public Smart Chat build from the latest GitHub release.',
       resolve_download_url: resolve_smart_chat_release_url,
-      locked: false,
     },
-  ];
-
-  const pro_placeholders = [
     {
       name: 'Connections Pro',
       repo: 'smart-connections-pro',
       description: 'Login with your supporter key to unlock Pro plugins.',
-      locked: true,
     },
     {
       name: 'Context Pro',
       repo: 'smart-context-pro',
       description: 'Login with your supporter key to unlock Pro plugins.',
-      locked: true,
     },
   ];
 
-  return [...public_plugins, ...pro_placeholders];
+  return pro_placeholders;
 }
 
 /**
@@ -371,18 +365,6 @@ export async function fetch_plugin_readme(repo, token, request_fn = requestUrl) 
 }
 
 /**
- * Converts unauthorized plugin list into display-friendly objects.
- *
- * @param {Array<{repo: string, link: string}>} unauthorized
- * @returns {Array<{name: string, link: string}>}
- */
-export function derive_unauthorized_display(unauthorized = []) {
-  return unauthorized.map(({ repo, link }) => ({
-    name: repo.split('/').pop(),
-    link
-  }));
-}
-/**
  * Persists the current enabled plugins to the configuration file.
  *
  * The configuration file is assumed to be "app.json" in the vault root. Its structure is:
@@ -399,4 +381,19 @@ export async function enable_plugin(app, plugin_id) {
   app.plugins.enabledPlugins.add(plugin_id);
   app.plugins.requestSaveConfig();
   app.plugins.loadManifests();
+}
+
+/**
+ * Compute the Smart Plugins OAuth storage prefix based on the vault name.
+ *
+ * Mirrors logic used by Smart Plugins OP / sc_oauth:
+ *   `${vault_name.toLowerCase().replace(/[^a-z0-9]/g, '_')}_smart_plugins_oauth_`
+ *
+ * @param {import('obsidian').App} app
+ * @returns {string}
+ */
+export function get_oauth_storage_prefix(app) {
+  const vault_name = app?.vault?.getName?.() || '';
+  const safe = vault_name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+  return `${safe}_smart_plugins_oauth_`;
 }
