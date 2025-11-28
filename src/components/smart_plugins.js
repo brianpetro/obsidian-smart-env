@@ -25,7 +25,7 @@ export function build_html(env, params = {}) {
   return `
     <div class="sc-smart-plugins-settings">
       <h1>Pro plugins</h1>
-      <p>Smart Plugins are designed to provide core functionality with minimal friction. Pro plugins provide access to advanced configurations and features.</p>
+      <p>Smart Plugins are designed to provide core functionality with minimal friction. Pro plugins provide access to advanced configurations and features. Pro plugin subscriptions support development. <a href="https://smartconnections.app/introducing-pro-plugins/" target="_external">Learn more</a> about the transition from the Supporter program to Pro plugins.</p>
       <section class="smart-plugins-list">
         <div class="pro-plugins-list"></div>
       </section>
