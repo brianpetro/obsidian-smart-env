@@ -11,19 +11,40 @@ export async function build_html(env, opts = {}) {
   // sc-env-settings-body is hidden/shown by the toggle button
   return `
     <div class="exclusion-settings-container">
-      <div class="smart-env-settings-header">
-        <h2>Excluded folders</h2>
-        <button class="sc-add-excluded-folder-btn" type="button">Edit excluded folders</button>
+      <div class="">
+        <div class="setting-item">
+          <div class="info setting-item-info">
+            <div class="setting-item-name">Excluded folders</div>
+            <div class="setting-item-description">Manage folders to exclude from the environment.</div>
+          </div>
+          <div class="control setting-item-control">
+            <button class="sc-add-excluded-folder-btn" type="button">Edit excluded folders</button>
+          </div>
+        </div>
       </div>
 
-      <div class="smart-env-settings-header">
-        <h2>Excluded files</h2>
-        <button class="sc-add-excluded-file-btn" type="button">Edit excluded files</button>
+      <div class="">
+        <div class="setting-item">
+          <div class="info setting-item-info">
+            <div class="setting-item-name">Excluded files</div>
+            <div class="setting-item-description">Manage files to exclude from the environment.</div>
+          </div>
+          <div class="control setting-item-control">
+            <button class="sc-add-excluded-file-btn" type="button">Edit excluded files</button>
+          </div>
+        </div>
       </div>
 
-      <div class="smart-env-settings-header">
-        <h2>Excluded</h2>
-        <button class="sc-excluded-sources-btn" type="button">Show all excluded</button>
+      <div class="">
+        <div class="setting-item">
+          <div class="info setting-item-info">
+            <div class="setting-item-name">Excluded</div>
+            <div class="setting-item-description">View all excluded sources.</div>
+          </div>
+          <div class="control setting-item-control">
+            <button class="sc-excluded-sources-btn" type="button">Show all excluded</button>
+          </div>
+        </div>
       </div>
     </div>
   `;

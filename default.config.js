@@ -135,6 +135,7 @@ const smart_env_config = {
       ],
       // process_embed_queue: false,
       process_embed_queue: true, // trigger embedding on load
+      load_order: 100, // load last
     },
     smart_blocks: {
       collection_key: 'smart_blocks',

@@ -92,8 +92,6 @@ export class SmartPluginSettingsTab extends PluginSettingTab {
     if (!this.global_settings_container) return;
     this.global_settings_container.empty?.();
     if (!this.env) return;
-    const env_fragment = await this.render_component('env_settings', this.env);
-    if (env_fragment) this.global_settings_container.appendChild(env_fragment);
     const more_plugins_fragment = create_more_plugins_fragment(this.smart_view, this.plugin);
     if (more_plugins_fragment) this.global_settings_container.appendChild(more_plugins_fragment);
     const supporter_callout = await this.render_component(
