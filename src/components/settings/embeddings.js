@@ -34,19 +34,36 @@ async function post_process (env, container, params) {
           value: 'transformers',
         },
         {
-          label: 'LM Studio (local, requires LM Studio app)',
+          label: 'PRO: LM Studio (local, requires LM Studio app)',
           value: 'lmstudio',
+          disabled: true,
         },
         {
-          label: 'Ollama (local, requires Ollama app)',
+          label: 'PRO: Ollama (local, requires Ollama app)',
           value: 'ollama',
-        }
+          disabled: true,
+        },
+        {
+          label: 'PRO: OpenAI (cloud)',
+          value: 'openai',
+          disabled: true,
+        },
+        {
+          label: 'PRO: Google Gemini (cloud)',
+          value: 'google_gemini',
+          disabled: true,
+        },
+        {
+          label: 'PRO: Open Router (cloud)',
+          value: 'open_router',
+          disabled: true,
+        },
       ],
       on_change: () => render_model_settings(),
     });
     this.empty(platform_container);
     platform_container.appendChild(platform_select_dropdown);
-  
+
     const embedding_platform = env.settings.models.embedding_platform;
     const platform_key = `${embedding_platform}#default`;
     const platform = env.platforms.items[platform_key]
@@ -67,7 +84,7 @@ async function post_process (env, container, params) {
     const model_options = await model.get_model_key_options();
     const model_select_dropdown = await env.smart_components.render_component('form_dropdown', model, {
       setting_key: 'model_key',
-      label: 'Embedding platform',
+      label: 'Embedding model platform',
       description: 'Select the embedding platform to use.',
       options: model_options,
       on_change: () => render_model_settings(),

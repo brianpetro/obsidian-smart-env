@@ -1,46 +1,5 @@
 import { PluginSettingTab } from 'obsidian';
 import { wait_for_env_to_load } from '../utils/wait_for_env_to_load.js';
-import { open_url_externally } from '../utils/open_url_externally.js';
-
-const MORE_PLUGIN_LINKS = [
-  {
-    label: 'Quickly copy notes many notes to clipboard',
-    url: 'https://obsidian.md/plugins?id=smart-context',
-  },
-  {
-    label: 'Embed & bookmark chat threads to notes',
-    url: 'https://obsidian.md/plugins?id=smart-chatgpt',
-  },
-  {
-    label: 'Smart note generation with context + templates',
-    url: 'https://obsidian.md/plugins?id=smart-templates',
-  },
-];
-
-/**
- * @param {import('smart-view').SmartView} smart_view
- * @param {unknown} plugin
- * @param {(scope: unknown, url: string) => void} open_url
- * @returns {DocumentFragment|null}
- */
-export function create_more_plugins_fragment(smart_view, plugin, open_url = open_url_externally) {
-  if (!smart_view) return null;
-  const html = [
-    '<h2>More Smart Plugins</h2>',
-    '<div class="smart-plugin-settings-tab__more-plugins">',
-    ...MORE_PLUGIN_LINKS.map(({ label, url }) => `<button type="button" data-url="${url}">${label}</button>`),
-    '</div>',
-  ].join('');
-  const fragment = smart_view.create_doc_fragment(html);
-  const buttons = fragment?.querySelectorAll?.('[data-url]') || [];
-  buttons.forEach((button) => {
-    button.addEventListener?.('click', () => {
-      const target_url = button.dataset?.url;
-      if (target_url) open_url(plugin, target_url);
-    });
-  });
-  return fragment;
-}
 
 /**
  * @class SmartPluginSettingsTab
@@ -92,8 +51,10 @@ export class SmartPluginSettingsTab extends PluginSettingTab {
     if (!this.global_settings_container) return;
     this.global_settings_container.empty?.();
     if (!this.env) return;
-    const more_plugins_fragment = create_more_plugins_fragment(this.smart_view, this.plugin);
-    if (more_plugins_fragment) this.global_settings_container.appendChild(more_plugins_fragment);
+    const settings_smart_env = await this.env.smart_components.render_component('settings_smart_env', this.env);
+    if (settings_smart_env) this.global_settings_container.appendChild(settings_smart_env);
+    const smart_plugins_settings = await this.render_component('smart_plugins', this.plugin);
+    if (smart_plugins_settings) this.global_settings_container.appendChild(smart_plugins_settings);
     const supporter_callout = await this.render_component(
       'supporter_callout',
       this.plugin,
@@ -102,11 +63,6 @@ export class SmartPluginSettingsTab extends PluginSettingTab {
       }
     );
     if (supporter_callout) this.global_settings_container.appendChild(supporter_callout);
-    const smart_plugins_settings = await this.render_component('smart_plugins', this.plugin);
-    if (smart_plugins_settings) this.global_settings_container.appendChild(smart_plugins_settings);
-    // BEGIN v2 replaces above
-    const settings_smart_env = await this.env.smart_components.render_component('settings_smart_env', this.env);
-    if (settings_smart_env) this.global_settings_container.appendChild(settings_smart_env);
   }
 
   async render_component(name, scope, params={}) {

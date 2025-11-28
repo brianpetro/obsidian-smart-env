@@ -56,7 +56,6 @@ import { ContextModal } from './src/modals/context_selector.js';
 import { NotificationsFeedModal } from './src/modals/notifications_feed_modal.js';
 // 2025-11-26
 import transformers from "smart-models/adapters/embedding/transformers_iframe.js";
-import ollama from "smart-models/adapters/embedding/ollama.js";
 import { default_settings } from './default.settings.js';
 
 const smart_env_config = {
@@ -169,7 +168,6 @@ const smart_env_config = {
   default_settings,
   embedding_models: {
     transformers,
-    ollama,
   },
   // begin obsidian-smart-env specific modules (need to update build_env_config.js to handle)
   modals: {
