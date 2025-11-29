@@ -36,8 +36,8 @@ async function post_process (env, container, params) {
 
     const embedding_platform = env.settings.models.embedding_platform;
     const platform_key = `${embedding_platform}#default`;
-    const platform = env.platforms.items[platform_key]
-      ?? env.platforms.new_platform({
+    const platform = env.model_platforms.items[platform_key]
+      ?? env.model_platforms.new_platform({
         key: platform_key,
         adapter_key: embedding_platform,
       })
