@@ -30,6 +30,7 @@ export class SmartEnvSettingTab extends SmartPluginSettingsTab {
   }
 
   async render_plugin_settings(container) {
+    container.createEl('p', { text: 'Manage all global Smart Environment settings from one tab. These settings apply to all Smart Plugins.' });
     if(this.is_pro) {
       const pro_settings = await this.render_component('settings_env_pro', this.env);
       container.appendChild(pro_settings);

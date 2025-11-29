@@ -2,7 +2,6 @@ import styles from './style.css';
 export async function build_html(env, opts = {}) {
   return `
     <div class="smart-env-settings-container">
-      <p>Manage all global Smart Environment settings from one tab. These settings apply to all Smart Plugins.</p>
       <div class="">
         <div class="setting-item">
           <div class="info setting-item-info">
