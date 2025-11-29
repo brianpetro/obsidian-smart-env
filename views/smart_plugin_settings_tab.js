@@ -51,8 +51,10 @@ export class SmartPluginSettingsTab extends PluginSettingTab {
     if (!this.global_settings_container) return;
     this.global_settings_container.empty?.();
     if (!this.env) return;
-    const settings_smart_env = await this.env.smart_components.render_component('settings_smart_env', this.env);
+    const settings_smart_env = await this.render_component('settings_smart_env', this.env);
     if (settings_smart_env) this.global_settings_container.appendChild(settings_smart_env);
+    const pro_settings = await this.render_component('settings_env_pro', this.env);
+    if (pro_settings) this.global_settings_container.appendChild(pro_settings);
     // const supporter_callout = await this.render_component(
     //   'supporter_callout',
     //   this.plugin,
@@ -66,7 +68,7 @@ export class SmartPluginSettingsTab extends PluginSettingTab {
   }
 
   async render_component(name, scope, params={}) {
-    return await this.env?.render_component(name, scope, params);
+    return await this.env.smart_components.render_component(name, scope, params);
   }
 
 }

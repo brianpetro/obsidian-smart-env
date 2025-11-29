@@ -72,5 +72,7 @@ export async function post_process(env, container, opts = {}) {
   container.appendChild(exclusion_settings);
   const embedding_settings = await env.smart_components.render_component('settings_embeddings', env);
   container.appendChild(embedding_settings);
+  const muted_notices_frag = await env.render_component('muted_notices', env);
+  container.appendChild(muted_notices_frag);
   return container;
 }

@@ -20,8 +20,9 @@ async function build_html(env, opts = {}) {
 export async function render(env, opts = {}) {
   let html = await build_html.call(this, env, opts);
   const frag = this.create_doc_fragment(html);
-  post_process.call(this, env, frag, opts);
-  return frag;
+  const container = frag.firstElementChild;
+  post_process.call(this, env, container, opts);
+  return container;
 }
 
 async function post_process(env, frag, opts = {}) {
