@@ -2,17 +2,25 @@ import styles from './style.css';
 export async function build_html(env, opts = {}) {
   return `
     <div class="smart-env-settings-container">
-      <div class="smart-env-settings-header" id="smart-env-buttons">
-        <h1>Smart Environment</h1>
-        <button class="smart-env-re-import-sources-btn" type="button">Re-import sources</button>
-        <div class="sc-inline-confirm-row" style="display: none;">
-          <span style="margin-right: 10px;">
-            Are you sure you want to clear all sources data? This cannot be undone.
-          </span>
-          <span class="sc-inline-confirm-row-buttons">
-            <button class="sc-inline-confirm-yes">Yes</button>
-            <button class="sc-inline-confirm-cancel">Cancel</button>
-          </span>
+      <p>Manage all global Smart Environment settings from one tab. These settings apply to all Smart Plugins.</p>
+      <div class="">
+        <div class="setting-item">
+          <div class="info setting-item-info">
+            <div class="setting-item-name">Re-import sources</div>
+            <div class="setting-item-description">Clear and reload all source data.</div>
+          </div>
+          <div class="control setting-item-control">
+            <button class="smart-env-re-import-sources-btn" type="button">Re-import sources</button>
+            <div class="sc-inline-confirm-row" style="display: none;">
+              <span style="margin-right: 10px;">
+                Are you sure you want to clear all sources data? This cannot be undone.
+              </span>
+              <span class="sc-inline-confirm-row-buttons">
+                <button class="sc-inline-confirm-yes">Yes</button>
+                <button class="sc-inline-confirm-cancel">Cancel</button>
+              </span>
+            </div>
+          </div>
         </div>
       </div>
     </div>

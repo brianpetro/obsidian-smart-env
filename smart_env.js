@@ -12,6 +12,7 @@ import { exchange_code_for_tokens, install_smart_plugins_plugin, get_smart_serve
 import { open_url_externally } from "./utils/open_url_externally.js";
 import { register_completion_variable_adapter_replacements } from './utils/register_completion_variable_adapter_replacements.js';
 import { remove_smart_plugins_plugin } from './migrations/remove_smart_plugins_plugin.js';
+import { SmartEnvSettingTab } from './src/views/smart_env_settings_tab.js';
 
 export class SmartEnv extends BaseSmartEnv {
   static async create(plugin, main_env_opts = null) {
@@ -53,6 +54,7 @@ export class SmartEnv extends BaseSmartEnv {
       new Notice(frag, 0);
       return;
     }
+    this.plugin.addSettingTab(new SmartEnvSettingTab(this.plugin.app, this.plugin));
     await super.load();
     this.smart_sources?.register_source_watchers?.(this.smart_sources);
     const plugin = this.main;

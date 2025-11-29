@@ -1,0 +1,57 @@
+/* 1) Host elements that should get a PRO badge */
+:is(
+  .env-pro-settings .setting-item-name,
+  .setting-component.pro-setting .setting-item-name
+) {
+  position: relative; /* safe default, keeps ::after anchored */
+}
+
+/* 2) The PRO badge itself */
+:is(
+  .env-pro-settings .setting-item-name,
+  .setting-component.pro-setting .setting-item-name
+)::after {
+  content: "PRO";
+
+  /* layout */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0.4em;
+  padding: 0.08em 0.55em;
+  border-radius: 999px;
+  white-space: nowrap;
+  vertical-align: middle;
+
+  /* typography */
+  font-size: 0.7em;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  line-height: 1;
+
+  /* color system: only Obsidian variables */
+  background-color: var(--interactive-accent);
+  background-image: linear-gradient(
+    135deg,
+    var(--interactive-accent),
+    var(--interactive-accent-hover)
+  );
+  color: var(--text-on-accent, var(--background-primary));
+  border: 1px solid var(--background-modifier-border);
+
+  /* subtle separation & depth, theme-aware */
+  box-shadow:
+    0 0 0 1px var(--background-primary),
+    0 1px 3px rgba(0, 0, 0, 0.35);
+  transform: translateY(-0.03em);
+}
+
+/* 3) Interactive refinement: follow Obsidian's accent hover behavior */
+:is(
+  .env-pro-settings .setting-item-name,
+  .setting-component.pro-setting .setting-item-name
+):hover::after {
+  background-color: var(--interactive-accent-hover);
+  filter: brightness(1.05);
+}
