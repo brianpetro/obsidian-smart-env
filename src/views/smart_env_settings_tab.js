@@ -30,12 +30,12 @@ export class SmartEnvSettingTab extends SmartPluginSettingsTab {
   }
 
   async render_plugin_settings(container) {
-    const settings_smart_env = await this.render_component('settings_smart_env', this.env);
-    if (settings_smart_env) container.appendChild(settings_smart_env);
     if(this.is_pro) {
       const pro_settings = await this.render_component('settings_env_pro', this.env);
       container.appendChild(pro_settings);
     }
+    const settings_smart_env = await this.render_component('settings_smart_env', this.env);
+    if (settings_smart_env) container.appendChild(settings_smart_env);
   }
 
 }
