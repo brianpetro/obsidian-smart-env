@@ -4,9 +4,8 @@ import { murmur_hash_32_alphanumeric } from 'smart-utils/create_hash.js';
 import { create_settings_section_heading } from '../utils/create_settings_section_heading.js';
 
 const lookup_lists_settings_config = {
-  section_lookup: create_settings_section_heading('Lookup queries'),
   results_collection_key: {
-    name: "Results type",
+    name: "Lookup results type",
     type: "dropdown",
     description: "Choose whether results should be sources or blocks.",
     option_1: 'smart_sources|Sources',
