@@ -1,3 +1,4 @@
+import {embedding_platform_options} from '../../utils/model_platforms.js';
 
 function build_html (env, params) {
   return `<div class="embedding-settings">
@@ -28,7 +29,7 @@ async function post_process (env, container, params) {
       setting_key: 'models.embedding_platform',
       label: 'Embedding platform',
       description: 'Select the embedding platform to use.',
-      options: platforms.map(p => ({ ...p, disabled: env.config.embedding_models[p.value] ? false : true })),
+      options: embedding_platform_options.map(p => ({ ...p, disabled: env.config.embedding_models[p.value] ? false : true })),
       on_change: () => render_model_settings(),
     });
     this.empty(platform_container);
@@ -74,35 +75,3 @@ async function post_process (env, container, params) {
   render_model_settings();
 
 }
-
-const platforms = [
-  {
-    label: 'Transformers (local, built-in)',
-    value: 'transformers',
-  },
-  {
-    label: 'PRO: LM Studio (local, requires LM Studio app)',
-    value: 'lmstudio',
-    disabled: true,
-  },
-  {
-    label: 'PRO: Ollama (local, requires Ollama app)',
-    value: 'ollama',
-    disabled: true,
-  },
-  {
-    label: 'PRO: OpenAI (cloud)',
-    value: 'openai',
-    disabled: true,
-  },
-  {
-    label: 'PRO: Google Gemini (cloud)',
-    value: 'google_gemini',
-    disabled: true,
-  },
-  {
-    label: 'PRO: Open Router (cloud)',
-    value: 'open_router',
-    disabled: true,
-  },
-];

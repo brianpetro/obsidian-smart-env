@@ -54,7 +54,7 @@ export class SmartEnv extends BaseSmartEnv {
       new Notice(frag, 0);
       return;
     }
-    this.plugin.addSettingTab(new SmartEnvSettingTab(this.plugin.app, this.plugin));
+    if(!this.env_settings_tab) this.plugin.addSettingTab(new SmartEnvSettingTab(this.plugin.app, this.plugin));
     await super.load();
     this.smart_sources?.register_source_watchers?.(this.smart_sources);
     const plugin = this.main;
@@ -114,7 +114,9 @@ export class SmartEnv extends BaseSmartEnv {
       this.status_elm.appendChild(container);
     });
   }
-
+  get env_settings_tab() {
+    return this.plugin.app.setting.pluginTabs.find(t => t.id === 'smart-environment');
+  }
   /**
    * @deprecated see events
    */

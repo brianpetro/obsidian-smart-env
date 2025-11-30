@@ -20,7 +20,7 @@ export function build_html(source, opts = {}) {
   </div>`;
 }
 
-import inspector_css from './source_inspector.css' with { type: 'css' };
+import inspector_css from './source_inspector.css';
 
 /**
  * Render the component by:
