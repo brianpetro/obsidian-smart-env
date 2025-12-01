@@ -2,7 +2,7 @@ import {chat_completion_platform_options} from '../../utils/model_platforms.js';
 
 function build_html (env, params) {
   return `<div class="chat-completion-settings">
-    <h2>Chat settings</h2>
+    <h2>Chat model</h2>
     <div class="settings-group">
   </div>`;
 }

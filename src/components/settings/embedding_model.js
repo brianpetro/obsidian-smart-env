@@ -2,7 +2,7 @@ import {embedding_platform_options} from '../../utils/model_platforms.js';
 
 function build_html (env, params) {
   return `<div class="embedding-settings">
-    <h2>Embedding settings</h2>
+    <h2>Embedding model</h2>
     <div class="settings-group">
   </div>`;
 }
