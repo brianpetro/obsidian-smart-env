@@ -1,11 +1,11 @@
-export const chat_platform_options = [
+export const chat_completion_platform_options = [
   {
     label: 'Open Router (cloud)',
     value: 'open_router',
   },
   {
     label: 'PRO: LM Studio (local, requires LM Studio app)',
-    value: 'lmstudio',
+    value: 'lm_studio',
     disabled: true,
   },
   {
@@ -20,9 +20,29 @@ export const chat_platform_options = [
   },
   {
     label: 'PRO: Google Gemini (cloud)',
-    value: 'google_gemini',
+    value: 'google',
     disabled: true,
   },
+  {
+    label: 'PRO: Cohere (cloud)',
+    value: 'cohere',
+    disabled: true,
+  },
+  {
+    label: 'PRO: xAI Grok (cloud)',
+    value: 'xai',
+    disabled: true,
+  },
+  {
+    label: 'PRO: Anthropic Claude (cloud)',
+    value: 'anthropic',
+    disabled: true,
+  },
+  {
+    label: 'PRO: Deepseek (cloud)',
+    value: 'deepseek',
+    disabled: true,
+  }
 ];
 
 export const embedding_platform_options = [
@@ -32,7 +52,7 @@ export const embedding_platform_options = [
   },
   {
     label: 'PRO: LM Studio (local, requires LM Studio app)',
-    value: 'lmstudio',
+    value: 'lm_studio',
     disabled: true,
   },
   {
@@ -47,7 +67,7 @@ export const embedding_platform_options = [
   },
   {
     label: 'PRO: Google Gemini (cloud)',
-    value: 'google_gemini',
+    value: 'google',
     disabled: true,
   },
   {

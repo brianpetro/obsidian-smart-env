@@ -36,5 +36,6 @@ export const default_settings = {
   // 2025-11-26
   models: {
     embedding_platform: 'transformers',
+    chat_completion_platform: 'open_router',
   },
 };
