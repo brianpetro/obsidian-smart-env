@@ -1,8 +1,9 @@
-import {chat_completion_platform_options} from '../../utils/model_platforms.js';
+import {embedding_platform_options} from '../../utils/model_platforms.js';
 
 function build_html (env, params) {
-  return `<div class="chat-completion-settings">
-    <h2>Chat settings</h2>
+  return `<div class="embedding-settings">
+    <h2>Embedding settings</h2>
+    <div class="reimport-sources"></div>
     <div class="settings-group">
   </div>`;
 }
@@ -17,25 +18,38 @@ export async function render (env, params) {
 async function post_process (env, container, params) {
   const settings_group = container.querySelector('.settings-group');
   const changed_provider = (provider_key, change_scope) => {
-    const model = env.chat_completion_models.filter(m => m.provider_key === provider_key)[0]
-      || env.chat_completion_models.new_model({ provider_key })
+    const model = env.embedding_models.filter(m => m.provider_key === provider_key)[0]
+      || env.embedding_models.new_model({ provider_key })
     ;
     render_model_settings(model);
   }
   const changed_model_key = async (model) => {
     model.queue_save();
     model.collection.process_save_queue();
+    const reimport_container = container.querySelector('.reimport-sources');
+    reimport_container.classList.add('env-setting-highlight');
+    this.empty(reimport_container);
+    // add notice to re-import sources to update embeddings
+    const notice = document.createElement('div');
+    notice.textContent = 'Embedding model changed. Please re-import your sources to update their embeddings.';
+    reimport_container.appendChild(notice);
+    const reimport_sources = await env.smart_components.render_component('settings_reimport_sources', env);
+    reimport_container.appendChild(reimport_sources);
+    env.events.once('sources:reimported', () => {
+      reimport_container.classList.remove('env-setting-highlight');
+      this.empty(reimport_container);
+    });
   }
 
   const render_model_settings = async (model) => {
-    if(!model) model = env.chat_completion_models.default;
+    if(!model) model = env.embedding_models.default;
     this.empty(settings_group);
-    settings_group.textContent = 'Loading chat model options...';
+    settings_group.textContent = 'Loading embedding options...';
     const provider_select_dropdown = await env.smart_components.render_component('form_dropdown', model, {
-      label: 'Chat provider',
-      description: 'Select the chat platform to use.',
+      label: 'Embedding provider',
+      description: 'Select the embedding provider to use.',
       setting_key: 'provider_key',
-      options: chat_completion_platform_options.map(p => ({ ...p, disabled: !model.env_config.providers[p.value] })),
+      options: embedding_platform_options.map(p => ({ ...p, disabled: !model.env_config.providers[p.value] })),
       on_change: (provider_key, change_scope) => changed_provider(provider_key, change_scope),
     });
     this.empty(settings_group);
@@ -43,8 +57,8 @@ async function post_process (env, container, params) {
     const model_options = await model.get_model_key_options();
     const model_select_dropdown = await env.smart_components.render_component('form_dropdown', model, {
       setting_key: 'model_key',
-      label: 'Chat model',
-      description: 'Select the chat model to use.',
+      label: 'Embedding model',
+      description: 'Select the embedding model to use.',
       options: model_options,
       on_change: () => changed_model_key(model),
     });

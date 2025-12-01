@@ -47,7 +47,7 @@ export const chat_completion_platform_options = [
 
 export const embedding_platform_options = [
   {
-    label: 'Transformers (local, built-in)',
+    label: 'Transformers (easy, local, built-in)',
     value: 'transformers',
   },
   {

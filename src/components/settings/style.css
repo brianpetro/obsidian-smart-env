@@ -13,3 +13,16 @@
   cursor: pointer;
 }
 
+
+.env-setting-highlight {
+  border: 1px solid var(--interactive-accent);
+  background-color: var(--interactive-hover);
+  padding: 0.5rem;
+  margin: 0.5rem 0;
+}
+
+.settings-group {
+  .setting-item {
+    border-top: none;
+  }
+}

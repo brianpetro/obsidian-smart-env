@@ -2,11 +2,9 @@
 import chat_completion_models from './src/collections/chat_completion_models.js';
 import embedding_models from './src/collections/embedding_models.js';
 import lookup_lists from './src/collections/lookup_lists.js';
-import providers from './src/collections/providers.js';
 import { ChatCompletionModel } from './src/items/chat_completion_model.js';
 import { EmbeddingModel } from './src/items/embedding_model.js';
 import { LookupList } from './src/items/lookup_list.js';
-import { Provider } from './src/items/provider.js';
 
 import { render as collection_settings_component } from './src/components/collection_settings.js';
 import { render as context_item_leaf_component } from './src/components/context-item/leaf.js';
@@ -16,7 +14,8 @@ import { render as lean_coffee_callout_component } from './src/components/lean_c
 import { render as muted_notices_component } from './src/components/muted_notices.js';
 import { render as notifications_feed_component } from './src/components/notifications_feed.js';
 import { render as settings_chat_completions_component } from './src/components/settings/chat_completions.js';
-import { render as settings_embeddings_component } from './src/components/settings/embeddings.js';
+import { render as settings_embedding_model_component } from './src/components/settings/embedding_model.js';
+import { render as settings_reimport_sources_component } from './src/components/settings/reimport_sources.js';
 import { render as settings_smart_env_component } from './src/components/settings/smart_env.js';
 import { render as settings_source_exclusions_component } from './src/components/settings/source_exclusions.js';
 import { render as smart_context_actions_component } from './src/components/smart-context/actions.js';
@@ -41,20 +40,17 @@ export const smart_env_config = {
   collections: {
     chat_completion_models,
     embedding_models,
-    lookup_lists,
-    providers
+    lookup_lists
   },
   item_types: {
     ChatCompletionModel,
     EmbeddingModel,
-    LookupList,
-    Provider
+    LookupList
   },
   items: {
     chat_completion_model: { class: ChatCompletionModel },
     embedding_model: { class: EmbeddingModel },
-    lookup_list: { class: LookupList },
-    provider: { class: Provider }
+    lookup_list: { class: LookupList }
   },
   modules: {
 
@@ -68,7 +64,8 @@ export const smart_env_config = {
     muted_notices: { render: muted_notices_component },
     notifications_feed: { render: notifications_feed_component },
     settings_chat_completions: { render: settings_chat_completions_component },
-    settings_embeddings: { render: settings_embeddings_component },
+    settings_embedding_model: { render: settings_embedding_model_component },
+    settings_reimport_sources: { render: settings_reimport_sources_component },
     settings_smart_env: { render: settings_smart_env_component },
     settings_source_exclusions: { render: settings_source_exclusions_component },
     smart_context_actions: { render: smart_context_actions_component },
