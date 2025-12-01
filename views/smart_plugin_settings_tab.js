@@ -42,6 +42,7 @@ export class SmartPluginSettingsTab extends PluginSettingTab {
     this.containerEl.empty();
     this.header_container = this.containerEl.createDiv({ cls: 'smart-plugin-settings-tab__header' });
     this.plugin_container = this.containerEl.createDiv({ cls: 'smart-plugin-settings-tab__plugin' });
+    this.smart_plugins_container = this.containerEl.createDiv({ cls: 'smart-plugin-settings-tab__smart-plugins' });
     this.global_settings_container = this.containerEl.createDiv({
       cls: 'smart-plugin-settings-tab__global',
       attr: { 'data-smart-settings': 'env' },
@@ -79,7 +80,8 @@ export class SmartPluginSettingsTab extends PluginSettingTab {
     //   this.global_settings_container.appendChild(pro_settings);
     // }
     const smart_plugins_settings = await this.render_component('smart_plugins', this.env);
-    this.global_settings_container.appendChild(smart_plugins_settings);
+    this.smart_plugins_container.empty?.();
+    this.smart_plugins_container.appendChild(smart_plugins_settings);
     // const supporter_callout = await this.render_component(
     //   'supporter_callout',
     //   this.plugin,

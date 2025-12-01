@@ -55,3 +55,11 @@
   background-color: var(--interactive-accent-hover);
   filter: brightness(1.05);
 }
+
+.sc-smart-plugins-settings {
+  border: 1px solid var(--interactive-accent);
+  border-radius: var(--radius-m);
+  padding: 1rem;
+  margin-top: 1rem;
+  background-color: var(--background-secondary);
+}
