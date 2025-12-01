@@ -49,8 +49,15 @@ export class SmartPluginSettingsTab extends PluginSettingTab {
   }
 
   async render_header(container) {
-    // append button "Show Smart Environment Settings"
-    const button = container.createEl('button', { text: 'Show Smart Environment Settings' });
+    const settings_item_div = container.createDiv({ cls: 'setting-item' });
+    const info_div = settings_item_div.createDiv({ cls: 'setting-item-info' });
+    info_div.createDiv({ cls: 'setting-item-name', text: 'Smart Environment' });
+    info_div.createDiv({
+      cls: 'setting-item-description',
+      text: 'Manage global settings in the dedicated Smart Environment settings tab.',
+    });
+    const control_div = settings_item_div.createDiv({ cls: 'setting-item-control' });
+    const button = control_div.createEl('button', { text: 'Show Smart Environment Settings' });
     button.addEventListener('click', () => {
       this.app.setting.openTabById('smart-environment');
     });
