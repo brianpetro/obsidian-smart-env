@@ -18,6 +18,7 @@ function build_html (env, params = {}) {
         </div>
       </div>
     </div>
+    <em class="reimport-notice"></em>
   </div>`;
 }
 
@@ -63,4 +64,17 @@ async function post_process (env, container, params = {}) {
     confirm_row.style.display = 'none';
     reimport_btn.style.display = 'inline-block';
   });
+  const disposers = [];
+  disposers.push(env.events?.on('model:changed', async (payload) => {
+    if(payload.collection_key !== 'embedding_models') return;
+    // add notice to re-import sources to update embeddings
+    container.classList.add('env-setting-highlight');
+    const notice = container.querySelector('.reimport-notice');
+    notice.textContent = 'Embedding model changed. Please re-import your sources to update their embeddings.';
+    container.appendChild(notice);
+    env.events.once('sources:reimported', () => {
+      reimport_container.classList.remove('env-setting-highlight');
+    });
+  }));
+  this.attach_disposer(container, disposers);
 }

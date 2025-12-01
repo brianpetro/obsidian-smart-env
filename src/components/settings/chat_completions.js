@@ -16,15 +16,17 @@ export async function render (env, params) {
 
 async function post_process (env, container, params) {
   const settings_group = container.querySelector('.settings-group');
+  const changed_model_key = async (model) => {
+    model.queue_save();
+    model.collection.process_save_queue();
+    model.collection.settings.default_model_key = model.key;
+  }
   const changed_provider = (provider_key, change_scope) => {
     const model = env.chat_completion_models.filter(m => m.provider_key === provider_key)[0]
       || env.chat_completion_models.new_model({ provider_key })
     ;
+    changed_model_key(model);
     render_model_settings(model);
-  }
-  const changed_model_key = async (model) => {
-    model.queue_save();
-    model.collection.process_save_queue();
   }
 
   const render_model_settings = async (model) => {

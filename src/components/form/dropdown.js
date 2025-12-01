@@ -76,7 +76,7 @@ export async function post_process(scope, container, params = {}) {
 
   const handler = () => {
     const value = select_el.value;
-    set_by_path(settings, setting_key, value);
+    set_by_path(scope.settings, setting_key, value);
     if (typeof params.on_change === 'function') {
       params.on_change(value, { scope, setting_key, select_el, container });
     }

@@ -3,7 +3,6 @@ import {embedding_platform_options} from '../../utils/model_platforms.js';
 function build_html (env, params) {
   return `<div class="embedding-settings">
     <h2>Embedding settings</h2>
-    <div class="reimport-sources"></div>
     <div class="settings-group">
   </div>`;
 }
@@ -17,28 +16,18 @@ export async function render (env, params) {
 
 async function post_process (env, container, params) {
   const settings_group = container.querySelector('.settings-group');
+  const changed_model_key = async (model) => {
+    model.queue_save();
+    model.collection.process_save_queue();
+    model.collection.settings.default_model_key = model.key;
+    model.emit_event('model:changed');
+  }
   const changed_provider = (provider_key, change_scope) => {
     const model = env.embedding_models.filter(m => m.provider_key === provider_key)[0]
       || env.embedding_models.new_model({ provider_key })
     ;
+    change_model_key(model);
     render_model_settings(model);
-  }
-  const changed_model_key = async (model) => {
-    model.queue_save();
-    model.collection.process_save_queue();
-    const reimport_container = container.querySelector('.reimport-sources');
-    reimport_container.classList.add('env-setting-highlight');
-    this.empty(reimport_container);
-    // add notice to re-import sources to update embeddings
-    const notice = document.createElement('div');
-    notice.textContent = 'Embedding model changed. Please re-import your sources to update their embeddings.';
-    reimport_container.appendChild(notice);
-    const reimport_sources = await env.smart_components.render_component('settings_reimport_sources', env);
-    reimport_container.appendChild(reimport_sources);
-    env.events.once('sources:reimported', () => {
-      reimport_container.classList.remove('env-setting-highlight');
-      this.empty(reimport_container);
-    });
   }
 
   const render_model_settings = async (model) => {
@@ -46,9 +35,9 @@ async function post_process (env, container, params) {
     this.empty(settings_group);
     settings_group.textContent = 'Loading embedding options...';
     const provider_select_dropdown = await env.smart_components.render_component('form_dropdown', model, {
+      setting_key: 'provider_key',
       label: 'Embedding provider',
       description: 'Select the embedding provider to use.',
-      setting_key: 'provider_key',
       options: embedding_platform_options.map(p => ({ ...p, disabled: !model.env_config.providers[p.value] })),
       on_change: (provider_key, change_scope) => changed_provider(provider_key, change_scope),
     });
