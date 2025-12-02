@@ -44,6 +44,9 @@ function get_level (entry) {
   if (event_domain === 'notification') {
     return event_type;
   }
+  if (event_type === 'error') {
+    return 'error';
+  }
   return 'info';
 }
 

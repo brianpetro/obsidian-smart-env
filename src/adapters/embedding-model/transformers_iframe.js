@@ -2,13 +2,11 @@ import {
   SmartEmbedTransformersIframeAdapter,
   settings_config
 } from "smart-embed-model/adapters/transformers_iframe.js";
+import { add_backward_compatibility } from "smart-models/utils/add_backward_compatibility.js";
 export class TransformersIframeEmbeddingModelAdapter extends SmartEmbedTransformersIframeAdapter {
   constructor(model_item) {
     super(model_item);
     // this.opts = model_item; // backward compatibility
-  }
-  get adapter_settings() {
-    return this.model.settings;
   }
   get use_gpu() {
     if(this.model.settings.legacy_transformers === true) return false;
@@ -37,6 +35,7 @@ export class TransformersIframeEmbeddingModelAdapter extends SmartEmbedTransform
     };
   }
 }
+add_backward_compatibility(TransformersIframeEmbeddingModelAdapter);
 export default {
   class: TransformersIframeEmbeddingModelAdapter,
   settings_config,

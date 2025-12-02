@@ -73,7 +73,7 @@ async function post_process (env, container, params = {}) {
     notice.textContent = 'Embedding model changed. Please re-import your sources to update their embeddings.';
     container.appendChild(notice);
     env.events.once('sources:reimported', () => {
-      reimport_container.classList.remove('env-setting-highlight');
+      container.classList.remove('env-setting-highlight');
     });
   }));
   this.attach_disposer(container, disposers);

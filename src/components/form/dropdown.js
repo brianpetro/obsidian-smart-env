@@ -14,6 +14,15 @@ export async function render(scope, params = {}) {
   return await post_process.call(this, scope, frag, params);
 }
 
+/**
+ * @param {object} scope - The scope object containing settings.
+ * @param {HTMLElement} container - The container element to render the dropdown into.
+ * @param {object} params - Additional parameters for rendering.
+ * @param {string} params.setting_key - The key in the scope.settings to bind the dropdown value to.
+ * @param {Array} params.options - The options for the dropdown, each option should be an object with 'value' and 'label' properties.
+ * @param {Function} [params.on_change] - Optional callback function to be called when the dropdown value changes. NOTE/WARNING: Skips automatic setting of value in scope.settings.
+ * @returns {HTMLElement} The container with the rendered dropdown.
+ */
 export async function post_process(scope, container, params = {}) {
   if (!scope) {
     container.textContent = 'Error: scope is required for dropdown component.';
@@ -76,9 +85,11 @@ export async function post_process(scope, container, params = {}) {
 
   const handler = () => {
     const value = select_el.value;
-    set_by_path(scope.settings, setting_key, value);
+    // skip set_by_path if on_change is defined
     if (typeof params.on_change === 'function') {
       params.on_change(value, { scope, setting_key, select_el, container });
+    } else {
+      set_by_path(scope.settings, setting_key, value);
     }
   };
   select_el.addEventListener('change', handler);

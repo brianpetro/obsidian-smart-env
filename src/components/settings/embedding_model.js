@@ -16,17 +16,22 @@ export async function render (env, params) {
 
 async function post_process (env, container, params) {
   const settings_group = container.querySelector('.settings-group');
-  const changed_model_key = async (model) => {
+  const save_active_model = (model) => {
     model.queue_save();
     model.collection.process_save_queue();
     model.collection.settings.default_model_key = model.key;
     model.emit_event('model:changed');
   }
+  const changed_model_key = async (model_key, change_scope) => {
+    const model = change_scope.scope;
+    model.data.model_key = model_key;
+    save_active_model(model);
+  }
   const changed_provider = (provider_key, change_scope) => {
     const model = env.embedding_models.filter(m => m.provider_key === provider_key)[0]
       || env.embedding_models.new_model({ provider_key })
     ;
-    change_model_key(model);
+    save_active_model(model);
     render_model_settings(model);
   }
 
@@ -49,7 +54,7 @@ async function post_process (env, container, params) {
       label: 'Embedding model',
       description: 'Select the embedding model to use.',
       options: model_options,
-      on_change: () => changed_model_key(model),
+      on_change: (model_key, change_scope) => changed_model_key(model_key, change_scope),
     });
     settings_group.appendChild(model_select_dropdown);
     const settings_config = model.provider_config.settings_config;
