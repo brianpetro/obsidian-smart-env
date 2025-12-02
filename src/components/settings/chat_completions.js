@@ -26,8 +26,9 @@ async function post_process (env, container, params) {
     const model = change_scope.scope;
     // model.data.model_key = model_key;
     model.data = {
+      ...model.instance.constructor.defaults,
       ...model.data,
-      ...(model.instance.models[model_key] || {}), // merges model details stored in models objects
+      ...(model.instance.models[model_key] || {}), // merge model details stored in models objects (enriched model details)
       model_key,
     }
     save_active_model(model);
