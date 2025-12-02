@@ -1,4 +1,5 @@
 import {embedding_platform_options} from '../../utils/model_platforms.js';
+import { merge_model_defaults_with_data } from '../../utils/smart-models/merge_model_defaults_with_data.js';
 
 function build_html (env, params) {
   return `<div class="embedding-settings">
@@ -25,12 +26,14 @@ async function post_process (env, container, params) {
   const changed_model_key = async (model_key, change_scope) => {
     const model = change_scope.scope;
     model.data.model_key = model_key;
+    merge_model_defaults_with_data(model);
     save_active_model(model);
   }
   const changed_provider = (provider_key, change_scope) => {
     const model = env.embedding_models.filter(m => m.provider_key === provider_key)[0]
       || env.embedding_models.new_model({ provider_key })
     ;
+    merge_model_defaults_with_data(model);
     save_active_model(model);
     render_model_settings(model);
   }
@@ -66,3 +69,6 @@ async function post_process (env, container, params) {
   render_model_settings();
 
 }
+  
+  
+  
