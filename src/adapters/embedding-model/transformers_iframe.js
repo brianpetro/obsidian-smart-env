@@ -8,10 +8,6 @@ export class TransformersIframeEmbeddingModelAdapter extends SmartEmbedTransform
     super(model_item);
     // this.opts = model_item; // backward compatibility
   }
-  get use_gpu() {
-    if(this.model.settings.legacy_transformers === true) return false;
-    return true;
-  }
   get models () {
     return {
       "TaylorAI/bge-micro-v2": {

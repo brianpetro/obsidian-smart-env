@@ -9,7 +9,6 @@ export const default_settings = {
     embed_model: {
       adapter: "transformers",
       transformers: {
-        legacy_transformers: false,
         model_key: 'TaylorAI/bge-micro-v2',
       },
     },
