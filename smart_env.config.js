@@ -13,8 +13,7 @@ import { render as form_dropdown_component } from './src/components/form/dropdow
 import { render as lean_coffee_callout_component } from './src/components/lean_coffee_callout.js';
 import { render as muted_notices_component } from './src/components/muted_notices.js';
 import { render as notifications_feed_component } from './src/components/notifications_feed.js';
-import { render as settings_chat_completions_component } from './src/components/settings/chat_completions.js';
-import { render as settings_embedding_model_component } from './src/components/settings/embedding_model.js';
+import { render as settings_env_models_component } from './src/components/settings/env_models.js';
 import { render as settings_reimport_sources_component } from './src/components/settings/reimport_sources.js';
 import { render as settings_smart_env_component } from './src/components/settings/smart_env.js';
 import { render as settings_sources_excluded_info_component } from './src/components/settings/sources_excluded_info.js';
@@ -64,8 +63,7 @@ export const smart_env_config = {
     lean_coffee_callout: { render: lean_coffee_callout_component },
     muted_notices: { render: muted_notices_component },
     notifications_feed: { render: notifications_feed_component },
-    settings_chat_completions: { render: settings_chat_completions_component },
-    settings_embedding_model: { render: settings_embedding_model_component },
+    settings_env_models: { render: settings_env_models_component },
     settings_reimport_sources: { render: settings_reimport_sources_component },
     settings_smart_env: { render: settings_smart_env_component },
     settings_sources_excluded_info: { render: settings_sources_excluded_info_component },

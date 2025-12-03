@@ -24,11 +24,12 @@ export async function post_process(env, container, opts = {}) {
   render_if_available.call(this, 'settings_sources_folder_exclusions', env, container);
   render_if_available.call(this, 'settings_sources_file_exclusions', env, container);
   render_if_available.call(this, 'settings_sources_excluded_info', env, container);
-  const embedding_settings = await env.smart_components.render_component('settings_embedding_model', env);
-  container.appendChild(embedding_settings);
-  const chat_completion_settings = await env.smart_components.render_component('settings_chat_completions', env);
-  container.appendChild(chat_completion_settings);
-  render_if_available.call(this, 'settings_ranking_model', env, container);
+  render_if_available.call(this, 'settings_env_models', env, container);
+  // const embedding_settings = await env.smart_components.render_component('settings_embedding_model', env);
+  // container.appendChild(embedding_settings);
+  // const chat_completion_settings = await env.smart_components.render_component('settings_chat_completions', env);
+  // container.appendChild(chat_completion_settings);
+  // render_if_available.call(this, 'settings_ranking_model', env, container);
   const muted_notices_frag = await env.render_component('muted_notices', env);
   container.appendChild(muted_notices_frag);
   return container;

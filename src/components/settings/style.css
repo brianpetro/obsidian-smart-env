@@ -26,3 +26,24 @@
     border-top: none;
   }
 }
+
+.model-settings .model-info {
+  border-radius: var(--radius-m);
+  padding: 1rem;
+  margin-bottom: 1rem;
+  background-color: var(--background-secondary);
+  pre {
+    margin: 0;
+    font-size: 0.9rem;
+  }
+  .test-result-icon {
+    vertical-align: middle;
+    margin-left: 0.5rem;
+  }
+  .test-result-icon[data-icon="square-check-big"]{
+    color: var(--color-green);
+  }
+  .test-result-icon[data-icon="circle-x"]{
+    color: var(--color-red);
+  }
+}

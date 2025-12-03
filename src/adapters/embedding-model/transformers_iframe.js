@@ -2,7 +2,6 @@ import {
   SmartEmbedTransformersIframeAdapter,
   settings_config
 } from "smart-embed-model/adapters/transformers_iframe.js";
-import { add_backward_compatibility } from "smart-models/utils/add_backward_compatibility.js";
 export class TransformersIframeEmbeddingModelAdapter extends SmartEmbedTransformersIframeAdapter {
   constructor(model_item) {
     super(model_item);
@@ -31,7 +30,6 @@ export class TransformersIframeEmbeddingModelAdapter extends SmartEmbedTransform
     };
   }
 }
-add_backward_compatibility(TransformersIframeEmbeddingModelAdapter);
 export default {
   class: TransformersIframeEmbeddingModelAdapter,
   settings_config,
