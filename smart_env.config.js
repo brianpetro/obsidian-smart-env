@@ -17,7 +17,8 @@ import { render as settings_chat_completions_component } from './src/components/
 import { render as settings_embedding_model_component } from './src/components/settings/embedding_model.js';
 import { render as settings_reimport_sources_component } from './src/components/settings/reimport_sources.js';
 import { render as settings_smart_env_component } from './src/components/settings/smart_env.js';
-import { render as settings_source_exclusions_component } from './src/components/settings/source_exclusions.js';
+import { render as settings_sources_excluded_info_component } from './src/components/settings/sources_excluded_info.js';
+import { render as settings_sources_folder_exclusions_component } from './src/components/settings/sources_folder_exclusions.js';
 import { render as smart_context_actions_component } from './src/components/smart-context/actions.js';
 import { render as smart_context_item_component } from './src/components/smart-context/item.js';
 import { render as smart_context_meta_component } from './src/components/smart-context/meta.js';
@@ -67,7 +68,8 @@ export const smart_env_config = {
     settings_embedding_model: { render: settings_embedding_model_component },
     settings_reimport_sources: { render: settings_reimport_sources_component },
     settings_smart_env: { render: settings_smart_env_component },
-    settings_source_exclusions: { render: settings_source_exclusions_component },
+    settings_sources_excluded_info: { render: settings_sources_excluded_info_component },
+    settings_sources_folder_exclusions: { render: settings_sources_folder_exclusions_component },
     smart_context_actions: { render: smart_context_actions_component },
     smart_context_item: { render: smart_context_item_component },
     smart_context_meta: { render: smart_context_meta_component },

@@ -29,9 +29,18 @@ export class ExcludedSourcesModal extends Modal {
     this.contentEl.empty();
     const list_el = this.contentEl.createEl('ul');
     const excluded_file_paths = this.env.smart_sources.excluded_file_paths;
+    const too_long_files = this.app.vault.getMarkdownFiles().filter(file => file.path.length > 200).map(file => file.path);
     for (const file_path of excluded_file_paths) {
       const li = list_el.createEl('li');
       li.setText(file_path);
     }
+    this.contentEl.createEl('hr');
+    this.contentEl.createEl('h3', { text: 'Paths too long to import into Smart Environment' });
+    const too_long_list_ul = this.contentEl.createEl('ul', { cls: 'too-long-exclusions' });
+    for (const file_path of too_long_files) {
+      const li = too_long_list_ul.createEl('li');
+      li.setText(file_path);
+    }
+
   }
 }

@@ -51,6 +51,7 @@ export class ExcludedFoldersFuzzy extends FuzzySuggestModal {
    * @param {string} item
    */
   onChooseItem(item) {
+    this.prevent_close = true;
     if (!item) return;
     const smart_sources_settings = ensure_smart_sources_settings(this.env);
     smart_sources_settings.folder_exclusions = add_exclusion(smart_sources_settings.folder_exclusions, item);
@@ -108,5 +109,11 @@ export class ExcludedFoldersFuzzy extends FuzzySuggestModal {
         this.updateSuggestions();
       });
     });
+  }
+  close() {
+    setTimeout(() => {
+      if(!this.prevent_close) super.close();
+      this.prevent_close = false;
+    }, 10);
   }
 }
