@@ -82,3 +82,23 @@
   color: var(--text-muted);
   padding: 0.37rem 0;
 }
+
+.status-bar-mobile {
+  position: var(--status-bar-position);
+  bottom: 0;
+  border-radius: 0 8px 0 0;
+  border-style: solid;
+  border-width: 1px;
+  border-color: var(--status-bar-border-color);
+  background-color: var(--status-bar-background);
+  color: var(--status-bar-text-color);
+  font-size: var(--status-bar-font-size);
+  min-height: 18px;
+  padding: var(--size-4-1);
+  user-select: none;
+  z-index: var(--layer-status-bar);
+  font-variant-numeric: tabular-nums;
+  &> .smart-env-status-container {
+    padding: 5px 5px 5px 0;
+  }
+}

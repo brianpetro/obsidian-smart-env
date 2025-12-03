@@ -1,4 +1,4 @@
-import { ItemView } from "obsidian";
+import { ItemView, Platform } from "obsidian";
 import { wait_for_env_to_load } from "../utils/wait_for_env_to_load.js";
 
 /**
@@ -183,6 +183,16 @@ export class SmartItemView extends ItemView {
     this.register_plugin_events();
     this.app.workspace.registerHoverLinkSource(this.constructor.view_type, { display: this.getDisplayText(), defaultMod: true });
     this.render_view();
+    if(Platform.isMobile) {
+      const status_bar_container = this.containerEl.querySelector('.status-bar-mobile')
+        ?? this.containerEl.createDiv({cls: 'status-bar-mobile'});
+      ;
+      status_bar_container.empty();
+      const status_bar_item = status_bar_container.createDiv({cls: 'status-bar-item'});
+      this.env.smart_components.render_component('status_bar', this.env)
+        .then((el) => status_bar_item.appendChild(el))
+      ;
+    }
   }
   register_plugin_events() { /* OVERRIDE AS NEEDED */ }
   render_view(params = {}) { throw new Error("render_view must be implemented in subclass"); }

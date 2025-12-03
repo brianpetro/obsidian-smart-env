@@ -1,6 +1,6 @@
 import { setIcon } from 'obsidian';
 import { register_status_bar_context_menu } from '../utils/register_status_bar_context_menu.js';
-import styles from './status_bar.css' assert { type: 'css' };
+import styles from './status_bar.css';
 
 /**
  * Build HTML for the status bar anchor. Includes dedicated icon and indicator slots to
@@ -39,7 +39,7 @@ export function build_html() {
 export async function render(env, opts = {}) {
   this.apply_style_sheet(styles);
   const frag = this.create_doc_fragment(build_html());
-  const anchor = frag.querySelector('.smart-env-status-container');
+  const anchor = frag.firstElementChild;
   post_process.call(this, env, anchor, opts);
   return anchor;
 }
@@ -54,7 +54,7 @@ function post_process(env, container, opts = {}) {
   const icon_slot = container?.querySelector?.('.smart-env-status-icon');
   const status_indicator = container?.querySelector?.('.smart-env-status-indicator');
   const status_msg = container?.querySelector?.('.smart-env-status-msg');
-  const version = env.constructor?.version || '';
+  const version = env.is_pro ? 'Pro' : env.constructor?.version;
   const get_session_event_count = () => {
     return env.event_logs?.session_events?.length || 0;
   }

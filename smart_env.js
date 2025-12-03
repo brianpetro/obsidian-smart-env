@@ -15,25 +15,25 @@ import { remove_smart_plugins_plugin } from './migrations/remove_smart_plugins_p
 import { SmartEnvSettingTab } from './src/views/smart_env_settings_tab.js';
 
 export class SmartEnv extends BaseSmartEnv {
-  static async create(plugin, main_env_opts = null) {
+  /**
+   * Creates and initializes a SmartEnv instance tailored for Obsidian.
+   * @param {Object} plugin - The Obsidian plugin instance.
+   * @param {Object} [env_config] - Required environment configuration object.
+   * @returns {Promise<SmartEnv>} The initialized SmartEnv instance.
+   */
+  static async create(plugin, env_config) {
+    if(!plugin) throw new Error("SmartEnv.create: 'plugin' parameter is required.");
     add_smart_chat_icon();
     add_smart_connections_icon();
     add_smart_lookup_icon();
-    if(!main_env_opts) main_env_opts = plugin.smart_env_config;
-    // Special handling for old Obsidian smart environments
-    // Detect if environment has 'init_main'
-    if (plugin.app.plugins.plugins['smart-connections']
-        && plugin.app.plugins.plugins['smart-connections'].env
-        && !plugin.app.plugins.plugins['smart-connections'].env.constructor.version
-    ) {
-      const update_notice = "Detected older SmartEnv with 'init_main'. Reloading without the outdated plugin. Please update Smart Connections.";
-      // Attempt a user-visible notice if Obsidian's Notice is in scope, otherwise warn:
+    if(window.smart_env && !window.smart_env.constructor.version) {
+      const update_notice = "Detected ancient SmartEnv. Removing it to prevent issues with new plugins. Make sure your Smart Plugins are up-to-date!";
       console.warn(update_notice);
       new Notice(update_notice, 0);
-      disable_plugin(plugin.app, 'smart-connections');
+      window.smart_env = null;
     }
 
-    const opts = merge_env_config(main_env_opts, default_config);
+    const opts = merge_env_config(env_config, default_config);
     opts.env_path = ''; // scope handled by Obsidian FS methods
     return await super.create(plugin, opts);
   }

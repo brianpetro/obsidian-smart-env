@@ -92,7 +92,7 @@ export class SmartPlugin extends Plugin {
    * @param {string} current_version
    * @returns {Promise<boolean>}
    */
-  async should_show_release_notes(current_version) {
+  async is_new_plugin_version(current_version) {
     return (await this.get_last_known_version()) !== current_version;
   }
 }
