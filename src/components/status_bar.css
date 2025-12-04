@@ -102,3 +102,9 @@
     padding: 5px 5px 5px 0;
   }
 }
+
+/* footer view on mobile */
+.embedded-backlinks > .status-bar-mobile {
+  position: relative;
+  border-style: none;
+}

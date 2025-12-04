@@ -295,15 +295,8 @@ export class ObsidianFsAdapter {
         ...payload,
       });
     };
-    const should_track_file = (file) => {
-      if (!(file instanceof this.obsidian.TFile)) return false;
-      const extension = file.extension?.toLowerCase();
-      if (!extension) return false;
-      return Boolean(sources_collection.source_adapters?.[extension]);
-    };
     plugin.registerEvent(
       app.vault.on('create', (file) => {
-        if (!should_track_file(file)) return;
         emit_event('sources:created', {
           path: file.path,
           event_source: 'obsidian:vault.create',
@@ -312,7 +305,6 @@ export class ObsidianFsAdapter {
     );
     plugin.registerEvent(
       app.vault.on('modify', (file) => {
-        if (!should_track_file(file)) return;
         emit_event('sources:modified', {
           path: file.path,
           event_source: 'obsidian:vault.modify',
@@ -321,10 +313,6 @@ export class ObsidianFsAdapter {
     );
     plugin.registerEvent(
       app.vault.on('rename', (file, old_path) => {
-        const track_new = should_track_file(file);
-        const old_extension = old_path?.split('.').pop()?.toLowerCase();
-        const track_old = old_extension ? Boolean(sources_collection.source_adapters?.[old_extension]) : false;
-        if (!track_new && !track_old) return;
         emit_event('sources:renamed', {
           path: file.path,
           old_path,
@@ -334,7 +322,6 @@ export class ObsidianFsAdapter {
     );
     plugin.registerEvent(
       app.vault.on('delete', (file) => {
-        if (!should_track_file(file)) return;
         emit_event('sources:deleted', {
           path: file.path,
           event_source: 'obsidian:vault.delete',
@@ -344,7 +331,7 @@ export class ObsidianFsAdapter {
     plugin.registerEvent(
       app.workspace.on('editor-change', (_editor, info) => {
         const file = info?.file;
-        if (!should_track_file(file)) return;
+        if (!file) return;
         emit_event('sources:modified', {
           path: file.path,
           event_source: 'obsidian:workspace.editor-change',
