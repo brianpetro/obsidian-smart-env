@@ -47,7 +47,7 @@ export function derive_fallback_plugins() {
   const pro_placeholders = [
     {
       name: 'Smart Chat',
-      description: 'Utilize local and API models with Smart Environment as context.',
+      description: '(Do we need another Smart Chat? Or should the focus be on making our other chats smarter? Pro users will help answer this question.) Utilize local and API models with Smart Environment as context.',
     },
     {
       name: 'Connections Pro',
