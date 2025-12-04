@@ -74,7 +74,10 @@ export class SmartEnv extends BaseSmartEnv {
         this.emit_source_opened(current_path, 'file-open');
       })
     );
-    register_completion_variable_adapter_replacements(this._config.collections.smart_completions.completion_adapters.SmartCompletionVariableAdapter);
+
+    if(this._config.collections.smart_completions?.completion_adapters?.SmartCompletionVariableAdapter) {
+      register_completion_variable_adapter_replacements(this._config.collections.smart_completions.completion_adapters.SmartCompletionVariableAdapter);
+    }
     // register modals
     const ContextModal = this._config.modals.context_selector.class;
     ContextModal.register_modal(this.main);
@@ -215,6 +218,7 @@ export class SmartEnv extends BaseSmartEnv {
   run_migrations () {
     // remove old smart-plugins plugin if present
     remove_smart_plugins_plugin({ app: this.plugin.app, plugin_ids: ['smart-plugins'] });
+    remove_smart_plugins_plugin({ app: this.plugin.app, plugin_ids: ['smart-editor'] });
   }
 }
 

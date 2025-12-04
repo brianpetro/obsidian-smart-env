@@ -36,7 +36,6 @@ import {
 } from "smart-chat-model/adapters.js";
 import { SmartHttpRequest, SmartHttpObsidianRequestAdapter } from "smart-http-request";
 import { requestUrl } from "obsidian";
-import { smart_completions, SmartCompletion } from "smart-completions";
 // actions architecture
 import smart_block from "smart-blocks/smart_block.js";
 import smart_source from "smart-sources/smart_source.js";
@@ -109,7 +108,6 @@ const smart_env_config = {
   collections: {
     context_items,
     event_logs,
-    smart_completions,
     smart_components,
     smart_contexts,
     smart_sources: {
@@ -146,7 +144,6 @@ const smart_env_config = {
   item_types: {
     SmartSource,
     SmartBlock,
-    SmartCompletion,
   },
   items: {
     smart_source,

@@ -12,7 +12,8 @@ import {
   get_oauth_storage_prefix,
 } from '../utils/smart_plugins.js';
 
-
+const PRO_PLUGINS_DESC = `Smart Plugins provide core functionality with minimal friction. Pro plugins enable advanced features and support development.`;
+const PRO_PLUGINS_FOOTER = `All Pro plugins include advanced configurations and additional model providers via Smart Environment Pro. Pro users get priority support via email. <a href="https://smartconnections.app/introducing-pro-plugins/" target="_external">Learn more</a> about Pro plugins.`;
 
 /**
  * Build the static shell HTML for Smart Plugins settings.
@@ -25,10 +26,11 @@ export function build_html(env, params = {}) {
   return `
     <div class="sc-smart-plugins-settings">
       <h1>Pro plugins</h1>
-      <p>Smart Plugins provide core functionality with minimal friction. Pro plugins enable advanced features. Pro plugin subscribers support continued development. <a href="https://smartconnections.app/introducing-pro-plugins/" target="_external">Learn more</a> about Pro plugins.</p>
+      <p>${PRO_PLUGINS_DESC}</p>
       <section class="smart-plugins-list">
         <div class="pro-plugins-list"></div>
       </section>
+      <footer class="smart-plugins-footer">${PRO_PLUGINS_FOOTER}</footer>
       <h2>Account</h2>
       <section class="smart-plugins-login">
       </section>

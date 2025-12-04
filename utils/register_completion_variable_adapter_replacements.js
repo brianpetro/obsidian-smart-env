@@ -1,4 +1,3 @@
-import { smart_completions_default_config as smart_completions } from 'smart-completions';
 import { replace_folder_tree_var } from './replace_folder_tree_var.js';
 import { replace_folders_top_var } from './replace_folders_top_var.js';
 import { replace_recent_n_var } from './replace_recent_n_var.js';

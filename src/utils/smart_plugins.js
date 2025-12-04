@@ -1,11 +1,3 @@
-/********************************************************************
- * utils.js
- * Shared logic extracted for use by main.js and settings_tab.js.
- * 
- * This file contains the "early known working logic" from settings_tab.js
- * plus the repeated functions from main.js, unified into a single module.
- ********************************************************************/
-
 import { requestUrl } from 'obsidian';
 
 export const SMART_CHAT_REPO = 'brianpetro/smart-chat-obsidian';
@@ -55,20 +47,15 @@ export function derive_fallback_plugins() {
   const pro_placeholders = [
     {
       name: 'Smart Chat',
-      repo: SMART_CHAT_REPO,
-      manifest_id: 'smart-chat-obsidian',
-      description: 'Install the public Smart Chat build from the latest GitHub release.',
-      resolve_download_url: resolve_smart_chat_release_url,
+      description: 'Utilize local and API models with Smart Environment as context.',
     },
     {
       name: 'Connections Pro',
-      repo: 'smart-connections-pro',
-      description: 'Login with your supporter key to unlock Pro plugins.',
+      description: 'Inline block connections, footer view, scoring algorithm configuration, more embedding providers, graph view and other advanced connections features.',
     },
     {
       name: 'Context Pro',
-      repo: 'smart-context-pro',
-      description: 'Login with your supporter key to unlock Pro plugins.',
+      description: 'Bases integration. Use external source files as context (great for coders). Manage note-specific context with the smart-context codeblock.',
     },
   ];
 
