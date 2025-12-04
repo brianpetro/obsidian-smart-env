@@ -55,7 +55,7 @@ export function derive_fallback_plugins() {
     },
     {
       name: 'Context Pro',
-      description: 'Bases integration. Use external source files as context (great for coders). Manage note-specific context with the smart-context codeblock.',
+      description: 'Bases integration. Images integration. Use external source files as context (great for coders). Manage note-specific context with the smart-context codeblock.',
     },
   ];
 
