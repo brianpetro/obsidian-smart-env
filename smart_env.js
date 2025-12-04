@@ -23,6 +23,8 @@ export class SmartEnv extends BaseSmartEnv {
    */
   static async create(plugin, env_config) {
     if(!plugin) throw new Error("SmartEnv.create: 'plugin' parameter is required.");
+    if(!env_config) throw new Error("SmartEnv.create: 'env_config' parameter is required.");
+    env_config.version = this.version;
     add_smart_chat_icon();
     add_smart_connections_icon();
     add_smart_lookup_icon();

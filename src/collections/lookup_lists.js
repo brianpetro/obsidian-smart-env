@@ -3,7 +3,7 @@ import { LookupList } from '../items/lookup_list.js';
 import { murmur_hash_32_alphanumeric } from 'smart-utils/create_hash.js';
 import { create_settings_section_heading } from '../utils/create_settings_section_heading.js';
 
-const lookup_lists_settings_config = {
+export const settings_config = {
   results_collection_key: {
     name: "Lookup results type",
     type: "dropdown",
@@ -14,6 +14,13 @@ const lookup_lists_settings_config = {
 }
 
 export class LookupLists extends Collection {
+  static get default_settings() {
+    return {
+      results_collection_key: 'smart_blocks',
+      score_algo_key: 'similarity',
+      results_limit: 20,
+    };
+  }
   static version = 0.01;
 
   new_item({query, filter}) {
@@ -40,7 +47,7 @@ export class LookupLists extends Collection {
   }
 
   get settings_config() {
-    return { ...lookup_lists_settings_config };
+    return { ...settings_config };
   }
 
   process_load_queue() { /* skip save/load for now */ }
@@ -64,5 +71,6 @@ export default {
   class: LookupLists,
   collection_key: 'lookup_lists',
   item_type: LookupList,
+  settings_config,
 };
 
