@@ -104,7 +104,7 @@ export class SmartEnvSettingTab extends PluginSettingTab {
     this.plugin?.env?.create_env_getter?.(this);
     this.plugin = plugin;
     this.name = 'Smart Environment';
-    if(this.env.is_pro && this.env.config.components.settings_env_pro) this.name += ' Pro';
+    if(this.env.is_pro) this.name += ' Pro';
     this.id = 'smart-environment';
   }
   get smart_view() {
@@ -127,10 +127,6 @@ export class SmartEnvSettingTab extends PluginSettingTab {
     this.plugin_container = this.containerEl.createDiv({ cls: 'smart-plugin-settings-main' });
     this.pro_plugins_container = this.containerEl.createDiv({ cls: 'smart-plugin-settings-pro-plugins' });
     this.header_container.createEl('p', { text: 'Manage all global Smart Environment settings from one tab. These settings apply to all Smart Plugins.' });
-    if(this.env.is_pro && this.env.config.components.settings_env_pro) {
-      const pro_settings = await this.render_component('settings_env_pro', this.env);
-      this.header_container.appendChild(pro_settings);
-    }
     const settings_smart_env = await this.render_component('settings_smart_env', this.env);
     if (settings_smart_env) this.plugin_container.appendChild(settings_smart_env);
     const smart_plugins_settings = await this.render_component('smart_plugins', this.env);

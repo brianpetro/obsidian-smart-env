@@ -36,6 +36,7 @@ export async function post_process(env, container, opts = {}) {
   render_if_available.call(this, 'settings_sources_folder_exclusions', env, sources_container);
   render_if_available.call(this, 'settings_sources_file_exclusions', env, sources_container);
   render_if_available.call(this, 'settings_sources_excluded_info', env, sources_container);
+  render_if_available.call(this, 'settings_sources_pro', env, sources_container);
   render_if_available.call(this, 'settings_env_models', env, models_container);
   render_if_available.call(this, 'settings_notifications', env, notifications_container);
   return container;

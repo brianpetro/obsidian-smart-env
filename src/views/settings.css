@@ -1,6 +1,5 @@
 /* 1) Host elements that should get a PRO badge */
 :is(
-  .env-pro-settings .setting-item-name,
   .setting-component.pro-setting .setting-item-name
 ) {
   position: relative; /* safe default, keeps ::after anchored */
@@ -8,7 +7,6 @@
 
 /* 2) The PRO badge itself */
 :is(
-  .env-pro-settings .setting-item-name,
   .setting-component.pro-setting .setting-item-name
 )::after {
   content: "PRO";
@@ -49,7 +47,6 @@
 
 /* 3) Interactive refinement: follow Obsidian's accent hover behavior */
 :is(
-  .env-pro-settings .setting-item-name,
   .setting-component.pro-setting .setting-item-name
 ):hover::after {
   background-color: var(--interactive-accent-hover);

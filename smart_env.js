@@ -128,16 +128,6 @@ export class SmartEnv extends BaseSmartEnv {
     }
     return this._notices;
   }
-  get settings_config() {
-    const config = super.settings_config;
-    delete config['is_obsidian_vault'];
-    config['re_import_wait_time'] = {
-      type: 'number',
-      name: 'Re-import wait time',
-      description: 'Time in seconds to wait before re-importing a file after modification.',
-    };
-    return config;
-  }
   // Smart Plugins
   /**
    * This is the function that is called by the new "Sign in with Smart Plugins" button.
