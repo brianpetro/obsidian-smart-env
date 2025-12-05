@@ -9,9 +9,9 @@ import { render as context_item_leaf_component } from './src/components/context-
 import { render as env_stats_component } from './src/components/env_stats.js';
 import { render as form_dropdown_component } from './src/components/form/dropdown.js';
 import { render as lean_coffee_callout_component } from './src/components/lean_coffee_callout.js';
-import { render as muted_notices_component } from './src/components/muted_notices.js';
 import { render as notifications_feed_component } from './src/components/notifications_feed.js';
 import { render as settings_env_models_component } from './src/components/settings/env_models.js';
+import { render as settings_notifications_component } from './src/components/settings/notifications.js';
 import { render as settings_reimport_sources_component } from './src/components/settings/reimport_sources.js';
 import { render as settings_smart_env_component } from './src/components/settings/smart_env.js';
 import { render as settings_sources_excluded_info_component } from './src/components/settings/sources_excluded_info.js';
@@ -56,9 +56,9 @@ export const smart_env_config = {
     env_stats: { render: env_stats_component },
     form_dropdown: { render: form_dropdown_component },
     lean_coffee_callout: { render: lean_coffee_callout_component },
-    muted_notices: { render: muted_notices_component },
     notifications_feed: { render: notifications_feed_component },
     settings_env_models: { render: settings_env_models_component },
+    settings_notifications: { render: settings_notifications_component },
     settings_reimport_sources: { render: settings_reimport_sources_component },
     settings_smart_env: { render: settings_smart_env_component },
     settings_sources_excluded_info: { render: settings_sources_excluded_info_component },

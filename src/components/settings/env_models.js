@@ -4,7 +4,6 @@ import { provider_options } from '../../utils/smart-models/provider_options.js';
 
 function build_html (env, params) {
   return `<div class="model-settings">
-    <h1>Default models</h1>
     <div class="settings-group">Loading model options...</div>
   </div>`;
 }

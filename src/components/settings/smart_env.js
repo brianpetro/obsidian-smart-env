@@ -1,6 +1,16 @@
 import styles from './style.css';
 export async function build_html(env, params = {}) {
-  return `<div class="smart-env-settings-container"></div>`;
+  return `<div class="smart-env-settings-container">
+    <div class="sources-container">
+      <h1>Sources</h1>
+    </div>
+    <div class="models-container">
+      <h1>Models</h1>
+    </div>
+    <div class="notifications-container">
+      <h1>Notifications</h1>
+    </div>
+  </div>`;
 }
 
 /**
@@ -19,19 +29,15 @@ export async function render(env, params = {}) {
  * Sets up event listeners for toggling, fuzzy modals, etc.
  */
 export async function post_process(env, container, opts = {}) {
-  const reimport_sources = await env.smart_components.render_component('settings_reimport_sources', env);
-  container.appendChild(reimport_sources);
-  render_if_available.call(this, 'settings_sources_folder_exclusions', env, container);
-  render_if_available.call(this, 'settings_sources_file_exclusions', env, container);
-  render_if_available.call(this, 'settings_sources_excluded_info', env, container);
-  render_if_available.call(this, 'settings_env_models', env, container);
-  // const embedding_settings = await env.smart_components.render_component('settings_embedding_model', env);
-  // container.appendChild(embedding_settings);
-  // const chat_completion_settings = await env.smart_components.render_component('settings_chat_completions', env);
-  // container.appendChild(chat_completion_settings);
-  // render_if_available.call(this, 'settings_ranking_model', env, container);
-  const muted_notices_frag = await env.render_component('muted_notices', env);
-  container.appendChild(muted_notices_frag);
+  const models_container = container.querySelector('.models-container');
+  const sources_container = container.querySelector('.sources-container');
+  const notifications_container = container.querySelector('.notifications-container');
+  render_if_available.call(this, 'settings_reimport_sources', env, sources_container);
+  render_if_available.call(this, 'settings_sources_folder_exclusions', env, sources_container);
+  render_if_available.call(this, 'settings_sources_file_exclusions', env, sources_container);
+  render_if_available.call(this, 'settings_sources_excluded_info', env, sources_container);
+  render_if_available.call(this, 'settings_env_models', env, models_container);
+  render_if_available.call(this, 'settings_notifications', env, notifications_container);
   return container;
 }
 
