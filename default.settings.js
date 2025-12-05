@@ -2,10 +2,10 @@ export const default_settings = {
   is_obsidian_vault: true,
   smart_blocks: {
     embed_blocks: true,
-    min_chars: 100,
+    min_chars: 200,
   },
   smart_sources: {
-    min_chars: 100,
+    min_chars: 200,
     embed_model: {
       adapter: "transformers",
       transformers: {
