@@ -24,7 +24,7 @@ const PRO_PLUGINS_FOOTER = `All Pro plugins include advanced configurations and 
  */
 export function build_html(env, params = {}) {
   return `
-    <div class="sc-smart-plugins-settings">
+    <div class="pro-plugins-container">
       <h1>Pro plugins</h1>
       <p>${PRO_PLUGINS_DESC}</p>
       <section class="smart-plugins-list">

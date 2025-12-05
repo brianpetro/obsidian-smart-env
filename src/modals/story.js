@@ -1,5 +1,5 @@
 import { Modal, Platform } from 'obsidian';
-import { open_url_externally } from '../utils/open_url_externally.js';
+import { open_url_externally } from '../../utils/open_url_externally.js';
 
 export class StoryModal extends Modal {
   constructor(plugin, {title, url}) {

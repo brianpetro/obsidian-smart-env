@@ -21,7 +21,7 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 import { SmartEnv } from './smart_env.js';
-import { SmartPluginSettingsTab } from './views/smart_plugin_settings_tab.js';
+import { SmartPluginSettingsTab } from './src/views/smart_plugin_settings_tab.js';
 import { merge_env_config } from 'smart-environment/utils/merge_env_config.js';
 import { camel_case_to_snake_case } from 'smart-utils/camel_case_to_snake_case.js';
 
