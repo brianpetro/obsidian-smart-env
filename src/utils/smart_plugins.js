@@ -46,8 +46,8 @@ export async function resolve_smart_chat_release_url(request_fn = requestUrl) {
 export function derive_fallback_plugins() {
   const pro_placeholders = [
     {
-      name: 'Smart Chat',
-      description: '(Do we need another Smart Chat? Or should the focus be on making our other chats smarter? Pro users will help answer this question.) Utilize local and API models with Smart Environment as context.',
+      name: 'Chat Pro',
+      description: 'Utilize local and API models with access to context and actions within Smart Environment.',
     },
     {
       name: 'Connections Pro',

@@ -204,6 +204,7 @@ export class SmartEnv extends BaseSmartEnv {
     // remove old smart-plugins plugin if present
     remove_smart_plugins_plugin({ app: this.plugin.app, plugin_ids: ['smart-plugins'] });
     remove_smart_plugins_plugin({ app: this.plugin.app, plugin_ids: ['smart-editor'] });
+    remove_smart_plugins_plugin({ app: this.plugin.app, plugin_ids: ['smart-sources'] });
   }
 }
 

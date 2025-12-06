@@ -6,7 +6,7 @@ import {
   get_smart_server_url,
 } from '../../utils/smart_plugins.js';
 
-const PRO_PLUGINS_DESC = `Smart Plugins provide core functionality with minimal friction. Pro plugins enable advanced features and support development.`;
+const PRO_PLUGINS_DESC = `<a href="https://smartconnections.app/core-plugins/" target="_external">Core plugins</a> provide essential functionality and a "just works" experience. <a href="https://smartconnections.app/pro-plugins/" target="_external">Pro plugins</a> enable advanced features.`;
 const PRO_PLUGINS_FOOTER = `All Pro plugins include advanced configurations and additional model providers via Smart Environment Pro. Pro users get priority support via email. <a href="https://smartconnections.app/introducing-pro-plugins/" target="_external">Learn more</a> about Pro plugins.`;
 
 export function build_html(env, params = {}) {
@@ -107,8 +107,8 @@ export async function post_process(env, container, params = {}) {
           .setDesc(item.description || 'Login to unlock Pro plugins.');
 
         row.addButton((btn) => {
-          btn.setButtonText('Login to unlock');
-          btn.onClick(() => initiate_oauth_login());
+          btn.setButtonText('Get Pro plugins');
+          btn.onClick(() => window.open('https://smartconnections.app/pro-plugins/', '_external'));
         });
       }
     }
