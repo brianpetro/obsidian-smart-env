@@ -1,13 +1,33 @@
 import { Setting, Notice, requestUrl } from 'obsidian';
 import { render as render_list_item } from './list_item.js';
 import {
-  derive_fallback_plugins,
   get_oauth_storage_prefix,
   get_smart_server_url,
 } from '../../utils/smart_plugins.js';
 
 const PRO_PLUGINS_DESC = `<a href="https://smartconnections.app/core-plugins/" target="_external">Core plugins</a> provide essential functionality and a "just works" experience. <a href="https://smartconnections.app/pro-plugins/" target="_external">Pro plugins</a> enable advanced features.`;
 const PRO_PLUGINS_FOOTER = `All Pro plugins include advanced configurations and additional model providers via Smart Environment Pro. Pro users get priority support via email. <a href="https://smartconnections.app/introducing-pro-plugins/" target="_external">Learn more</a> about Pro plugins.`;
+function derive_fallback_plugins() {
+  const pro_placeholders = [
+    {
+      name: 'Chat Pro',
+      description: 'Utilize local and API models with access to context and actions within Smart Environment.',
+      core_id: 'smart-chatgpt'
+    },
+    {
+      name: 'Connections Pro',
+      description: 'Inline block connections, footer view, scoring algorithm configuration, more embedding providers, graph view and other advanced connections features.',
+      core_id: 'smart-connections'
+    },
+    {
+      name: 'Context Pro',
+      description: 'Bases integration. Images integration. Use external source files as context (great for coders). Manage note-specific context with the smart-context codeblock.',
+      core_id: 'smart-context'
+    },
+  ];
+
+  return pro_placeholders;
+}
 
 export function build_html(env, params = {}) {
   return `

@@ -35,32 +35,6 @@ export async function resolve_smart_chat_release_url(request_fn = requestUrl) {
   return zip_url;
 }
 
-/**
- * Provide a fallback list of plugins when Smart Plugins auth is missing.
- *
- * Includes a public Smart Chat download plus placeholders for Pro plugins
- * that require authentication.
- *
- * @returns {Array<{name:string, repo:string, manifest_id?:string, description?:string, download_url?:string, resolve_download_url?:Function}>}
- */
-export function derive_fallback_plugins() {
-  const pro_placeholders = [
-    {
-      name: 'Chat Pro',
-      description: 'Utilize local and API models with access to context and actions within Smart Environment.',
-    },
-    {
-      name: 'Connections Pro',
-      description: 'Inline block connections, footer view, scoring algorithm configuration, more embedding providers, graph view and other advanced connections features.',
-    },
-    {
-      name: 'Context Pro',
-      description: 'Bases integration. Images integration. Use external source files as context (great for coders). Manage note-specific context with the smart-context codeblock.',
-    },
-  ];
-
-  return pro_placeholders;
-}
 
 /**
  * Attempt Node zlib in Obsidian desktop with window.require("zlib").
