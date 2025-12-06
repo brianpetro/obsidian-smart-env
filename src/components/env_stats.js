@@ -18,6 +18,7 @@ export async function build_html(env, opts = {}) {
   lines.push(`<h2>Collections</h2>`);
 
   const collection_keys = Object.keys(env.collections)
+    .filter(key => ['smart_sources', 'smart_blocks'].includes(key))
     // sort smart_sources and smart_blocks first
     .sort((a, b) => {
       if (a === 'smart_sources' || a === 'smart_blocks') return -1;
