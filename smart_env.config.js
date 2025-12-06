@@ -10,6 +10,8 @@ import { render as env_stats_component } from './src/components/env_stats.js';
 import { render as form_dropdown_component } from './src/components/form/dropdown.js';
 import { render as lean_coffee_callout_component } from './src/components/lean_coffee_callout.js';
 import { render as notifications_feed_component } from './src/components/notifications_feed.js';
+import { render as pro_plugins_list_component } from './src/components/pro-plugins/list.js';
+import { render as pro_plugins_list_item_component } from './src/components/pro-plugins/list_item.js';
 import { render as settings_env_models_component } from './src/components/settings/env_models.js';
 import { render as settings_notifications_component } from './src/components/settings/notifications.js';
 import { render as settings_reimport_sources_component } from './src/components/settings/reimport_sources.js';
@@ -20,7 +22,6 @@ import { render as smart_context_actions_component } from './src/components/smar
 import { render as smart_context_item_component } from './src/components/smart-context/item.js';
 import { render as smart_context_meta_component } from './src/components/smart-context/meta.js';
 import { render as smart_context_tree_component } from './src/components/smart-context/tree.js';
-import { render as smart_plugins_component } from './src/components/smart_plugins.js';
 import { render as source_inspector_component } from './src/components/source_inspector.js';
 import { render as status_bar_component } from './src/components/status_bar.js';
 import { render as supporter_callout_component } from './src/components/supporter_callout.js';
@@ -57,6 +58,8 @@ export const smart_env_config = {
     form_dropdown: { render: form_dropdown_component },
     lean_coffee_callout: { render: lean_coffee_callout_component },
     notifications_feed: { render: notifications_feed_component },
+    pro_plugins_list: { render: pro_plugins_list_component },
+    pro_plugins_list_item: { render: pro_plugins_list_item_component },
     settings_env_models: { render: settings_env_models_component },
     settings_notifications: { render: settings_notifications_component },
     settings_reimport_sources: { render: settings_reimport_sources_component },
@@ -67,7 +70,6 @@ export const smart_env_config = {
     smart_context_item: { render: smart_context_item_component },
     smart_context_meta: { render: smart_context_meta_component },
     smart_context_tree: { render: smart_context_tree_component },
-    smart_plugins: { render: smart_plugins_component },
     source_inspector: { render: source_inspector_component },
     status_bar: { render: status_bar_component },
     supporter_callout: { render: supporter_callout_component },
