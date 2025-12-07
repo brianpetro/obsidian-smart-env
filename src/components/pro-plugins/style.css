@@ -1,0 +1,9 @@
+.get-core-link {
+  text-wrap: nowrap;
+  font-size: var(--font-ui-small);
+}
+.core-installed-text {
+  text-wrap: nowrap;
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}

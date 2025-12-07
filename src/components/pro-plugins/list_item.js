@@ -9,8 +9,20 @@ import {
   fetch_zip_from_url,
 } from '../../utils/smart_plugins.js';
 
+const PRO_PLUGINS_URL = 'https://smartconnections.app/pro-plugins/';
+
 export function build_html(item, params = {}) {
   return `<div class="pro-plugins-list-item"></div>`;
+}
+
+/**
+ * Determines whether an item represents a local fallback definition
+ * (no repo/version data from the server).
+ * @param {object} item
+ * @returns {boolean}
+ */
+function is_fallback_item(item) {
+  return !item || !item.repo;
 }
 
 export function compute_display_state(item, local_info) {
@@ -52,6 +64,39 @@ export async function render(item, params = {}) {
 
 async function post_process(item, container, params = {}) {
   const { app, token, installed_map = {}, on_installed } = params;
+
+  if (is_fallback_item(item)) {
+    const row = new Setting(container)
+      .setName(item.name || 'Pro plugin')
+      .setDesc(item.description || 'Login to unlock Pro plugins.')
+    ;
+
+    if (item.core_id) {
+      if(app.plugins.manifests[item.core_id]) {
+        const core_installed_text = document.createElement('i');
+        core_installed_text.classList.add('core-installed-text');
+        core_installed_text.textContent = 'Core installed!';
+        row.controlEl.appendChild(core_installed_text);
+      } else {
+        const get_core_link = document.createElement('a');
+        get_core_link.setAttribute('href', `obsidian://show-plugin?id=${item.core_id}`);
+        get_core_link.setAttribute('target', '_external');
+        get_core_link.textContent = 'Install Core';
+        get_core_link.style.marginLeft = '10px';
+        get_core_link.classList.add('get-core-link');
+        row.controlEl.appendChild(get_core_link);
+      }
+    }
+    row.addButton((btn) => {
+      btn.setButtonText('Get Pro');
+      btn.onClick(() => {
+        window.open(PRO_PLUGINS_URL, '_external');
+      });
+    });
+
+    return container;
+  }
+
   const plugin_id = item.manifest_id || item.repo.replace('/', '_');
   const local = installed_map[plugin_id] || null;
   const state = compute_display_state(item, local);

@@ -1,9 +1,9 @@
 import { Setting, Notice, requestUrl } from 'obsidian';
-import { render as render_list_item } from './list_item.js';
 import {
   get_oauth_storage_prefix,
   get_smart_server_url,
 } from '../../utils/smart_plugins.js';
+import styles from './style.css';
 
 const PRO_PLUGINS_DESC = `<a href="https://smartconnections.app/core-plugins/" target="_external">Core plugins</a> provide essential functionality and a "just works" experience. <a href="https://smartconnections.app/pro-plugins/" target="_external">Pro plugins</a> enable advanced configuration and features for Obsidian AI experts.`;
 const PRO_PLUGINS_FOOTER = `All Pro plugins include advanced configurations and additional model providers. Pro users get priority support via email. <a href="https://smartconnections.app/introducing-pro-plugins/" target="_external">Learn more</a> about Pro plugins.`;
@@ -46,6 +46,7 @@ export function build_html(env, params = {}) {
 }
 
 export async function render(env, params = {}) {
+  this.apply_style_sheet(styles);
   const html = build_html.call(this, env, params);
   const frag = this.create_doc_fragment(html);
   const container = frag.firstElementChild;
@@ -120,17 +121,15 @@ export async function post_process(env, container, params = {}) {
   const render_fallback_plugin_list = async () => {
     this.empty(pro_list_el);
 
-    if (placeholders.length > 0 && pro_list_el) {
-      for (const item of placeholders) {
-        const row = new Setting(pro_list_el)
-          .setName(item.name)
-          .setDesc(item.description || 'Login to unlock Pro plugins.');
+    if (!pro_list_el || placeholders.length === 0) return;
 
-        row.addButton((btn) => {
-          btn.setButtonText('Get Pro plugins');
-          btn.onClick(() => window.open('https://smartconnections.app/pro-plugins/', '_external'));
-        });
-      }
+    for (const item of placeholders) {
+      const row = await env.smart_components.render_component("pro_plugins_list_item", item, {
+        env,
+        app,
+        installed_map: {},
+      });
+      pro_list_el.appendChild(row);
     }
   };
 
@@ -171,7 +170,7 @@ export async function post_process(env, container, params = {}) {
       }
 
       for (const item of list) {
-        const row = await render_list_item.call(this, item, {
+        const row = await env.smart_components.render_component("pro_plugins_list_item", item, {
           env,
           app,
           token,
