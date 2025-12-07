@@ -5,23 +5,23 @@ import {
   get_smart_server_url,
 } from '../../utils/smart_plugins.js';
 
-const PRO_PLUGINS_DESC = `<a href="https://smartconnections.app/core-plugins/" target="_external">Core plugins</a> provide essential functionality and a "just works" experience. <a href="https://smartconnections.app/pro-plugins/" target="_external">Pro plugins</a> enable advanced features.`;
-const PRO_PLUGINS_FOOTER = `All Pro plugins include advanced configurations and additional model providers via Smart Environment Pro. Pro users get priority support via email. <a href="https://smartconnections.app/introducing-pro-plugins/" target="_external">Learn more</a> about Pro plugins.`;
+const PRO_PLUGINS_DESC = `<a href="https://smartconnections.app/core-plugins/" target="_external">Core plugins</a> provide essential functionality and a "just works" experience. <a href="https://smartconnections.app/pro-plugins/" target="_external">Pro plugins</a> enable advanced configuration and features for Obsidian AI experts.`;
+const PRO_PLUGINS_FOOTER = `All Pro plugins include advanced configurations and additional model providers. Pro users get priority support via email. <a href="https://smartconnections.app/introducing-pro-plugins/" target="_external">Learn more</a> about Pro plugins.`;
 function derive_fallback_plugins() {
   const pro_placeholders = [
     {
       name: 'Chat Pro',
-      description: 'Utilize local and API models with access to context and actions within Smart Environment.',
+      description: 'Configure chat to use Local and Cloud API providers (Ollama, LM Studio, OpenAI, Gemini, Anthropic, Open Router, and more).',
       core_id: 'smart-chatgpt'
     },
     {
       name: 'Connections Pro',
-      description: 'Inline block connections, footer view, scoring algorithm configuration, more embedding providers, graph view and other advanced connections features.',
+      description: 'More opportunities for connections. Graph view for visualizing. Inline and footer views (great for mobile!). Configurable algorithms and additional embedding model providers.',
       core_id: 'smart-connections'
     },
     {
       name: 'Context Pro',
-      description: 'Bases integration. Images integration. Use external source files as context (great for coders). Manage note-specific context with the smart-context codeblock.',
+      description: 'Advanced tools for context engineering. Utilize Bases, images, and external sources (great for coders!) in your contexts.',
       core_id: 'smart-context'
     },
   ];
