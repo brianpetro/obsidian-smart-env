@@ -24,10 +24,12 @@ import { SmartEnv } from './smart_env.js';
 import { SmartPluginSettingsTab } from './src/views/smart_plugin_settings_tab.js';
 import { merge_env_config } from 'smart-environment/utils/merge_env_config.js';
 import { camel_case_to_snake_case } from 'smart-utils/camel_case_to_snake_case.js';
+import { SmartPlugin } from './smart_plugin.js';
 
 export {
   SmartEnv,
   SmartPluginSettingsTab,
   merge_env_config,
   camel_case_to_snake_case,
+  SmartPlugin,
 };
