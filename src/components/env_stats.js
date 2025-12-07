@@ -73,16 +73,11 @@ function generate_collection_stats(collection, collectionKey) {
       </div>
     `;
   }
-  const load_time_html = collection.load_time_ms ? `<span>Load time: ${collection.load_time_ms}ms</span>` : '';
-  const state_html = `<span>State: ${state}</span>`;
+  const load_time_html = collection.load_time_ms ? `<p>Load time: ${collection.load_time_ms}ms</p>` : '';
+  const state_html = `<p>State: ${state}</p>`;
 
   // Distinguish "smart_sources" / "smart_blocks" / fallback
-  let html = '';
-  if (collectionKey === 'smart_sources') {
-    html = get_smart_sources_stats(collection, niceName, total_items, );
-  } else {
-    html = get_generic_collection_stats(collection, niceName, total_items, );
-  }
+  let html = get_generic_collection_stats(collection, niceName, total_items, );
   let embed_stats = '';
   if(typeof collection.process_embed_queue === 'function') {
     embed_stats = calculate_embed_coverage(collection, total_items);
@@ -98,25 +93,6 @@ function generate_collection_stats(collection, collectionKey) {
   `;
 }
 
-/**
- * For "smart_sources": show "Total files", "Excluded", "Included", "Embedding coverage"
- */
-function get_smart_sources_stats(collection, niceName, total_items, load_time_html) {
-  // total_files, included_files, etc. (from collection)
-  const totalFiles = collection.total_files ?? total_items;
-  const included = collection.included_files ?? 'Error calculating included files'; // fallback
-  const excluded = totalFiles - included;
-
-  return `
-      <p><strong>Total Files:</strong> ${totalFiles}</p>
-      <p><strong>Excluded:</strong> ${excluded}</p>
-      <p><strong>Included:</strong> ${included}</p>
-  `;
-}
-
-/**
- * Fallback for other collections: "Total items", "Embedding coverage"
- */
 function get_generic_collection_stats(collection, niceName, total_items, load_time_html) {
   return `
       <p><strong>Total:</strong> ${total_items}</p>
@@ -125,12 +101,20 @@ function get_generic_collection_stats(collection, niceName, total_items, load_ti
 export function calculate_embed_coverage(collection, total_items) {
   const embedded_items = Object.values(collection.items).filter(item => item.vec);
   if(!embedded_items.length) return '<p>No items embedded</p>';
-  const is_unembedded = Object.values(collection.items).filter(i => i.should_embed && i.is_unembedded);
-  const pct = (embedded_items.length / total_items) * 100;
+  const stats = Object.values(collection.items).reduce((acc, i) => {
+    if(i.should_embed) acc.should_embed += 1;
+    else acc.should_not_embed += 1;
+    if(i.vec) acc.embedded += 1;
+    if(i.should_embed && !i.vec) acc.missing_embed += 1;
+    if(!i.should_embed && i.vec) acc.extraneous_embed += 1;
+    return acc;
+  }, {should_embed: 0, embedded: 0, missing_embed: 0, extraneous_embed: 0, should_not_embed: 0});
+  const pct = (stats.embedded / stats.should_embed) * 100;
   const percent = Math.round(pct);
-  const display = `${percent}% (${embedded_items.length} / ${total_items})`;
-  return `<p><strong>Embedding coverage:</strong> ${display}</p>`
-    + (is_unembedded.length ? `<p><strong>Unembedded:</strong> ${is_unembedded.length}</p>` : '')
+  return `<p><strong>Embedding coverage:</strong> ${percent}% (${stats.embedded} / ${stats.should_embed})</p>`
+    + (stats.missing_embed ? `<p><strong>Missing embeddings:</strong> ${stats.missing_embed}</p>` : '')
+    + (stats.extraneous_embed ? `<p><strong>Extraneous embeddings:</strong> ${stats.extraneous_embed}</p>` : '')
+    + (stats.should_not_embed ? `<p><strong>Other items (e.g. less than minimum length to embed):</strong> ${stats.should_not_embed}</p>` : '')
   ;
 }
 

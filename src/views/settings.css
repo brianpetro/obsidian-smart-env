@@ -66,3 +66,7 @@
   flex-wrap: wrap;
   gap: var(--pill-padding-y);
 }
+
+.setting-component:has(.dropdown-no-options) {
+  display: none;
+}
