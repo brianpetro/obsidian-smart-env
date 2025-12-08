@@ -135,18 +135,6 @@ const download_plugin_zip = async (item, token) => {
   return fetch_plugin_zip(item.repo, token);
 };
 
-const derive_folder_name = (item, plugin_manifest) => {
-  let folder_name = '';
-  if (plugin_manifest?.id) {
-    folder_name = plugin_manifest.id.trim();
-  } else if (item.manifest_id) {
-    folder_name = item.manifest_id.trim();
-  } else {
-    folder_name = item.repo.replace('/', '_');
-  }
-  return folder_name.replace(/[^\w-]/g, '_');
-};
-
 const install_plugin = async (item, params = {}) => {
   const { app, token, on_installed } = params;
   try {
@@ -155,7 +143,7 @@ const install_plugin = async (item, params = {}) => {
     const zip_data = await download_plugin_zip(item, token);
     const { files, pluginManifest } = await parse_zip_into_files(zip_data);
 
-    const folder_name = derive_folder_name(item, pluginManifest);
+    const folder_name = item.plugin_id;
     const base_folder = `${app.vault.configDir}/plugins/${folder_name}`;
     await write_files_with_adapter(app.vault.adapter, base_folder, files);
 

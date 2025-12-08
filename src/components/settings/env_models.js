@@ -1,6 +1,7 @@
 import { Menu, setIcon } from 'obsidian';
 import { SmartModelModal } from '../../modals/smart_model_modal.js';
 import { provider_options } from '../../utils/smart-models/provider_options.js';
+import styles from './env_models.css';
 
 function build_html (env, params) {
   return `<div class="model-settings">
@@ -8,12 +9,15 @@ function build_html (env, params) {
   </div>`;
 }
 export async function render (env, params) {
+  this.apply_style_sheet(styles);
   const frag = this.create_doc_fragment(build_html(env, params));
   const container = frag.firstElementChild;
   post_process.call(this, env, container, params);
   return container;
 }
-
+/**
+ * @param params.only_show {string} - only show settings for this model collection key
+ */
 async function post_process (env, container, params) {
   const settings_group = container.querySelector('.settings-group');
   const render_model_type_settings = async (models_collection) => {
@@ -26,6 +30,10 @@ async function post_process (env, container, params) {
       type_container = this.create_doc_fragment(`<div data-model-type="${models_collection.collection_key}"></div>`).firstElementChild;
       settings_group.appendChild(type_container);
     }
+    // add heading
+    const heading = this.create_doc_fragment(`<h2>${models_collection.model_type} models</h2>`).firstElementChild;
+    type_container.appendChild(heading);
+    // add settings
     const default_setting = await this.render_settings(models_collection.env_config.settings_config, {
       scope: models_collection,
     });
@@ -79,6 +87,16 @@ async function post_process (env, container, params) {
   }
   const render_settings_group = async () => {
     this.empty(settings_group);
+    if(params.only_show) {
+      const collection = env[params.only_show];
+      if(collection) {
+        await render_model_type_settings(collection);
+        return;
+      } else {
+        settings_group.innerText = 'No models found for the specified type: ' + params.only_show;
+        return;
+      }
+    }
     const models_collections = [
       env.embedding_models,
       env.chat_completion_models,

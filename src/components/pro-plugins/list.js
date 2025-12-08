@@ -2,6 +2,7 @@ import { Setting, Notice, requestUrl } from 'obsidian';
 import {
   get_oauth_storage_prefix,
   get_smart_server_url,
+  fetch_server_plugin_list,
 } from '../../utils/smart_plugins.js';
 import styles from './style.css';
 
@@ -133,24 +134,31 @@ export async function post_process(env, container, params = {}) {
     }
   };
 
-  const fetch_plugin_list = async (token) => {
-    const resp = await requestUrl({
-      url: `${get_smart_server_url()}/plugin_list`,
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({}),
+  const add_update_sub_to_login_section = () => {
+    const setting = new Setting(login_container)
+      .setName('Subscription Expired')
+      .setDesc('Your Smart Connections Pro subscription has expired. Please update your subscription to retain access to Pro plugins.')
+    ;
+    setting.addButton((btn) => {
+      btn.setButtonText('Get Pro');
+      btn.onClick(() => {
+        window.open('https://smartconnections.app/subscribe/', '_external');
+      });
     });
-
-    if (resp.status !== 200) {
-      throw new Error(`Failed to fetch plugin list: ${resp.status} ${resp.text}`);
-    }
-
-    const { list = [] } = resp.json || {};
-    return list;
+    setting.addButton((btn) => {
+      btn.setButtonText('Update subscription');
+      btn.onClick(() => {
+        window.open('https://smartconnections.app/subscription-update/', '_external');
+      });
+    });
+    setting.addButton((btn) => {
+      btn.setButtonText('Refresh');
+      btn.onClick(() => {
+        env.events.emit('pro_plugins:refresh');
+      });
+    });
   };
+
 
   const render_plugin_list_section = async () => {
     this.empty(pro_list_el);
@@ -162,10 +170,18 @@ export async function post_process(env, container, params = {}) {
 
     try {
       const installed_map = await get_installed_info();
-      const list = await fetch_plugin_list(token);
+      const resp = await fetch_server_plugin_list(token);
+      const { list = [], unauthorized = [], sub_exp } = resp;
+
+      if (typeof sub_exp === 'number' && sub_exp < Date.now()) {
+        add_update_sub_to_login_section();
+        await render_fallback_plugin_list();
+        return;
+      }
 
       if (!Array.isArray(list) || list.length === 0) {
-        pro_list_el.textContent = 'No plugins found.';
+        // pro_list_el.textContent = 'No plugins found.';
+        await render_fallback_plugin_list();
         return;
       }
 

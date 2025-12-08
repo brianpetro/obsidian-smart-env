@@ -358,3 +358,20 @@ export function get_oauth_storage_prefix(app) {
   const safe = vault_name.toLowerCase().replace(/[^a-z0-9]/g, '_');
   return `${safe}_smart_plugins_oauth_`;
 }
+
+export async function fetch_server_plugin_list(token) {
+  const resp = await requestUrl({
+    url: `${get_smart_server_url()}/plugin_list`,
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({}),
+  });
+
+  if (resp.status !== 200) {
+    throw new Error(`plugin_list error ${resp.status}: ${resp.text}`);
+  }
+  return resp.json;
+}
