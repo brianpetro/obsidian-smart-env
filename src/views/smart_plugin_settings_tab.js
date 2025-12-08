@@ -70,7 +70,7 @@ export class SmartPluginSettingsTab extends PluginSettingTab {
         text: 'Manage global settings in the dedicated Smart Environment settings tab.',
       });
       const control_div = settings_item_div.createDiv({ cls: 'setting-item-control' });
-      const button = control_div.createEl('button', { text: 'Show Smart Environment Settings' });
+      const button = control_div.createEl('button', { text: 'Open settings' });
       button.addEventListener('click', () => {
         this.app.setting.openTabById('smart-environment');
       });

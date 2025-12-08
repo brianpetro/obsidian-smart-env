@@ -31,8 +31,10 @@ async function post_process (env, container, params) {
       settings_group.appendChild(type_container);
     }
     // add heading
-    const heading = this.create_doc_fragment(`<h2>${models_collection.model_type} models</h2>`).firstElementChild;
-    type_container.appendChild(heading);
+    const smart_env_heading_container = this.create_doc_fragment(`<div class="smart-env-settings-header">
+      <h2>${models_collection.model_type} models</h2>
+    </div>`).firstElementChild;
+    type_container.appendChild(smart_env_heading_container);
     // add settings
     const default_setting = await this.render_settings(models_collection.env_config.settings_config, {
       scope: models_collection,
@@ -71,6 +73,7 @@ async function post_process (env, container, params) {
       });
       menu.showAtMouseEvent(e);
     });
+    smart_env_heading_container.appendChild(new_model_btn);
     const info_container = this.create_doc_fragment(build_model_info_html(models_collection.default)).firstElementChild;
     type_container.appendChild(info_container);
     const icon_el = info_container.querySelector('.test-result-icon');
