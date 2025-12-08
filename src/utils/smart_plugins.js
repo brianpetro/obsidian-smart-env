@@ -31,10 +31,9 @@ export async function resolve_smart_chat_release_url(request_fn = requestUrl) {
   if (resp.status && resp.status !== 200) {
     throw new Error(`Release lookup error ${resp.status}`);
   }
-  const zip_url = resp.json?.assets?.find(a => a.name.endsWith('.zip'))?.browser_download_url;
+  const zip_url = resp.json?.assets?.find((a) => a.name.endsWith('.zip'))?.browser_download_url;
   return zip_url;
 }
-
 
 /**
  * Attempt Node zlib in Obsidian desktop with window.require("zlib").
@@ -257,7 +256,7 @@ export function is_server_version_newer(localVer, serverVer) {
 /**
  * Calls server /plugin_download to get the zip ArrayBuffer.
  * Used by main.js or any consumer that needs the plugin .zip.
- * 
+ *
  * @param {string} repoName
  * @param {string} token
  * @returns {Promise<ArrayBuffer>}
@@ -268,9 +267,9 @@ export async function fetch_plugin_zip(repoName, token) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
+      'Authorization': `Bearer ${token}`,
     },
-    body: JSON.stringify({ repo: repoName })
+    body: JSON.stringify({ repo: repoName }),
   });
   if (resp.status !== 200) {
     throw new Error(`plugin_download error ${resp.status}: ${resp.text}`);
@@ -315,9 +314,9 @@ export async function fetch_plugin_readme(repo, token, request_fn = requestUrl) 
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
+      'Authorization': `Bearer ${token}`,
     },
-    body: JSON.stringify({ repo })
+    body: JSON.stringify({ repo }),
   });
   if (resp.status !== 200) {
     throw new Error(`plugin_readme error ${resp.status}: ${resp.text}`);
@@ -335,6 +334,7 @@ export async function fetch_plugin_readme(repo, token, request_fn = requestUrl) 
  * }
  *
  * @param {object} app - The Obsidian app instance.
+ * @param {string} plugin_id
  * @returns {Promise<void>}
  */
 export async function enable_plugin(app, plugin_id) {
