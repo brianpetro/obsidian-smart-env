@@ -7,7 +7,7 @@ async function build_html(env, opts = {}) {
     for (const notice in env.notices.settings?.muted) {
       html += `<div class="muted-notice" data-notice="${notice}" style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
         <span>${notice}</span>
-        <button class="unmute-button">Remove</button>
+        <button class="unmute-button">Unmute</button>
       </div>`;
     }
   } else {
