@@ -1,6 +1,6 @@
-import { SmartModelModal, show_new_model_menu } from '../../modals/smart_model_modal.js';
+import { SmartModelModal } from '../../modals/smart_model_modal.js';
 import styles from './env_model.css';
-import { Menu, setIcon } from 'obsidian';
+import { setIcon } from 'obsidian';
 
 function build_html (model, params) {
   const details = [

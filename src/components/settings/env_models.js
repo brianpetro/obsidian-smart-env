@@ -1,6 +1,3 @@
-import { Menu, setIcon } from 'obsidian';
-import { SmartModelModal, show_new_model_menu } from '../../modals/smart_model_modal.js';
-
 function build_html (env, params) {
   const models_collections = [
     env.embedding_models,

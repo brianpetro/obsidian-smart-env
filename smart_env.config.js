@@ -15,6 +15,7 @@ import { render as pro_plugins_list_item_component } from './src/components/pro-
 import { render as settings_env_model_component } from './src/components/settings/env_model.js';
 import { render as settings_env_model_type_component } from './src/components/settings/env_model_type.js';
 import { render as settings_env_models_component } from './src/components/settings/env_models.js';
+import { render as settings_model_actions_component } from './src/components/settings/model_actions.js';
 import { render as settings_notifications_component } from './src/components/settings/notifications.js';
 import { render as settings_reimport_sources_component } from './src/components/settings/reimport_sources.js';
 import { render as settings_smart_env_component } from './src/components/settings/smart_env.js';
@@ -65,6 +66,7 @@ export const smart_env_config = {
     settings_env_model: { render: settings_env_model_component },
     settings_env_model_type: { render: settings_env_model_type_component },
     settings_env_models: { render: settings_env_models_component },
+    settings_model_actions: { render: settings_model_actions_component },
     settings_notifications: { render: settings_notifications_component },
     settings_reimport_sources: { render: settings_reimport_sources_component },
     settings_smart_env: { render: settings_smart_env_component },
