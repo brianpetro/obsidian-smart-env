@@ -1,4 +1,4 @@
-import { show_new_model_menu } from '../../modals/show_new_model_menu.js';
+import { show_new_model_menu } from '../../utils/smart-models/show_new_model_menu.js';
 
 function build_html (models_collection, params) {
   return `<div class="model-settings" data-model-type="${models_collection.collection_key}">

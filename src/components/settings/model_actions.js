@@ -1,3 +1,4 @@
+import { show_new_model_menu } from '../../utils/smart-models/show_new_model_menu.js';
 function build_html(model, params = {}) {
   return `<div class="smart-model-modal-actions">
     <button class="new-model-btn">New</button>
@@ -25,7 +26,7 @@ async function post_process(model, container, params = {}) {
     if (typeof on_before_new === 'function') {
       opts.on_before_new = on_before_new;
     }
-    show_new_model_menu(this.collection, event, opts);
+    show_new_model_menu(model.collection, event, opts);
   });
   const delete_model_btn = container.querySelector('.delete-model-btn');
   const confirm_delete_container = container.querySelector('.confirm-delete-container');

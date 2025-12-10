@@ -1,6 +1,6 @@
 import { Menu } from 'obsidian';
-import { provider_options } from '../utils/smart-models/provider_options.js';
-import { SmartModelModal } from './smart_model_modal.js';
+import { provider_options } from './provider_options.js';
+import { SmartModelModal } from '../../modals/smart_model_modal.js';
 
 
 
