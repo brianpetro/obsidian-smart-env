@@ -43,17 +43,19 @@ export class SmartModelModal extends Modal {
     });
     container.appendChild(form);
     const test_btn = container.createEl('button', { text: 'Test model' });
+    const test_results_el = container.createDiv({ cls: 'model-test-container' });
     test_btn.addEventListener('click', async () => {
-      await this.run_test(container, model);
+      await this.run_test(test_results_el, model);
     });
     if(this.params.test_on_open) {
-      await this.run_test(container, model);
+      await this.run_test(test_results_el, model);
     }
   }
 
-  async run_test(container, model) {
-    const test_result_el = container.createEl('pre', { cls: 'model-test-result', text: 'Testing...' });
-    container.appendChild(test_result_el);
+  async run_test(test_results_el, model) {
+    test_results_el.empty();
+    const test_result_el = test_results_el.createEl('pre', { cls: 'model-test-result', text: 'Testing...' });
+    test_results_el.appendChild(test_result_el);
     const test_result = await model.test_model();
     test_result_el.textContent = JSON.stringify(test_result, null, 2);
   }
