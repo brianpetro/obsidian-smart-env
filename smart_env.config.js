@@ -12,6 +12,8 @@ import { render as lean_coffee_callout_component } from './src/components/lean_c
 import { render as notifications_feed_component } from './src/components/notifications_feed.js';
 import { render as pro_plugins_list_component } from './src/components/pro-plugins/list.js';
 import { render as pro_plugins_list_item_component } from './src/components/pro-plugins/list_item.js';
+import { render as settings_env_model_component } from './src/components/settings/env_model.js';
+import { render as settings_env_model_type_component } from './src/components/settings/env_model_type.js';
 import { render as settings_env_models_component } from './src/components/settings/env_models.js';
 import { render as settings_notifications_component } from './src/components/settings/notifications.js';
 import { render as settings_reimport_sources_component } from './src/components/settings/reimport_sources.js';
@@ -60,6 +62,8 @@ export const smart_env_config = {
     notifications_feed: { render: notifications_feed_component },
     pro_plugins_list: { render: pro_plugins_list_component },
     pro_plugins_list_item: { render: pro_plugins_list_item_component },
+    settings_env_model: { render: settings_env_model_component },
+    settings_env_model_type: { render: settings_env_model_type_component },
     settings_env_models: { render: settings_env_models_component },
     settings_notifications: { render: settings_notifications_component },
     settings_reimport_sources: { render: settings_reimport_sources_component },
