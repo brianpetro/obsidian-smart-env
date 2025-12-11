@@ -49,9 +49,7 @@ export class SmartEnv extends BaseSmartEnv {
     if(Platform.isMobile && !force_load){
       // create doc frag with a button to run load_env
       const frag = this.smart_view.create_doc_fragment(`<div><p>Smart Environment loading deferred on mobile.</p><button>Load Environment</button></div>`);
-      frag.querySelector('button').addEventListener('click', () => {
-        this.load(true);
-      });
+      frag.querySelector('button').addEventListener('click', this.load.bind(this, true));
       new Notice(frag, 0);
       return;
     }
