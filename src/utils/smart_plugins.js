@@ -1,9 +1,5 @@
 import { requestUrl } from 'obsidian';
 
-export const SMART_CHAT_REPO = 'brianpetro/smart-chat-obsidian';
-export const SMART_CHAT_RELEASE_BASE_URL = `https://github.com/${SMART_CHAT_REPO}/releases`;
-export const SMART_CHAT_RELEASE_API_URL = `https://api.github.com/repos/${SMART_CHAT_REPO}/releases/latest`;
-
 /**
  * If the user or test code sets window.SMART_SERVER_URL_OVERRIDE,
  * we use that as the base URL. Otherwise, default to production.
@@ -14,25 +10,6 @@ export function get_smart_server_url() {
     return window.SMART_SERVER_URL_OVERRIDE;
   }
   return 'https://connect.smartconnections.app';
-}
-
-/**
- * Resolve latest Smart Chat release asset URL with a versioned zip name.
- *
- * @param {Function} request_fn
- * @returns {Promise<string>}
- */
-export async function resolve_smart_chat_release_url(request_fn = requestUrl) {
-  const resp = await request_fn({
-    url: SMART_CHAT_RELEASE_API_URL,
-    method: 'GET',
-    headers: { Accept: 'application/vnd.github+json' },
-  });
-  if (resp.status && resp.status !== 200) {
-    throw new Error(`Release lookup error ${resp.status}`);
-  }
-  const zip_url = resp.json?.assets?.find((a) => a.name.endsWith('.zip'))?.browser_download_url;
-  return zip_url;
 }
 
 /**
