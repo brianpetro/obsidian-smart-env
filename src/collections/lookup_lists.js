@@ -10,6 +10,15 @@ export const settings_config = {
     description: "Choose whether results should be sources or blocks.",
     option_1: 'smart_sources|Sources',
     option_2: 'smart_blocks|Blocks',
+    options_callback: (scope) => {
+      const options = [
+        { value: 'smart_sources', name: 'Sources' },
+      ];
+      if (scope.env.smart_blocks) {
+        options.push({ value: 'smart_blocks', name: 'Blocks' });
+      }
+      return options;
+    }
   },
 }
 

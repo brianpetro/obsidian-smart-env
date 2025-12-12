@@ -1,13 +1,9 @@
 import { show_new_model_menu } from '../../utils/smart-models/show_new_model_menu.js';
+import { render_settings_config } from '../../utils/render_settings_config.js';
 
 function build_html (models_collection, params) {
   return `<div class="model-settings" data-model-type="${models_collection.collection_key}">
-    <div class="smart-env-settings-header">
-      <h2>${models_collection.model_type} models</h2>
-      <button class="new-model">New</button>
-    </div>
     <div class="global-settings"></div>
-    <div class="model-info"></div>
   </div>`;
 }
 export async function render (models_collection, params) {
@@ -18,21 +14,25 @@ export async function render (models_collection, params) {
 }
 async function post_process (models_collection, container, params) {
   const disposers = [];
-  const global_settings_container = container.querySelector('.global-settings');
-  const model_info_container = container.querySelector('.model-info');
   const render_current_model_info = async (current_model) => {
-    const default_setting = await this.render_settings(models_collection.env_config.settings_config, {
-      scope: models_collection,
-    });
-    this.empty(global_settings_container);
-    global_settings_container.appendChild(default_setting);
-    const new_model_btn = container.querySelector('.new-model');
-    new_model_btn.addEventListener('click', async (event) => {
-      show_new_model_menu(models_collection, event);
-    });
+    this.empty(container);
+    const [settings_group] = render_settings_config(
+      models_collection.env_config.settings_config,
+      models_collection,
+      container,
+      {
+        default_group_name: `${models_collection.model_type} models`,
+        heading_btn: {
+          btn_text: '+ New',
+          callback: (event, setting) => {
+            show_new_model_menu(models_collection, event);
+          },
+        },
+      }
+    );
+    
     models_collection.env.smart_components.render_component('settings_env_model', current_model, {}).then((model_info_el) => {
-      this.empty(model_info_container);
-      model_info_container.appendChild(model_info_el);
+      settings_group.listEl.appendChild(model_info_el);
     });
   };
   render_current_model_info(models_collection.default);

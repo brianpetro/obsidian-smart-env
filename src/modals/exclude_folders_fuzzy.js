@@ -20,10 +20,10 @@ export class ExcludedFoldersFuzzy extends FuzzySuggestModal {
   /**
    * Open the modal with an optional callback invoked after an item is chosen.
    * The current exclusion list is rendered at the top of the modal.
-   * @param {Function} [callback]
+   * @param {Function} [selection_callback]
    */
-  open(callback) {
-    this.callback = callback;
+  open(selection_callback) {
+    this.callback = selection_callback;
     super.open();
     this.render_excluded_list();
   }

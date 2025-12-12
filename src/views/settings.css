@@ -1,13 +1,13 @@
 /* 1) Host elements that should get a PRO badge */
 :is(
-  .setting-component.pro-setting .setting-item-name
+  .pro-setting .setting-item-name
 ) {
   position: relative; /* safe default, keeps ::after anchored */
 }
 
 /* 2) The PRO badge itself */
 :is(
-  .setting-component.pro-setting .setting-item-name
+  .pro-setting .setting-item-name:not(:empty)
 )::after {
   content: "PRO";
 
@@ -47,7 +47,7 @@
 
 /* 3) Interactive refinement: follow Obsidian's accent hover behavior */
 :is(
-  .setting-component.pro-setting .setting-item-name
+  .pro-setting .setting-item-name
 ):hover::after {
   background-color: var(--interactive-accent-hover);
   filter: brightness(1.05);
@@ -69,4 +69,19 @@
 
 .setting-component:has(.dropdown-no-options) {
   display: none;
+}
+
+/* wrap Obsidian native styles within smart plugin settings main class */
+.smart-plugin-settings-main, .smart-plugin-settings-env {
+  .setting-group {
+    margin-top: var(--size-4-6);
+    margin-bottom: var(--size-4-6);
+  }
+  /* polyfill */
+  .setting-group .setting-items {
+    background-color: var(--setting-items-background, var(--background-primary-alt));
+    padding: var(--setting-items-padding, var(--size-4-5));
+    border-radius: var(--setting-items-radius, var(--radius-l));
+    border: var(--setting-items-border-width, 0) solid var(--setting-items-border-color, var(--background-modifier-border));
+  }
 }

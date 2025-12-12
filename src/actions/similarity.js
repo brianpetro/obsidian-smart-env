@@ -17,9 +17,11 @@ similarity.action_type = 'score';
 export const display_name = 'Cosine Similarity';
 export const display_description = 'Ranks by cosine similarity between the current note and candidates.';
 export const settings_config = {
-  score_algo_description: {
+  similarity_algo_description: {
+    group: 'Score algorithm',
     type: 'html',
-    value: `<p><small><b>${display_name}</b>: ${display_description}</small></p>`,
+    name: `${display_name} algorithm`,
+    value: `${display_description}`,
   },
 }
 

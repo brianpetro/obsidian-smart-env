@@ -15,6 +15,10 @@ export class SmartPluginSettingsTab extends PluginSettingTab {
     this.global_settings_container = null;
     this.plugin?.env?.create_env_getter?.(this);
     if(this.env.is_pro && !this.env_settings_tab) this.plugin.addSettingTab(new SmartEnvSettingTab(this.plugin.app, this.plugin));
+    this.icon = 'smart-connections';
+    if (this.env.is_pro) {
+      this.name = this.name.replace('Smart ', '');
+    }
   }
   get smart_view() {
     return this.env?.smart_view;
@@ -103,9 +107,9 @@ export class SmartEnvSettingTab extends PluginSettingTab {
     this.global_settings_container = null;
     this.plugin?.env?.create_env_getter?.(this);
     this.plugin = plugin;
-    this.name = 'Smart Environment';
-    if(this.env.is_pro) this.name += ' Pro';
+    this.name = 'Smart Env Pro';
     this.id = 'smart-environment';
+    this.icon = 'smart-connections';
   }
   get smart_view() {
     return this.env?.smart_view;

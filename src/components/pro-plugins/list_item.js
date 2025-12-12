@@ -93,6 +93,12 @@ async function post_process(item, container, params = {}) {
         window.open(PRO_PLUGINS_URL, '_external');
       });
     });
+    row.addButton((btn) => {
+      btn.setButtonText('Learn more');
+      btn.onClick(() => {
+        window.open(item.url, '_external');
+      });
+    });
 
     return container;
   }
@@ -112,8 +118,12 @@ async function post_process(item, container, params = {}) {
   });
 
   row.addButton((btn) => {
-    btn.setButtonText('Learn more');
-    btn.onClick(() => show_plugin_readme(item, { app, token, display_name: state.display_name }));
+    btn.setButtonText('Docs');
+    if (item.docs_url) {
+      btn.onClick(() => window.open(item.docs_url, '_external'));
+    } else {
+      btn.onClick(() => show_plugin_readme(item, { app, token, display_name: state.display_name }));
+    }
   });
 
   return container;

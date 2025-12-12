@@ -19,7 +19,7 @@
   },
   "homepage": "https://jsbrains.org",
   "dependencies": {
-    "obsidian": "latest",
+    "obsidian": "^1.11.0",
     "smart-blocks": "file:../jsbrains/smart-blocks",
     "smart-chat-model": "file:../jsbrains/smart-chat-model",
     "smart-collections": "file:../jsbrains/smart-collections",
@@ -36,6 +36,7 @@
     "smart-plugins-obsidian": "file:../smart-plugins-obsidian",
     "smart-settings": "file:../jsbrains/smart-settings",
     "smart-sources": "file:../jsbrains/smart-sources",
+    "smart-types": "file:../jsbrains/smart-types",
     "smart-utils": "file:../jsbrains/smart-utils",
     "smart-view": "file:../jsbrains/smart-view"
   },

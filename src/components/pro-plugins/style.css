@@ -22,3 +22,17 @@
   border-top: 1px solid var(--background-modifier-border);
   row-gap: var(--size-4-3);
 }
+
+.pro-plugins-container > .setting-group {
+  .setting-item-name.pro-heading {
+    font-size: var(--h1-size);
+  }
+  &> p {
+    padding: 0 var(--size-4-4);
+  }
+
+}
+
+.smart-plugins-login .setting-item {
+  gap: var(--size-4-3);
+}

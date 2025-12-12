@@ -13,35 +13,40 @@ function derive_fallback_plugins() {
     {
       name: 'Chat Pro',
       description: 'Configure chat to use Local and Cloud API providers (Ollama, LM Studio, OpenAI, Gemini, Anthropic, Open Router, and more).',
-      core_id: 'smart-chatgpt'
+      core_id: 'smart-chatgpt',
+      url: 'https://smartconnections.app/smart-chat/'
     },
     {
       name: 'Connections Pro',
       description: 'More opportunities for connections. Graph view for visualizing. Inline and footer views (great for mobile!). Configurable algorithms and additional embedding model providers.',
-      core_id: 'smart-connections'
+      core_id: 'smart-connections',
+      url: 'https://smartconnections.app/smart-connections/'
     },
     {
       name: 'Context Pro',
       description: 'Advanced tools for context engineering. Utilize Bases, images, and external sources (great for coders!) in your contexts.',
-      core_id: 'smart-context'
+      core_id: 'smart-context',
+      url: 'https://smartconnections.app/smart-context/'
     },
   ];
 
   return pro_placeholders;
 }
-
 export function build_html(env, params = {}) {
   return `
-    <div class="pro-plugins-container">
-      <h1>Pro plugins</h1>
-      <p>${PRO_PLUGINS_DESC}</p>
-      <section class="smart-plugins-list">
-        <div class="pro-plugins-list"></div>
-      </section>
-      <footer class="smart-plugins-footer">${PRO_PLUGINS_FOOTER}</footer>
-      <h2>Account</h2>
-      <section class="smart-plugins-login">
-      </section>
+    <div class="pro-plugins-container setting-item-heading">
+      <div class="setting-group">
+        <div class="setting-item setting-item-heading">
+          <div class="setting-item-name pro-heading">Pro plugins</div>
+          <div class="setting-item-control">
+            <section class="smart-plugins-login"></section>
+          </div>
+        </div>
+        <p>${PRO_PLUGINS_DESC}</p>
+        <div class="setting-items pro-plugins-list">
+        </div>
+        <p>${PRO_PLUGINS_FOOTER}</p>
+      </div>
     </div>
   `;
 }
@@ -94,18 +99,16 @@ export async function post_process(env, container, params = {}) {
 
     if (!token) {
       const setting = new Setting(login_container)
-        .setName('Connect Account')
-        .setDesc('Log in with your Smart Connections supporter key.');
+        .setName('Connect account')
+        .setDesc('Log in with the key provided in your Pro welcome email.');
 
       setting.addButton((btn) => {
         btn.setButtonText('Login');
         btn.onClick(() => initiate_oauth_login());
       });
     } else {
-      const setting = new Setting(login_container)
-        .setName('OAuth Token')
-        .setDesc(token.slice(0, 16) + '...');
-
+      const setting = new Setting(login_container);
+      setting.setDesc('Signed in to Smart Plugins Pro account.');
       setting.addButton((btn) => {
         btn.setButtonText('Logout');
         btn.onClick(() => {
