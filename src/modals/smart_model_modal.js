@@ -44,6 +44,8 @@ export class SmartModelModal extends Modal {
     container.appendChild(model_actions_bar);
 
     const settings = model.settings_config;
+    // TODO: update callbacks to functions or add string handling to render_settings_config before migration
+    // ex. `model_changed` callback
     const form = await this.env.smart_view.render_settings(settings, {
       scope: model,
     });
