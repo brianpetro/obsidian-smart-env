@@ -36,3 +36,25 @@
 .smart-plugins-login .setting-item {
   gap: var(--size-4-3);
 }
+
+.smart-plugins-login-manual {
+  margin-top: var(--size-4-3);
+}
+
+.smart-plugins-login-manual-instructions {
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+  margin-bottom: var(--size-2-2);
+}
+
+.smart-plugins-login-manual-controls {
+  display: flex;
+  gap: var(--size-2-2);
+  align-items: center;
+}
+
+.smart-plugins-login-manual-input {
+  flex: 1;
+  min-width: 240px;
+  font-size: var(--font-ui-small);
+}

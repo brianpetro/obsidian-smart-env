@@ -129,6 +129,7 @@ export class SmartEnv extends BaseSmartEnv {
   // Smart Plugins
   /**
    * This is the function that is called by the new "Sign in with Smart Plugins" button.
+   * @deprecated 2025-12-13 moved to components/pro-plugins/list.js
    * It replicates the old 'initiate_oauth()' logic from sc_settings_tab.js
    */
   initiate_smart_plugins_oauth() {
@@ -136,7 +137,8 @@ export class SmartEnv extends BaseSmartEnv {
     const state = Math.random().toString(36).slice(2);
     const redirect_uri = encodeURIComponent("obsidian://smart-plugins/callback");
     const url = `${get_smart_server_url()}/oauth?client_id=smart-plugins-op&redirect_uri=${redirect_uri}&state=${state}`;
-    open_url_externally(this.plugin, url);
+    window.open(url, '_external');
+    return url;
   }
   /**
    * Handles the OAuth callback from the Smart Plugins server.

@@ -8,6 +8,7 @@ import styles from './style.css';
 
 const PRO_PLUGINS_DESC = `<a href="https://smartconnections.app/core-plugins/" target="_external">Core plugins</a> provide essential functionality and a "just works" experience. <a href="https://smartconnections.app/pro-plugins/" target="_external">Pro plugins</a> enable advanced configuration and features for Obsidian AI experts.`;
 const PRO_PLUGINS_FOOTER = `All Pro plugins include advanced configurations and additional model providers. Pro users get priority support via email. <a href="https://smartconnections.app/introducing-pro-plugins/" target="_external">Learn more</a> about Pro plugins.`;
+
 function derive_fallback_plugins() {
   const pro_placeholders = [
     {
@@ -32,6 +33,7 @@ function derive_fallback_plugins() {
 
   return pro_placeholders;
 }
+
 export function build_html(env, params = {}) {
   return `
     <div class="pro-plugins-container setting-item-heading">
@@ -71,6 +73,54 @@ export async function post_process(env, container, params = {}) {
 
   const placeholders = derive_fallback_plugins();
 
+  let login_click_count = 0;
+  let last_login_url = '';
+  let manual_login_el = null;
+
+
+  const render_manual_login_link = (login_url) => {
+    if (!login_container) return;
+    if (!login_url) return;
+
+    if (!manual_login_el || !manual_login_el.isConnected) {
+      manual_login_el = document.createElement('div');
+      manual_login_el.classList.add('smart-plugins-login-manual');
+      login_container.appendChild(manual_login_el);
+    }
+
+    manual_login_el.innerHTML = '';
+
+    const instructions = document.createElement('div');
+    instructions.classList.add('smart-plugins-login-manual-instructions');
+    instructions.textContent = 'If the login page did not open, copy this link and paste it into your browser to open the login page:';
+    manual_login_el.appendChild(instructions);
+
+    const controls = document.createElement('div');
+    controls.classList.add('smart-plugins-login-manual-controls');
+    manual_login_el.appendChild(controls);
+
+    const input = document.createElement('input');
+    input.classList.add('smart-plugins-login-manual-input');
+    input.type = 'text';
+    input.value = login_url;
+    input.readOnly = true;
+    input.addEventListener('focus', () => input.select());
+    controls.appendChild(input);
+
+    const btn = document.createElement('button');
+    btn.classList.add('mod-cta');
+    btn.textContent = 'Copy';
+    btn.addEventListener('click', async () => {
+      const ok = await copy_to_clipboard(login_url);
+      if (ok) {
+        new Notice('Copied login link to clipboard.');
+      } else {
+        new Notice('Copy failed. Please select and copy the link manually.');
+      }
+    });
+    controls.appendChild(btn);
+  };
+
   const get_installed_info = async () => {
     const installed_map = {};
     let { manifests } = app.plugins;
@@ -86,15 +136,24 @@ export async function post_process(env, container, params = {}) {
     return installed_map;
   };
 
-  const initiate_oauth_login = () => {
-    if (env && typeof env.initiate_smart_plugins_oauth === 'function') {
-      env.initiate_smart_plugins_oauth();
-      new Notice('Please complete the login in your browser.');
+  const initiate_oauth_login = async () => {
+    login_click_count++;
+    if (login_click_count >= 2 && last_login_url) {
+      render_manual_login_link(last_login_url);
     }
+
+    if (env && typeof env.initiate_smart_plugins_oauth === 'function') {
+      last_login_url = initiate_smart_plugins_oauth();
+    }
+
+    new Notice('Please complete the login in your browser.');
+
   };
 
   const render_oauth_login_section = () => {
     this.empty(login_container);
+    manual_login_el = null;
+
     const token = localStorage.getItem(oauth_storage_prefix + 'token') || '';
 
     if (!token) {
@@ -104,22 +163,26 @@ export async function post_process(env, container, params = {}) {
 
       setting.addButton((btn) => {
         btn.setButtonText('Login');
-        btn.onClick(() => initiate_oauth_login());
-      });
-    } else {
-      const setting = new Setting(login_container);
-      setting.setDesc('Signed in to Smart Plugins Pro account.');
-      setting.addButton((btn) => {
-        btn.setButtonText('Logout');
-        btn.onClick(() => {
-          localStorage.removeItem(oauth_storage_prefix + 'token');
-          localStorage.removeItem(oauth_storage_prefix + 'refresh');
-          new Notice('Logged out of Smart Plugins');
-          render_oauth_login_section();
-          render_plugin_list_section();
+        btn.onClick(async () => {
+          await initiate_oauth_login();
         });
       });
+
+      return;
     }
+
+    const setting = new Setting(login_container);
+    setting.setDesc('Signed in to Smart Plugins Pro account.');
+    setting.addButton((btn) => {
+      btn.setButtonText('Logout');
+      btn.onClick(() => {
+        localStorage.removeItem(oauth_storage_prefix + 'token');
+        localStorage.removeItem(oauth_storage_prefix + 'refresh');
+        new Notice('Logged out of Smart Plugins');
+        render_oauth_login_section();
+        render_plugin_list_section();
+      });
+    });
   };
 
   const render_fallback_plugin_list = async () => {
@@ -162,7 +225,6 @@ export async function post_process(env, container, params = {}) {
     });
   };
 
-
   const render_plugin_list_section = async () => {
     this.empty(pro_list_el);
     const token = localStorage.getItem(oauth_storage_prefix + 'token') || '';
@@ -183,7 +245,6 @@ export async function post_process(env, container, params = {}) {
       }
 
       if (!Array.isArray(list) || list.length === 0) {
-        // pro_list_el.textContent = 'No plugins found.';
         await render_fallback_plugin_list();
         return;
       }
@@ -216,3 +277,38 @@ export async function post_process(env, container, params = {}) {
   await render_smart_plugins();
   return container;
 }
+
+function initiate_smart_plugins_oauth() {
+  console.log("initiate_smart_plugins_oauth");
+  const state = Math.random().toString(36).slice(2);
+  const redirect_uri = encodeURIComponent("obsidian://smart-plugins/callback");
+  const url = `${get_smart_server_url()}/oauth?client_id=smart-plugins-op&redirect_uri=${redirect_uri}&state=${state}`;
+  window.open(url, '_external');
+  return url;
+}
+
+const copy_to_clipboard = async (text) => {
+  if (!text) return false;
+  try {
+    if (navigator?.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {}
+
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', 'true');
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    ta.style.top = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return Boolean(ok);
+  } catch {}
+
+  return false;
+};

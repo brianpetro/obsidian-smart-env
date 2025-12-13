@@ -324,7 +324,6 @@ export async function enable_plugin(app, plugin_id) {
 /**
  * Compute the Smart Plugins OAuth storage prefix based on the vault name.
  *
- * Mirrors logic used by Smart Plugins OP / sc_oauth:
  *   `${vault_name.toLowerCase().replace(/[^a-z0-9]/g, '_')}_smart_plugins_oauth_`
  *
  * @param {import('obsidian').App} app
