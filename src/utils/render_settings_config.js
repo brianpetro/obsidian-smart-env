@@ -49,12 +49,16 @@ export function render_settings_config(settings_config, scope, container, params
     .sort(([a], [b]) => (a === default_group_name ? -1 : b === default_group_name ? 1 : 0))
     .map(([group_name, group_config]) => {
       const group_container = container.createDiv();
+      const group_params = {
+        ...params,
+        ...(params.group_params?.[group_name] || {}),
+      };
       return render_settings_group(
         group_name,
         scope,
         group_config,
         group_container,
-        params
+        group_params
       );
     })
   ;
