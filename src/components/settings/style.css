@@ -14,7 +14,7 @@
 }
 
 
-.env-setting-highlight {
+.setting-group .setting-items .setting-item.env-setting-highlight {
   border: 1px solid var(--interactive-accent);
   background-color: var(--interactive-hover);
   padding: 0.5rem;

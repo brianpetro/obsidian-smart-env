@@ -20,25 +20,35 @@ export async function post_process(env, container, opts = {}) {
   }
   render_settings_config(settings_config, env, container, {
     default_group_name: 'Sources',
+    heading_btn: {
+      btn_icon: 'help-circle',
+      callback: (event, setting) => {
+        window.open('https://smartconnections.app/environment-settings/?utm_source=source-settings', '_external');
+      },
+    },
   });
   const disposers = [];
-  disposers.push(env.events?.on('model:changed', highlight_reset_data(env)));
+  disposers.push(env.events?.on('model:changed', highlight_reset_data(env, container)));
   this.attach_disposer(container, disposers);
   return container;
 }
 
 
-export function highlight_reset_data(env) {
+export function highlight_reset_data(env, container) {
   return async (payload) => {
     if (payload.collection_key !== 'embedding_models') return;
-    const re_import_setting = re_import_setting.querySelector('.re-import-sources');
+    const re_import_setting = container.querySelector('.re-import-sources');
     // add notice to re-import sources to update embeddings
     re_import_setting.classList.add('env-setting-highlight');
-    const notice = re_import_setting.querySelector('.reimport-notice');
+    const notice = re_import_setting.querySelector('.reimport-notice')
+      ? re_import_setting.querySelector('.reimport-notice')
+      : re_import_setting.createEl('div', { cls: 'reimport-notice env-setting-note' })
+    ;
     notice.textContent = 'Embedding model changed. Please re-import your sources to update their embeddings.';
     re_import_setting.appendChild(notice);
     env.events.once('sources:reimported', () => {
       re_import_setting.classList.remove('env-setting-highlight');
+      notice.remove();
     });
   };
 }

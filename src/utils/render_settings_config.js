@@ -89,7 +89,8 @@ export function render_settings_group(group_name, scope, settings_config, contai
   if (heading_btn && typeof heading_btn === 'object') {
     const heading_btn_setting = new Setting(setting_group.controlEl);
     heading_btn_setting.addButton(btn => {
-      btn.setButtonText(heading_btn.btn_text || 'Execute');
+      if (heading_btn.btn_icon) btn.setIcon(heading_btn.btn_icon);
+      if (heading_btn.btn_text) btn.setButtonText(heading_btn.btn_text || 'Execute');
       btn.onClick(async (event) => {
         if (typeof heading_btn.callback === 'function') {
           await handle_config_callback(heading_btn_setting, event, heading_btn.callback, { scope });
@@ -106,7 +107,7 @@ export function render_settings_group(group_name, scope, settings_config, contai
       continue;
     }
     setting_group.addSetting(setting => {
-      console.log('Rendering setting:', setting);
+      // console.log('Rendering setting:', setting);
       if (setting_config.name) setting.setName(setting_config.name);
       setting.setClass(setting_path.replace(/[^a-zA-Z0-9]/g, '-'));
       if (setting_config.description) {
@@ -128,6 +129,9 @@ export function render_settings_group(group_name, scope, settings_config, contai
             toggle.setValue(get_by_path(scope.settings, setting_path) || false);
             toggle.onChange((value) => {
               set_by_path(scope.settings, setting_path, value);
+              if (typeof setting_config.callback === 'function') {
+                handle_config_callback(setting, value, setting_config.callback, { scope });
+              }
             });
           });
           break;
@@ -148,6 +152,9 @@ export function render_settings_group(group_name, scope, settings_config, contai
               if (!isNaN(num_value)) {
                 set_by_path(scope.settings, setting_path, num_value);
               }
+              if (typeof setting_config.callback === 'function') {
+                handle_config_callback(setting, num_value, setting_config.callback, { scope });
+              }
             });
           });
           break;
@@ -167,6 +174,9 @@ export function render_settings_group(group_name, scope, settings_config, contai
             dropdown.setValue(get_by_path(scope.settings, setting_path) || '');
             dropdown.onChange((value) => {
               set_by_path(scope.settings, setting_path, value);
+              if (typeof setting_config.callback === 'function') {
+                handle_config_callback(setting, value, setting_config.callback, { scope });
+              }
             });
           });
           break;
