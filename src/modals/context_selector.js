@@ -17,7 +17,7 @@ export class ContextModal extends SmartFuzzySuggestModal {
 
   constructor(smart_context, params={}) {
     super(smart_context);
-    this.params = params;
+    this.params = { ...params };
     this.smart_context = smart_context;
     // this.shouldRestoreSelection = true; // does nothing?
     this.setInstructions([
@@ -27,8 +27,9 @@ export class ContextModal extends SmartFuzzySuggestModal {
     ]);
   }
   open(params={}) {
+    this.params = { ...this.params, ...params };
     super.open();
-    this.render(params);
+    this.render(this.params);
   }
 
   async render(params=this.params) {
