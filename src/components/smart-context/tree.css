@@ -9,4 +9,29 @@
     font-weight: bold;
     filter: brightness(1.8);
   }
+  .sc-context-item-remove {
+    padding: 0 0.2rem;
+    margin-left: -1.4rem;
+  }
+}
+.sc-context-item-leaf {
+  cursor: pointer;
+}
+.sc-context-item-score,
+.sc-context-item-size {
+  display: inline-block;
+  min-width: 4.5ch;
+  height: 1.7em;
+  line-height: 1.7em;
+  text-align: center;
+  font-weight: 600 !important;
+  font-size: 0.8em !important;
+  color: var(--nav-item-color) !important;
+  background: var(--background-modifier-hover);
+  border-radius: 6px;
+  padding: 0 0.4em;
+  margin-right: 0.35em;
+}
+.sc-context-item-size {
+  min-width: 0;
 }
