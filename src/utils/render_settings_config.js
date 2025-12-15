@@ -47,6 +47,9 @@ export function render_settings_config(settings_config, scope, container, params
   const settings_groups = Object.entries(group_map)
     // sort group_name first
     .sort(([a], [b]) => (a === default_group_name ? -1 : b === default_group_name ? 1 : 0))
+    // filter has at least one setting
+    .filter(([, group_config]) => Object.keys(group_config).length > 0)
+    // render each group
     .map(([group_name, group_config]) => {
       const group_container = container.createDiv();
       const group_params = {
@@ -109,6 +112,7 @@ export function render_settings_group(group_name, scope, settings_config, contai
       // console.log('Rendering setting:', setting);
       if (setting_config.name) setting.setName(setting_config.name);
       setting.setClass(setting_path.replace(/[^a-zA-Z0-9]/g, '-'));
+      if (setting_config.type) setting.setClass(setting_config.type);
       if (setting_config.description) {
         setting.setDesc(setting_config.description);
       }
@@ -176,6 +180,14 @@ export function render_settings_group(group_name, scope, settings_config, contai
               if (typeof setting_config.callback === 'function') {
                 handle_config_callback(setting, value, setting_config.callback, { scope });
               }
+            });
+          });
+          break;
+        case 'textarea':
+          setting.addTextArea((text) => {
+            text.setValue(String(get_by_path(scope.settings, setting_path) || ''));
+            text.onChange((value) => {
+              set_by_path(scope.settings, setting_path, value);
             });
           });
           break;
