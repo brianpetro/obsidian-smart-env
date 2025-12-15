@@ -2,33 +2,12 @@ import { setIcon } from 'obsidian';
 export function build_html() {
   return `
     <div class="sc-context-actions">
-      <input
-        type="text"
-        class="sc-context-name-input"
-        placeholder="Context name…"
-        aria-label="Context name"
-      />
-      <span class="sc-context-actions-right">
-        <button class="sc-add-context-btn" type="button">Add context</button>
-        <button class="sc-clear-context-btn" type="button" style="display:none;">Clear</button>
-        <button class="sc-copy-clipboard" type="button" style="display:none;">Copy to clipboard</button>
-        <button class="sc-help-btn" type="button" aria-label="Learn more"></button>
-      </span>
+      <div class="sc-context-actions-left">
+      </div>
+      <div class="sc-context-actions-right">
+      </div>
     </div>
   `;
-}
-
-/**
- * Normalize a human-entered name.
- * @param {string} name
- * @returns {string}
- */
-export function sanitize_context_name(name) {
-  const str = String(name ?? '').trim();
-  if (!str) return '';
-  const collapsed = str.replace(/\s+/g, ' ');
-  const max = 120;
-  return collapsed.length > max ? collapsed.slice(0, max) : collapsed;
 }
 
 export async function render(ctx, opts = {}) {
@@ -40,61 +19,15 @@ export async function render(ctx, opts = {}) {
 }
 async function post_process(ctx, container, opts = {}) {
   const render_ctx_actions = () => {
-    const name_input = container.querySelector('.sc-context-name-input');
-  
-    const refresh_name = () => {
-      name_input.value = ctx?.data?.name ? String(ctx.data.name) : '';
-    };
-  
-    const save_name = () => {
-      const next = sanitize_context_name(name_input.value);
-      if (next === (ctx.data.name || '')) return;
-      ctx.name = next;
-    };
-  
-    refresh_name();
-  
-    name_input.addEventListener('keydown', (e) => {
-      // Intentionally allow default keydown behavior (e.g., text input, navigation)
-      // Prevent event bubbling to avoid parent handlers interfering
-      e.stopPropagation();
-      if (e.key === 'Enter') {
-        save_name();
-        name_input.blur();
-      }
-      if (e.key === 'Escape') {
-        refresh_name();
-        name_input.blur();
-      }
-    });
-    name_input.addEventListener('blur', () => save_name());
-  
+    const actions_left = container.querySelector('.sc-context-actions-left');
+    this.empty(actions_left);
+    const actions_right = container.querySelector('.sc-context-actions-right');
+    this.empty(actions_right);
     // Add context -> open selector (hidden by CSS in certain views)
-    const add_btn = container.querySelector('.sc-add-context-btn');
-    add_btn.addEventListener('click', () => {
-      ctx.emit_event('context_selector:open');
-    });
-  
-    // Copy to clipboard button (only when items exist)
-    if (ctx.has_context_items) {
-      const copy_btn = container.querySelector('.sc-copy-clipboard');
-      copy_btn.style.display = 'inline-block';
-      copy_btn.addEventListener('click', async () => {
-        ctx.actions.context_copy_to_clipboard();
-      });
-      const clear_btn = container.querySelector('.sc-clear-context-btn');
-      clear_btn.style.display = 'inline-block';
-      clear_btn.addEventListener('click', () => {
-        ctx.clear_all();
-      });
-    }
-
-    const help_btn = container.querySelector('.sc-help-btn');
-    setIcon(help_btn, 'help-circle');
-    help_btn.addEventListener('click', () => {
-      window.open('https://smartconnections.app/smart-context/builder/?utm_source=context-selector-modal', '_external');
-      ctx.emit_event('context_selector:help');
-    });
+    render_btn_open_selector(ctx, actions_right);
+    render_btn_copy_context(ctx, actions_right);
+    render_btn_clear_context(ctx, actions_right);
+    render_btn_help(ctx, actions_right);
   }
   render_ctx_actions();
   const disposers = [];
@@ -102,4 +35,59 @@ async function post_process(ctx, container, opts = {}) {
   this.attach_disposer(container, disposers);
 
   return container;
+}
+export function render_btn_open_selector(ctx, container) {
+  // const add_btn = container.querySelector('.sc-add-context-btn');
+  const add_btn = document.createElement('button');
+  add_btn.type = 'button';
+  add_btn.className = 'sc-add-context-btn';
+  add_btn.textContent = 'Add context';
+  container.appendChild(add_btn);
+  add_btn.addEventListener('click', () => {
+    ctx.emit_event('context_selector:open');
+  });
+}
+export function render_btn_copy_context(ctx, container) {
+  // const copy_btn = container.querySelector('.sc-copy-clipboard');
+  const copy_btn = document.createElement('button');
+  copy_btn.type = 'button';
+  copy_btn.className = 'sc-copy-clipboard';
+  copy_btn.textContent = 'Copy to clipboard';
+  if (!ctx.has_context_items) {
+    copy_btn.style.display = 'none';
+  }
+  container.appendChild(copy_btn);
+  copy_btn.addEventListener('click', async () => {
+    ctx.actions.context_copy_to_clipboard();
+  });
+}
+
+export function render_btn_clear_context(ctx, container) {
+  // const clear_btn = container.querySelector('.sc-clear-context-btn');
+  const clear_btn = document.createElement('button');
+  clear_btn.type = 'button';
+  clear_btn.className = 'sc-clear-context-btn';
+  clear_btn.textContent = 'Clear';
+  if (!ctx.has_context_items) {
+    clear_btn.style.display = 'none';
+  }
+  container.appendChild(clear_btn);
+  clear_btn.addEventListener('click', () => {
+    ctx.clear_all();
+    ctx.emit_event('context:cleared');
+  });
+}
+
+export function render_btn_help(ctx, container) {
+  // const help_btn = container.querySelector('.sc-help-btn');
+  const help_btn = document.createElement('button');
+  help_btn.type = 'button';
+  help_btn.className = 'sc-help-btn';
+  help_btn.setAttribute('aria-label', 'Learn more');
+  container.appendChild(help_btn);
+  setIcon(help_btn, 'help-circle');
+  help_btn.addEventListener('click', () => {
+    window.open('https://smartconnections.app/smart-context/builder/?utm_source=context-selector-modal', '_external');
+    ctx.emit_event('context_selector:help');
+  });
 }
