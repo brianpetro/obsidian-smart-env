@@ -24,22 +24,22 @@ export async function merge_template(context_items_text, context_items) {
 export const settings_config = {
   context_explanation: {
     type: 'html',
-    value: `
-      <div class="setting-explanation">
-        <h5>Context templates</h5>
-        <ul>
-          <li><code>{{FILE_TREE}}</code> - Shows hierarchical view of all files</li>
-        </ul>
-      </div>
+    group: 'Context templates',
+    value: `<b>Available variables:</b>
+      <ul>
+        <li><code>{{FILE_TREE}}</code> - Shows hierarchical view of all files</li>
+      </ul>
     `
   },
   template_before: {
     type: 'textarea',
+    group: 'Context templates',
     name: 'Template Before',
     description: 'Template to wrap before the context.',
   },
   template_after: {
     type: 'textarea',
+    group: 'Context templates',
     name: 'Template After',
     description: 'Template to wrap after the context.',
   },

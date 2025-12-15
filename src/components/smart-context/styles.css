@@ -10,3 +10,8 @@
     display: none;
   }
 }
+
+/* make hover popover work in builder modal */
+.hover-popover {
+  z-index: 100;
+}
