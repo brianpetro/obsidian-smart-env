@@ -1,6 +1,7 @@
+import { setIcon } from 'obsidian';
 export function build_html() {
-  return `<div>
-    <div class="sc-context-view-actions">
+  return `
+    <div class="sc-context-actions">
       <input
         type="text"
         class="sc-context-name-input"
@@ -11,9 +12,10 @@ export function build_html() {
         <button class="sc-add-context-btn" type="button">Add context</button>
         <button class="sc-clear-context-btn" type="button" style="display:none;">Clear</button>
         <button class="sc-copy-clipboard" type="button" style="display:none;">Copy to clipboard</button>
+        <button class="sc-help-btn" type="button" aria-label="Learn more"></button>
       </span>
     </div>
-  </div>`;
+  `;
 }
 
 /**
@@ -32,7 +34,7 @@ export function sanitize_context_name(name) {
 export async function render(ctx, opts = {}) {
   const html = build_html();
   const frag = this.create_doc_fragment(html);
-  const container = frag.querySelector('.sc-context-view-actions');
+  const container = frag.firstElementChild;
   post_process.call(this, ctx, container, opts);
   return container;
 }
@@ -86,6 +88,13 @@ async function post_process(ctx, container, opts = {}) {
         ctx.clear_all();
       });
     }
+
+    const help_btn = container.querySelector('.sc-help-btn');
+    setIcon(help_btn, 'help-circle');
+    help_btn.addEventListener('click', () => {
+      window.open('https://smartconnections.app/smart-context/builder/?utm_source=context-selector-modal', '_external');
+      ctx.emit_event('context_selector:help');
+    });
   }
   render_ctx_actions();
   const disposers = [];

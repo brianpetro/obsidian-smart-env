@@ -4,13 +4,13 @@ export function build_html(ctx, opts = {}) {
   return `<div>
     <div class="sc-context-view" data-context-key="${ctx.data.key}">
       <div class="sc-context-view-header">
-        <div class="sc-context-view-actions"></div>
+        <div class="sc-context-actions"></div>
       </div>
       <div class="sc-context-view-body">
-        <div class="sc-context-view-tree"></div>
+        <div class="sc-context-tree"></div>
       </div>
       <div class="sc-context-view-footer">
-        <div class="sc-context-view-meta"></div>
+        <div class="sc-context-meta"></div>
       </div>
     </div>
   </div>`;
@@ -30,22 +30,25 @@ export async function render(ctx, opts = {}) {
 
 export async function post_process(ctx, container, opts = {}) {
   const disposers = [];
-  const actions_el = container.querySelector('.sc-context-view-actions');
-  const tree_el    = container.querySelector('.sc-context-view-tree');
-  const meta_el    = container.querySelector('.sc-context-view-meta');
 
   const render_children = async () => {
-    const actions = await ctx.env.render_component('smart_context_actions', ctx, opts);
-    this.empty(actions_el);
-    actions_el.appendChild(actions);
+    const header = container.querySelector('.sc-context-view-header');
+    ctx.env.smart_components.render_component('smart_context_actions', ctx, opts).then((actions) => {
+      this.empty(header);
+      header.appendChild(actions);
+    });
 
-    const tree = await ctx.env.render_component('smart_context_tree', ctx, opts);
-    this.empty(tree_el);
-    tree_el.appendChild(tree);
+    const body = container.querySelector('.sc-context-view-body');
+    ctx.env.smart_components.render_component('smart_context_tree', ctx, opts).then((tree) => {
+      this.empty(body);
+      body.appendChild(tree);
+    });
 
-    const meta = await ctx.env.render_component('smart_context_meta', ctx, opts);
-    this.empty(meta_el);
-    meta_el.appendChild(meta);
+    const footer = container.querySelector('.sc-context-view-footer');
+    ctx.env.smart_components.render_component('smart_context_meta', ctx, opts).then((meta) => {
+      this.empty(footer);
+      footer.appendChild(meta);
+    });
   };
   
   const plugin = ctx.env.plugin;

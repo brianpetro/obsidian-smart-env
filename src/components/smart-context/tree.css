@@ -1,0 +1,12 @@
+.sc-context-tree {
+  ul {
+    padding-inline-start: 1.7rem;
+  }
+  li:has(> .sc-context-item-leaf > .sc-context-item-remove) {
+    list-style-type: none;
+  }
+  .sc-context-item-remove:hover {
+    font-weight: bold;
+    filter: brightness(1.8);
+  }
+}

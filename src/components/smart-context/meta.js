@@ -3,15 +3,15 @@ function estimate_tokens(char_count) {
 }
 
 export function build_html() {
-  return `<div>
-    <div class="sc-context-view-meta" aria-live="polite"></div>
-  </div>`;
+  return `
+    <div class="sc-context-meta" aria-live="polite"></div>
+  `;
 }
 
 export async function render(ctx, params = {}) {
   const html = build_html();
   const frag = this.create_doc_fragment(html);
-  const container = frag.querySelector('.sc-context-view-meta');
+  const container = frag.firstElementChild;
   post_process.call(this, ctx, container, params);
   return container;
 }

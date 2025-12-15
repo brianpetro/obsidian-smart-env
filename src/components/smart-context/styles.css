@@ -9,6 +9,26 @@
   .sc-add-context-btn {
     display: none;
   }
+  .sc-context-view-header {
+    padding: var(--size-4-2);
+  }
+  .sc-context-actions {
+    display: flex;
+    justify-content: space-between;
+  }
+  .sc-context-actions-right {
+    display: flex;
+    gap: var(--size-4-2);
+  }
+
+  .sc-context-view-body {
+    padding: var(--size-4-2);
+  }
+
+  .sc-context-view-footer {
+    padding: var(--size-4-2);
+  }
+
 }
 
 /* make hover popover work in builder modal */

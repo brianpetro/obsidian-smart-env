@@ -1,15 +1,16 @@
 import { build_tree_html } from '../../utils/smart-context/build_tree_html.js';
-
+import tree_styles from './tree.css';
 export function build_html(ctx, params = {}) {
-  return `<div>
+  return `
     <div class="sc-context-tree" data-context-key="${ctx.data.key}"></div>
-  </div>`;
+  `;
 }
 
 export async function render(ctx, params = {}) {
+  this.apply_style_sheet(tree_styles);
   const html = build_html(ctx, params);
   const frag = this.create_doc_fragment(html);
-  const container = frag.querySelector('.sc-context-tree');
+  const container = frag.firstElementChild;
   post_process.call(this, ctx, container, params);
   return container;
 }
