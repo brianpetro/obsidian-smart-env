@@ -221,6 +221,15 @@ export class SmartFuzzySuggestModal extends FuzzySuggestModal {
       if (typeof suggestion.arrow_left_action === 'function') {
         this.handle_choose_action(suggestion, 'arrow_left_action');
       } else {
+        if(this.last_input_value) {
+          this.inputEl.value = this.last_input_value;
+          // set cursor to end (timeout ensures after final character)
+          setTimeout(() => {
+            const len = this.inputEl.value.length;
+            this.inputEl.setSelectionRange(len, len);
+          }, 0);
+          this.last_input_value = null;
+        }
         this.suggestions = null;
         this.params.default_suggest_action_keys = null; // reset to config default
         this.updateSuggestions();
