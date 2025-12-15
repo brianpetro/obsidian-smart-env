@@ -104,13 +104,16 @@ export class SmartFuzzySuggestModal extends FuzzySuggestModal {
     super.open();
     this.modalEl.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') this.selectActiveSuggestion(e);
-      if (e.target !== this.inputEl || !this.inputEl.value || Keymap.isModEvent(e)) {
+      // is_cursor_end_of_input
+      const is_cursor_end_of_input = this.inputEl.selectionStart === this.inputEl.value.length;
+      console.log({is_cursor_end_of_input, inputEl: this.inputEl});
+      if (e.target !== this.inputEl || !this.inputEl.value || is_cursor_end_of_input || Keymap.isModEvent(e)) {
         if (e.key === 'ArrowLeft') {
           this.use_arrow_left = true;
           this.selectActiveSuggestion(e);
           return;
         }
-        if (e.key === 'ArrowRight') {
+        if (e.key === 'ArrowRight' && (is_cursor_end_of_input || e.target !== this.inputEl || !this.inputEl.value)) {
           e.preventDefault();
           this.use_mod_select = true;
           this.use_arrow_right = true;

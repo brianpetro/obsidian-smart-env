@@ -7,11 +7,13 @@ export function context_suggest_sources(params={}) {
       select_action: () => {
         this.add_item(src.key);
       },
-      mod_select_action: () => {
+      mod_select_action: ({modal}) => {
+        modal.inputEl.value = '';
         // DO: decedied: replace with adding all blocks?
         return context_suggest_blocks.call(this, { source_key: src.key });
       },
-      arrow_right_action: () => {
+      arrow_right_action: ({modal}) => {
+        modal.inputEl.value = '';
         return context_suggest_blocks.call(this, { source_key: src.key });
       }
     }))
