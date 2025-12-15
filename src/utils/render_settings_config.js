@@ -1,5 +1,5 @@
 // import { SettingGroup } from 'obsidian';
-import { Setting } from 'obsidian';
+import { Setting, setIcon } from 'obsidian';
 import { get_by_path, set_by_path } from 'smart-utils';
 // polyfill for Obsidian's SettingGroup not being available in older versions
 // jsdocs using imported SettingGroup for type hinting purposes
@@ -91,18 +91,13 @@ export function render_settings_group(group_name, scope, settings_config, contai
   } = params;
   let setting_group = new SettingGroup(container);
   if (heading_btn && typeof heading_btn === 'object') {
-    const heading_btn_setting = new Setting(setting_group.controlEl);
-    heading_btn_setting.addButton(btn => {
-      if (heading_btn.btn_icon) btn.setIcon(heading_btn.btn_icon);
-      if (heading_btn.btn_text) btn.setButtonText(heading_btn.btn_text || 'Execute');
-      btn.onClick(async (event) => {
-        if (typeof heading_btn.callback === 'function') {
-          await handle_config_callback(heading_btn_setting, event, heading_btn.callback, { scope });
-        } else {
-          console.warn('No callback defined for heading button');
-        }
-      });
-    });
+    if(Array.isArray(heading_btn)) {
+      for(const btn_config of heading_btn) {
+        render_heading_button(setting_group, scope, btn_config);
+      }
+    } else {
+      render_heading_button(setting_group, scope, heading_btn);
+    }
   }
   setting_group.setHeading(group_name);
   for (const [setting_path, setting_config] of Object.entries(settings_config)) {
@@ -205,6 +200,33 @@ export function render_settings_group(group_name, scope, settings_config, contai
     });
   }
   return setting_group;
+}
+
+function render_heading_button(setting_group, scope, heading_btn) {
+  // const heading_btn_setting = new Setting(setting_group.controlEl);
+  // heading_btn_setting.addButton(btn => {
+  //   if (heading_btn.btn_icon) btn.setIcon(heading_btn.btn_icon);
+  //   if (heading_btn.btn_text) btn.setButtonText(heading_btn.btn_text || 'Execute');
+  //   btn.onClick(async (event) => {
+  //     if (typeof heading_btn.callback === 'function') {
+  //       await handle_config_callback(heading_btn_setting, event, heading_btn.callback, { scope });
+  //     } else {
+  //       console.warn('No callback defined for heading button');
+  //     }
+  //   });
+  // });
+  const btn_el = setting_group.controlEl.createEl('button', { cls: '' });
+  if (heading_btn.btn_icon) { setIcon(btn_el, heading_btn.btn_icon); }
+  if (heading_btn.btn_text) { btn_el.setText(heading_btn.btn_text); }
+  if (heading_btn.label) { btn_el.setAttr('aria-label', heading_btn.label); }
+  btn_el.addEventListener('click', async (event) => {
+    if (typeof heading_btn.callback === 'function') {
+      await handle_config_callback(null, event, heading_btn.callback, { scope });
+    } else {
+      console.warn('No callback defined for heading button');
+    }
+  });
+  setting_group.controlEl.appendChild(btn_el);
 }
 
 /**
