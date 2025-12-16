@@ -43,7 +43,12 @@ export const provider_options = {
       label: 'PRO: Deepseek (cloud)',
       value: 'deepseek',
       disabled: true,
-    }
+    },
+    {
+      label: 'PRO: Azure OpenAI (cloud)',
+      value: 'azure',
+      disabled: true,
+    },
   ],
   embedding_models: [
     {
