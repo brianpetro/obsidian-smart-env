@@ -112,7 +112,7 @@ export function render_settings_group(group_name, scope, settings_config, contai
       // console.log('Rendering setting:', setting);
       if (setting_config.name) setting.setName(setting_config.name);
       setting.setClass(setting_path.replace(/[^a-zA-Z0-9]/g, '-'));
-      if (setting_config.type) setting.setClass(setting_config.type);
+      if (setting_config.type) setting.setClass(`setting-type-${setting_config.type}`);
       if (setting_config.description) {
         setting.setDesc(setting_config.description);
       }
