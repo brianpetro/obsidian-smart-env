@@ -23,7 +23,7 @@ export async function post_process(env, container, opts = {}) {
     heading_btn: {
       btn_icon: 'help-circle',
       callback: (event, setting) => {
-        window.open('https://smartconnections.app/environment-settings/?utm_source=source-settings', '_external');
+        window.open('https://smartconnections.app/smart-environment/settings/?utm_source=source-settings', '_external');
       },
     },
   });
