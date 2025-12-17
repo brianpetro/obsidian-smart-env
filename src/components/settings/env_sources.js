@@ -1,4 +1,5 @@
 import { render_settings_config } from '../../utils/render_settings_config.js';
+import { reset_env_settings } from '../../utils/reset_env_settings.js';
 export async function build_html(env, opts = {}) {
   return `
     <div class="sources-settings">
@@ -16,6 +17,7 @@ export async function post_process(env, container, opts = {}) {
   const settings_config = {
     folder_exclusions,
     view_exclusions,
+    // reset_env_settings_btn, // TODO: manually tested before implementing reset button
     re_import_sources,
   }
   render_settings_config(settings_config, env, container, {
@@ -121,5 +123,41 @@ export const re_import_sources = {
       confirm_row.style.display = 'none';
       reimport_btn.style.display = 'inline-block';
     });
+  }
+};
+
+// TODO: manually tested before implementing reset button
+const reset_env_settings_btn = {
+  type: 'button',
+  name: 'Reset Smart Env settings',
+  description: 'Restore Smart Environment settings to defaults.',
+  btn_text: 'Reset settings',
+  callback: async function (value, setting) {
+    const env = this; // scope passed as 'this'
+    const container = setting.controlEl;
+    const reset_btn = container.querySelector('button');
+    const existing_confirm_row = container.querySelector('.sc-inline-confirm-row');
+    if (existing_confirm_row) existing_confirm_row.remove();
+    const confirm_row = container.createEl('div', { cls: 'sc-inline-confirm-row' });
+    const message = confirm_row.createEl('span', { text: 'Reset Smart Environment settings to defaults?' });
+    const cancel_btn = confirm_row.createEl('button', { text: 'Cancel' });
+    const confirm_btn = confirm_row.createEl('button', { text: 'Reset', cls: 'mod-warning' });
+    reset_btn.style.display = 'none';
+    confirm_btn.addEventListener('click', async () => {
+      confirm_btn.disabled = true;
+      confirm_btn.textContent = 'Resetting...';
+      await reset_env_settings(env);
+      message.textContent = 'Settings reset. Reopen this tab to review defaults.';
+      confirm_btn.style.display = 'none';
+      cancel_btn.textContent = 'Close';
+      cancel_btn.addEventListener('click', () => {
+        confirm_row.remove();
+        reset_btn.style.display = 'inline-block';
+      }, { once: true });
+    });
+    cancel_btn.addEventListener('click', () => {
+      confirm_row.remove();
+      reset_btn.style.display = 'inline-block';
+    }, { once: true });
   }
 };
