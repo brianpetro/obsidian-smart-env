@@ -191,6 +191,23 @@ export function render_settings_group(group_name, scope, settings_config, contai
             });
           });
           break;
+        case 'slider':
+          setting.addSlider((slider) => {
+            const min = setting_config.min || 0;
+            const max = setting_config.max || 100;
+            const step = setting_config.step || 1;
+            slider.setLimits(min, max, step);
+            slider.setValue(get_by_path(scope.settings, setting_path) || min);
+            // slider.showTooltip();
+            slider.setDynamicTooltip();
+            slider.onChange((value) => {
+              set_by_path(scope.settings, setting_path, value);
+              if (typeof setting_config.callback === 'function') {
+                handle_config_callback(setting, value, setting_config.callback, { scope });
+              }
+            });
+          });
+          break;
         case 'heading':
           setting.setHeading();
           break;
