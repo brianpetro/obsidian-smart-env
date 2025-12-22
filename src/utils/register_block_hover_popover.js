@@ -1,6 +1,6 @@
 import { HoverPopover, MarkdownRenderer, Keymap } from 'obsidian';
 
-export function register_block_hover_popover(parent, target, env, block_key) {
+export function register_block_hover_popover(parent, target, env, block_key, params = {}) {
   const app = env?.plugin?.app || window.app;
   target.addEventListener('mouseover', async (ev) => {
     if (Keymap.isModEvent(ev)) {
@@ -20,6 +20,8 @@ export function register_block_hover_popover(parent, target, env, block_key) {
         popover.hoverEl.appendChild(frag);
         const sizer = popover.hoverEl.querySelector('.markdown-preview-sizer');
         MarkdownRenderer.render(app, markdown, sizer, "/", popover);
+        const event_domain = params.event_key_domain || 'block';
+        block.emit_event(`${event_domain}:hover_preview`);
       }
     }
   });
