@@ -14,7 +14,7 @@ export class TransformersIframeEmbeddingModelAdapter extends SmartEmbedTransform
         "batch_size": 1,
         "dims": 384,
         "max_tokens": 512,
-        "name": "BGE-micro-v2",
+        "name": "BGE-micro-v2 (fastest)",
         "description": "Local, 512 tokens, 384 dim (recommended)",
         "adapter": "transformers"
       },
@@ -23,7 +23,16 @@ export class TransformersIframeEmbeddingModelAdapter extends SmartEmbedTransform
         "batch_size": 1,
         "dims": 384,
         "max_tokens": 512,
-        "name": "Snowflake Arctic Embed XS",
+        "name": "Snowflake Arctic Embed XS (fast)",
+        "description": "Local, 512 tokens, 384 dim",
+        "adapter": "transformers"
+      },
+      "intfloat/multilingual-e5-small": {
+        "id": "intfloat/multilingual-e5-small",
+        "batch_size": 1,
+        "dims": 384,
+        "max_tokens": 512,
+        "name": "Multilingual E5 Small",
         "description": "Local, 512 tokens, 384 dim",
         "adapter": "transformers"
       },
