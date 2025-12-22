@@ -103,9 +103,13 @@ export const EVENTS_CHECKLIST_ITEMS_BY_EVENT_KEY = {
     group: 'Context',
     milestone: 'Opened the Context Builder selector modal.',
   },
+  'context:named': {
+    group: 'Context',
+    milestone: 'Named a Smart Context (created a reusable saved context).',
+  },
   'context:renamed': {
     group: 'Context',
-    milestone: 'Saved a named Context Pack for reuse (created a reusable saved context).',
+    milestone: 'Renamed a Smart Context (increased clarity).',
   },
   'context:copied_with_media': {
     group: 'Context',
@@ -121,6 +125,7 @@ export const EVENTS_CHECKLIST_ITEMS_BY_EVENT_KEY = {
   'completion:completed': {
     group: 'Chat',
     milestone: 'Received the first Smart Chat response (a completion finished).',
+    is_pro: true,
   },
   'chat_codeblock:marked_done': {
     group: 'Chat',
