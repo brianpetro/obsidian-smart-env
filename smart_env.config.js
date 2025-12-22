@@ -9,6 +9,7 @@ import { render as context_item_leaf_component } from './src/components/context-
 import { render as env_stats_component } from './src/components/env_stats.js';
 import { render as form_dropdown_component } from './src/components/form/dropdown.js';
 import { render as lean_coffee_callout_component } from './src/components/lean_coffee_callout.js';
+import { render as milestones_component } from './src/components/milestones.js';
 import { render as notifications_feed_component } from './src/components/notifications_feed.js';
 import { render as pro_plugins_list_component } from './src/components/pro-plugins/list.js';
 import { render as pro_plugins_list_item_component } from './src/components/pro-plugins/list_item.js';
@@ -58,6 +59,7 @@ export const smart_env_config = {
     env_stats: { render: env_stats_component },
     form_dropdown: { render: form_dropdown_component },
     lean_coffee_callout: { render: lean_coffee_callout_component },
+    milestones: { render: milestones_component },
     notifications_feed: { render: notifications_feed_component },
     pro_plugins_list: { render: pro_plugins_list_component },
     pro_plugins_list_item: { render: pro_plugins_list_item_component },

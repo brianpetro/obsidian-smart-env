@@ -9,9 +9,9 @@ import default_config from './default.config.js';
 import { add_smart_chat_icon, add_smart_connections_icon, add_smart_lookup_icon } from './utils/add_icons.js';
 import { SmartNotices } from "smart-notices/smart_notices.js"; // TODO: move to jsbrains
 import { exchange_code_for_tokens, install_smart_plugins_plugin, get_smart_server_url, enable_plugin } from './utils/sc_oauth.js';
-import { open_url_externally } from "./utils/open_url_externally.js";
 import { register_completion_variable_adapter_replacements } from './utils/register_completion_variable_adapter_replacements.js';
 import { remove_smart_plugins_plugin } from './migrations/remove_smart_plugins_plugin.js';
+import { register_first_of_event_notifications } from './src/utils/onboarding_events.js';
 
 export class SmartEnv extends BaseSmartEnv {
   /**
@@ -79,6 +79,7 @@ export class SmartEnv extends BaseSmartEnv {
     ContextModal.register_modal(this.main);
     // register status bar
     this.register_status_bar();
+    register_first_of_event_notifications(this);
   }
   emit_source_opened(current_path, event_source=null) {
     if (this._current_opened_source === current_path) return; // prevent duplicate events
@@ -198,6 +199,12 @@ export class SmartEnv extends BaseSmartEnv {
   open_notifications_feed_modal() {
     const NotificationsModalClass = this.config.modals.notifications_feed_modal.class;
     const modal = new NotificationsModalClass(this.obsidian_app, this);
+    modal.open();
+  }
+  // open milestones modal
+  open_milestones_modal() {
+    const MilestonesModalClass = this.config.modals.milestones_modal.class;
+    const modal = new MilestonesModalClass(this.obsidian_app, this);
     modal.open();
   }
   run_migrations () {

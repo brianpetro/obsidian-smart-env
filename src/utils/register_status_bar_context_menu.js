@@ -68,6 +68,14 @@ export function register_status_bar_context_menu(env, status_container, deps = {
     );
     menu.addItem((item) =>
       item
+        .setTitle("Milestones")
+        .setIcon("flag")
+        .onClick(() => {
+          env.open_milestones_modal();
+        }),
+    );
+    menu.addItem((item) =>
+      item
         .setTitle('Notifications')
         .setIcon('bell')
         .onClick(() => {

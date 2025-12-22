@@ -23,6 +23,7 @@ export class LookupList extends CollectionItem {
     let results = this.filter_and_score(params);
     // Post-process if needed
     if(this.should_post_process) results = await this.post_process(results, params);
+    this.emit_event('lookup:get_results');
     return results;
   }
 

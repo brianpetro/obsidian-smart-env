@@ -1,0 +1,141 @@
+.sc-events-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-3);
+  padding: var(--size-4-2);
+
+  .sc-events-checklist__header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--size-4-3);
+  }
+
+  .sc-events-checklist__title {
+    margin: 0;
+    font-size: var(--h2-size);
+  }
+
+  .sc-events-checklist__summary {
+    font-size: var(--font-ui-small);
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  .sc-events-checklist__group {
+    border-top: 1px solid var(--background-modifier-border);
+    padding-top: var(--size-4-3);
+  }
+
+  .sc-events-checklist__group-title {
+    margin: 0 0 var(--size-4-2) 0;
+    font-size: var(--h3-size);
+  }
+
+  .sc-events-checklist__items {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-2-2);
+  }
+
+  .sc-events-checklist__item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 8px;
+    border-radius: var(--radius-s);
+
+    &:hover {
+      background: var(--background-modifier-hover);
+    }
+  }
+
+  .sc-events-checklist__label {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--size-2-2);
+    cursor: default;
+  }
+
+  .sc-events-checklist__checkbox {
+    margin-top: 2px;
+  }
+
+  .sc-events-checklist__milestone {
+    line-height: 1.3;
+  }
+
+  .sc-events-checklist__meta {
+    padding-left: calc(var(--size-2-2) + 18px);
+  }
+
+  .sc-events-checklist__event-key {
+    font-size: var(--font-ui-smaller);
+    color: var(--text-muted);
+  }
+
+  .sc-events-checklist__item[data-checked='true'] {
+    .sc-events-checklist__milestone {
+      color: var(--text-normal);
+    }
+  }
+}
+
+/* 1) Host elements that should get a PRO badge */
+:is(
+  .pro-milestone > span
+) {
+  position: relative; /* safe default, keeps ::after anchored */
+}
+
+/* 2) The PRO badge itself */
+:is(
+  .pro-milestone > span
+)::after {
+  content: "PRO";
+
+  /* layout */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0.4em;
+  padding: 0.08em 0.55em;
+  border-radius: 999px;
+  white-space: nowrap;
+  vertical-align: middle;
+
+  /* typography */
+  font-size: 0.7em;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  line-height: 1;
+
+  /* color system: only Obsidian variables */
+  background-color: var(--interactive-accent);
+  background-image: linear-gradient(
+    135deg,
+    var(--interactive-accent),
+    var(--interactive-accent-hover)
+  );
+  color: var(--text-on-accent, var(--background-primary));
+  border: 1px solid var(--background-modifier-border);
+
+  /* subtle separation & depth, theme-aware */
+  box-shadow:
+    0 0 0 1px var(--background-primary),
+    0 1px 3px rgba(0, 0, 0, 0.35);
+  transform: translateY(-0.03em);
+}
+
+/* 3) Interactive refinement: follow Obsidian's accent hover behavior */
+:is(
+  .pro-milestone > span
+):hover::after {
+  background-color: var(--interactive-accent-hover);
+  filter: brightness(1.05);
+}
+

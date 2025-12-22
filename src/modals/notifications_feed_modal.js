@@ -9,8 +9,8 @@ export class NotificationsFeedModal extends Modal {
   async onOpen() {
     this.titleEl.setText('Smart Env notifications');
     this.contentEl.empty();
-    const container = await this.env.smart_components.render_component('notifications_feed', this.env);
-    this.contentEl.appendChild(container);
+    const event_log = await this.env.smart_components.render_component('notifications_feed', this.env);
+    this.contentEl.appendChild(event_log);
   }
 
   onClose() {

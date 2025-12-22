@@ -15,6 +15,7 @@ export async function copy_to_clipboard(params = {}) {
     max_depth: params.max_depth,
     exclusions: params.exclusions,
   });
+  this.emit_event('context:copied');
   new Notice(message);
 }
 
