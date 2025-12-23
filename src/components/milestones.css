@@ -32,6 +32,45 @@
     font-size: var(--h3-size);
   }
 
+  /*
+    Group completion badge:
+    - shows only when every checkbox in the group is checked
+    - uses :has() (no JS needed)
+    - avoids false positives on empty groups by requiring at least one checkbox
+  */
+  .sc-events-checklist__group:has(.sc-events-checklist__checkbox):not(:has(.sc-events-checklist__checkbox:not(:checked))) {
+    .sc-events-checklist__group-title::after {
+      content: "DONE";
+
+      /* layout */
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: 0.5em;
+      padding: 0.08em 0.55em;
+      border-radius: 999px;
+      white-space: nowrap;
+      vertical-align: middle;
+
+      /* typography */
+      font-size: 0.65em;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+
+      /* theme vars (with safe fallback) */
+      color: var(--color-green, var(--text-accent));
+      background-color: var(--background-secondary);
+      border: 1px solid var(--background-modifier-border);
+
+      /* subtle depth, theme-aware */
+      box-shadow:
+        0 0 0 1px var(--background-primary),
+        0 1px 3px rgba(0, 0, 0, 0.25);
+      transform: translateY(-0.03em);
+    }
+  }
+
   .sc-events-checklist__items {
     list-style: none;
     padding: 0;
@@ -138,4 +177,3 @@
   background-color: var(--interactive-accent-hover);
   filter: brightness(1.05);
 }
-
