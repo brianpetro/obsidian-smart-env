@@ -5,9 +5,10 @@ import {
 } from 'smart-utils';
 
 import {
-  EVENTS_CHECKLIST_ITEMS_BY_EVENT_KEY, 
+  EVENTS_CHECKLIST_ITEMS_BY_EVENT_KEY,
   derive_events_checklist_groups,
- } from '../utils/onboarding_events.js';
+} from '../utils/onboarding_events.js';
+
 /**
  * Determine whether an event has been emitted.
  *
@@ -91,11 +92,12 @@ export async function render(env, params = {}) {
  * @returns {Promise<HTMLElement>}
  */
 export async function post_process(env, container, params = {}) {
+  attach_item_link_listeners(container);
   return container;
 }
 
 /**
- * @param {{event_key:string, group:string, milestone:string}} item
+ * @param {{event_key:string, group:string, milestone:string, link:string, is_pro?: boolean}} item
  * @param {{checked:boolean}} state
  * @returns {string}
  */
@@ -103,8 +105,19 @@ function build_item_html(item, state) {
   const checked = state.checked === true;
   const checked_attr = checked ? 'checked' : '';
   const checked_flag = checked ? 'true' : 'false';
+  const link = typeof item.link === 'string' ? item.link : '';
+  const aria_label = `Open docs: ${item.milestone || item.event_key || 'milestone'}`;
+
   return `
-    <li class="sc-events-checklist__item" data-event-key="${escape_html(item.event_key)}" data-checked="${checked_flag}">
+    <li
+      class="sc-events-checklist__item"
+      data-event-key="${escape_html(item.event_key)}"
+      data-link="${escape_html(link)}"
+      data-checked="${checked_flag}"
+      tabindex="0"
+      role="button"
+      aria-label="${escape_html(aria_label)}"
+    >
       <label class="sc-events-checklist__label${item.is_pro ? ' pro-milestone' : ''}">
         <input class="sc-events-checklist__checkbox" type="checkbox" disabled ${checked_attr} />
         <span class="sc-events-checklist__milestone">${escape_html(item.milestone)}</span>
@@ -116,3 +129,51 @@ function build_item_html(item, state) {
   `;
 }
 
+function attach_item_link_listeners(container) {
+  if (!container) return;
+  if (container.getAttribute('data-links-enabled') === 'true') return;
+  container.setAttribute('data-links-enabled', 'true');
+
+  container.addEventListener('click', (evt) => {
+    const item_el = get_item_el_from_event(container, evt);
+    if (!item_el) return;
+
+    // Let users select/copy the event key without triggering navigation.
+    if (evt.target && evt.target.closest && evt.target.closest('.sc-events-checklist__meta')) return;
+
+    const link = get_item_link(item_el);
+    if (typeof link === 'string' && link.length > 0) {
+      window.open(link, '_external');
+    }
+  });
+}
+
+/**
+ * @param {HTMLElement} container
+ * @param {Event} evt
+ * @returns {HTMLElement|null}
+ */
+function get_item_el_from_event(container, evt) {
+  const target = evt && /** @type {any} */ (evt).target;
+  if (!target || typeof target.closest !== 'function') return null;
+  const item_el = target.closest('.sc-events-checklist__item');
+  if (!item_el) return null;
+  if (!container.contains(item_el)) return null;
+  return item_el;
+}
+
+/**
+ * @param {HTMLElement} item_el
+ * @returns {string}
+ */
+function get_item_link(item_el) {
+  const data_link = item_el.getAttribute('data-link');
+  if (typeof data_link === 'string' && data_link.length > 0) return data_link;
+
+  const event_key = item_el.getAttribute('data-event-key');
+  if (typeof event_key !== 'string' || event_key.length === 0) return '';
+
+  const item = EVENTS_CHECKLIST_ITEMS_BY_EVENT_KEY[event_key];
+  if (!item || typeof item.link !== 'string') return '';
+  return item.link;
+}

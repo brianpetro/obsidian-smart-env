@@ -31,89 +31,108 @@ export function register_first_of_event_notifications(env) {
  * Each entry is a *single* target event key mapped to:
  *  - group: relevant plugin/feature set
  *  - milestone: description of the result achieved by emitting the event
+ *  - link: SmartConnections.app docs link for the milestone
  *  - is_pro: whether the milestone is Pro-only (adds badge in UI)
  *
- * @type {Record<string, {group: string, milestone: string, is_pro?: boolean}>}
+ * @type {Record<string, {group: string, milestone: string, link: string, is_pro?: boolean}>}
  */
 export const EVENTS_CHECKLIST_ITEMS_BY_EVENT_KEY = {
   // Environment
   'sources:import_completed': {
     group: 'Environment',
     milestone: 'Initial vault import completed (all sources discovered).',
+    link: 'https://smartconnections.app/smart-environment/settings/?utm_source=milestones#sources',
   },
   'embedding:completed': {
     group: 'Environment',
     milestone: 'Initial embedding completed, you are ready to make connections!',
+    link: 'https://smartconnections.app/smart-environment/settings/?utm_source=milestones#embedding-models',
   },
 
   // Connections
   'connections:opened': {
     group: 'Connections',
     milestone: 'Opened the connections view.',
+    link: 'https://smartconnections.app/smart-connections/list-feature/?utm_source=milestones#quick-start',
   },
   'connections:drag_result': {
     group: 'Connections',
     milestone: 'Dragged a Smart Connections result into a note to create a link.',
+    link: 'https://smartconnections.app/smart-connections/list-feature/?utm_source=milestones#drag-link',
   },
   'connections:open_result': {
     group: 'Connections',
     milestone: 'Opened a Smart Connections result from the UI (list item or inline popover).',
+    link: 'https://smartconnections.app/smart-connections/list-feature/?utm_source=milestones#core-interactions',
   },
   'connections:sent_to_context': {
     group: 'Connections',
     milestone: 'Sent Connections results to Smart Context (turn discovery into a context pack).',
+    link: 'https://smartconnections.app/smart-connections/list-feature/?utm_source=milestones#send-to-context',
   },
   'connections:copied_list': {
     group: 'Connections',
     milestone: 'Copied Connections results as a list of links.',
+    link: 'https://smartconnections.app/smart-connections/list-feature/?utm_source=milestones#copy-list',
   },
   'connections:hover_preview': {
     group: 'Connections',
     milestone: 'Previewed a connection by holding cmd/ctrl while hovering the result.',
+    link: 'https://smartconnections.app/smart-connections/list-feature/?utm_source=milestones#core-interactions',
   },
 
   // Lookup
   'lookup:hover_preview': {
     group: 'Lookup',
     milestone: 'Previewed a Smart Lookup result by holding cmd/ctrl while hovering.',
+    link: 'https://smartconnections.app/smart-connections/lookup/?utm_source=milestones#understanding-results',
   },
   'lookup:get_results': {
     group: 'Lookup',
     milestone: 'Submitted a lookup query (started a semantic search).',
+    link: 'https://smartconnections.app/smart-connections/lookup/?utm_source=milestones',
   },
   'lookup:drag_result': {
     group: 'Lookup',
     milestone: 'Dragged a Smart Lookup result into a note to create a link.',
+    link: 'https://smartconnections.app/smart-connections/lookup/?utm_source=milestones#understanding-results',
   },
   'lookup:open_result': {
     group: 'Lookup',
     milestone: 'Opened a Lookup result.',
+    link: 'https://smartconnections.app/smart-connections/lookup/?utm_source=milestones#understanding-results',
   },
 
   // Context
   'context:created': {
     group: 'Context',
     milestone: 'First context created!',
+    link: 'https://smartconnections.app/smart-context/builder/?utm_source=milestones#quick-start',
   },
   'context:copied': {
     group: 'Context',
     milestone: 'Copied context to clipboard.',
+    link: 'https://smartconnections.app/smart-context/clipboard/?utm_source=milestones#copy-current',
   },
   'context_selector:open': {
     group: 'Context',
     milestone: 'Opened the Context Builder selector modal.',
+    link: 'https://smartconnections.app/smart-context/builder/?utm_source=milestones#open-builder',
   },
   'context:named': {
     group: 'Context',
     milestone: 'Named a Smart Context (created a reusable saved context).',
+    link: 'https://smartconnections.app/smart-context/builder/?utm_source=milestones#save-reuse',
   },
   'context:renamed': {
     group: 'Context',
     milestone: 'Renamed a Smart Context (increased clarity).',
+    link: 'https://smartconnections.app/smart-context/builder/?utm_source=milestones#save-reuse',
   },
   'context:copied_with_media': {
     group: 'Context',
     milestone: 'Copied context with media (images/PDF pages) for multimodal workflows.',
+    link: 'https://smartconnections.app/smart-context/clipboard/?utm_source=milestones#copy-modes',
     is_pro: true,
   },
 
@@ -121,37 +140,44 @@ export const EVENTS_CHECKLIST_ITEMS_BY_EVENT_KEY = {
   'chat_codeblock:saved_thread': {
     group: 'Chat',
     milestone: 'Started a chat in a Smart Chat codeblock (opened the loop).',
+    link: 'https://smartconnections.app/smart-chat/codeblock/?utm_source=milestones#quick-start',
   },
   'completion:completed': {
     group: 'Chat',
     milestone: 'Received the first Smart Chat response (a completion finished).',
+    link: 'https://smartconnections.app/smart-chat/api-integration/?utm_source=milestones#quick-start',
     is_pro: true,
   },
   'chat_codeblock:marked_done': {
     group: 'Chat',
     milestone: 'Marked the chat thread as done (closed the loop).',
+    link: 'https://smartconnections.app/smart-chat/codeblock/?utm_source=milestones#chat-inbox',
   },
 
   // Pro
   'smart_plugins_oauth_completed': {
     group: 'Pro',
     milestone: 'Connected account (enabled Pro plugins).',
+    link: 'https://smartconnections.app/pro-plugins/?utm_source=milestones',
   },
 
   // Inline connections (Pro)
   'inline_connections:show': {
     group: 'Inline connections',
     milestone: 'Opened inline connections in-note (used the inline workflow).',
+    link: 'https://smartconnections.app/smart-connections/inline/?utm_source=milestones',
     is_pro: true,
   },
   'inline_connections:open_result': {
     group: 'Inline connections',
     milestone: 'Opened an inline connections result (navigated from discovery to source).',
+    link: 'https://smartconnections.app/smart-connections/inline/?utm_source=milestones',
     is_pro: true,
   },
   'inline_connections:drag_result': {
     group: 'Inline connections',
     milestone: 'Inserted an inline link from an inline connection (converted discovery into a durable link).',
+    link: 'https://smartconnections.app/smart-connections/inline/?utm_source=milestones',
     is_pro: true,
   },
 };
@@ -173,8 +199,8 @@ const EVENTS_CHECKLIST_GROUP_ORDER = [
 
 /**
  * Convert the checklist map into an ordered array of groups with ordered items.
- * @param {Record<string, {group: string, milestone: string, is_pro?: boolean}>} items_by_event_key
- * @returns {Array<{group: string, items: Array<{event_key: string, group: string, milestone: string, is_pro?: boolean}>}>}
+ * @param {Record<string, {group: string, milestone: string, link: string, is_pro?: boolean}>} items_by_event_key
+ * @returns {Array<{group: string, items: Array<{event_key: string, group: string, milestone: string, link: string, is_pro?: boolean}>}>}
  */
 export function derive_events_checklist_groups(items_by_event_key) {
   const group_map = Object.entries(items_by_event_key || {}).reduce((acc, [event_key, item]) => {
@@ -182,7 +208,7 @@ export function derive_events_checklist_groups(items_by_event_key) {
     if (!acc[group]) acc[group] = [];
     acc[group].push({ event_key, group, milestone: item?.milestone || '', ...item });
     return acc;
-  }, /** @type {Record<string, Array<{event_key: string, group: string, milestone: string, is_pro?: boolean}>>} */ ({}));
+  }, /** @type {Record<string, Array<{event_key: string, group: string, milestone: string, link: string, is_pro?: boolean}>>} */ ({}));
 
   const all_groups = Object.keys(group_map);
   const order_index = EVENTS_CHECKLIST_GROUP_ORDER.reduce((acc, name, idx) => {
