@@ -122,9 +122,6 @@ function build_item_html(item, state) {
         <input class="sc-events-checklist__checkbox" type="checkbox" disabled ${checked_attr} />
         <span class="sc-events-checklist__milestone">${escape_html(item.milestone)}</span>
       </label>
-      <div class="sc-events-checklist__meta">
-        <code class="sc-events-checklist__event-key">${escape_html(item.event_key)}</code>
-      </div>
     </li>
   `;
 }
@@ -138,8 +135,9 @@ function attach_item_link_listeners(container) {
     const item_el = get_item_el_from_event(container, evt);
     if (!item_el) return;
 
-    // Let users select/copy the event key without triggering navigation.
-    if (evt.target && evt.target.closest && evt.target.closest('.sc-events-checklist__meta')) return;
+    // prevent if selecting text
+    const selection = window.getSelection();
+    if (selection && selection.toString().length > 0) return;
 
     const link = get_item_link(item_el);
     if (typeof link === 'string' && link.length > 0) {
