@@ -27,8 +27,8 @@ export class TransformersIframeEmbeddingModelAdapter extends SmartEmbedTransform
         "description": "Local, 512 tokens, 384 dim",
         "adapter": "transformers"
       },
-      "intfloat/multilingual-e5-small": {
-        "id": "intfloat/multilingual-e5-small",
+      "Xenova/multilingual-e5-small": {
+        "id": "Xenova/multilingual-e5-small",
         "batch_size": 1,
         "dims": 384,
         "max_tokens": 512,
