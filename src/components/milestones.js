@@ -8,21 +8,9 @@ import { setIcon } from 'obsidian';
 
 import {
   EVENTS_CHECKLIST_ITEMS_BY_EVENT_KEY,
+  check_if_event_emitted,
   derive_events_checklist_groups,
 } from '../utils/onboarding_events.js';
-
-/**
- * Determine whether an event has been emitted.
- *
- * IMPORTANT: Placeholder implementation.
- *
- * @param {import('../smart_env.js').SmartEnv} env
- * @param {string} event_key
- * @returns {boolean}
- */
-export function check_if_event_emitted(env, event_key) {
-  return !!env.event_logs.items[event_key];
-}
 
 /**
  * Build the HTML string for the checklist.

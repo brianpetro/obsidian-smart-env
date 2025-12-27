@@ -1,5 +1,29 @@
 import {Notice} from 'obsidian';
 
+const PLUGIN_INSTALL_EVENT_CONFIG = {
+  'connections:installed': {
+    ids: ['smart-connections'],
+  },
+  'connections_pro:installed': {
+    ids: ['smart-connections'],
+    require_pro_name: true,
+  },
+  'context:installed': {
+    ids: ['smart-context'],
+  },
+  'context_pro:installed': {
+    ids: ['smart-context'],
+    require_pro_name: true,
+  },
+  'chat:installed': {
+    ids: ['smart-chatgpt', 'smart-chat'],
+  },
+  'chat_pro:installed': {
+    ids: ['smart-chat'],
+    require_pro_name: true,
+  },
+};
+
 export function register_first_of_event_notifications(env) {
   env.events.on('event_log:first', (data) => {
     const event_key = data?.first_of_event_key;
@@ -23,6 +47,17 @@ export function register_first_of_event_notifications(env) {
       new Notice(frag, 7000);
     }
   });
+}
+
+export function check_if_event_emitted(env, event_key) {
+  const plugin_event_state = resolve_plugin_install_event(env, event_key);
+  if (plugin_event_state === true) return true;
+
+  if (env?.event_logs?.items?.[event_key]) return true;
+
+  if (plugin_event_state === false) return false;
+
+  return false;
 }
 
 /**
@@ -50,6 +85,11 @@ export const EVENTS_CHECKLIST_ITEMS_BY_EVENT_KEY = {
   },
 
   // Connections
+  'connections:installed': {
+    group: 'Connections',
+    milestone: 'Installed Smart Connections (core plugin).',
+    link: 'https://smartconnections.app/smart-connections/list-feature/?utm_source=milestones',
+  },
   'connections:opened': {
     group: 'Connections',
     milestone: 'Opened the connections view.',
@@ -79,6 +119,19 @@ export const EVENTS_CHECKLIST_ITEMS_BY_EVENT_KEY = {
     group: 'Connections',
     milestone: 'Previewed a connection by holding cmd/ctrl while hovering the result.',
     link: 'https://smartconnections.app/smart-connections/list-feature/?utm_source=milestones#core-interactions',
+  },
+  'connections:open_random': {
+    group: 'Connections',
+    milestone: 'Opened a random connection from Smart Connections.',
+    link: 'https://smartconnections.app/smart-connections/getting-started/?utm_source=milestones#open-a-random-connection',
+  },
+
+  // Connections Pro
+  'connections_pro:installed': {
+    group: 'Connections Pro',
+    milestone: 'Installed Smart Connections Pro.',
+    link: 'https://smartconnections.app/pro-plugins/?utm_source=milestones#connections-pro',
+    is_pro: true,
   },
 
   // Lookup
@@ -130,20 +183,33 @@ export const EVENTS_CHECKLIST_ITEMS_BY_EVENT_KEY = {
     link: 'https://smartconnections.app/smart-context/builder/?utm_source=milestones#save-reuse',
   },
   'context:copied_with_media': {
-    group: 'Context',
+    group: 'Context Pro',
     milestone: 'Copied context with media (images/PDF pages) for multimodal workflows.',
     link: 'https://smartconnections.app/smart-context/clipboard/?utm_source=milestones#copy-modes',
     is_pro: true,
   },
 
+  // Context Pro
+  'context_pro:installed': {
+    group: 'Context Pro',
+    milestone: 'Installed Smart Context Pro.',
+    link: 'https://smartconnections.app/pro-plugins/?utm_source=milestones#context-pro',
+    is_pro: true,
+  },
+
   // Chat
+  'chat:installed': {
+    group: 'Chat',
+    milestone: 'Installed Smart ChatGPT.',
+    link: 'https://smartconnections.app/smart-chat/?utm_source=milestones',
+  },
   'chat_codeblock:saved_thread': {
     group: 'Chat',
     milestone: 'Started a chat in a Smart Chat codeblock (opened the loop).',
     link: 'https://smartconnections.app/smart-chat/codeblock/?utm_source=milestones#quick-start',
   },
   'completion:completed': {
-    group: 'Chat',
+    group: 'Chat Pro',
     milestone: 'Received the first Smart Chat response (a completion finished).',
     link: 'https://smartconnections.app/smart-chat/api-integration/?utm_source=milestones#quick-start',
     is_pro: true,
@@ -154,6 +220,14 @@ export const EVENTS_CHECKLIST_ITEMS_BY_EVENT_KEY = {
     link: 'https://smartconnections.app/smart-chat/codeblock/?utm_source=milestones#chat-inbox',
   },
 
+  // Chat Pro
+  'chat_pro:installed': {
+    group: 'Chat Pro',
+    milestone: 'Installed Smart Chat Pro.',
+    link: 'https://smartconnections.app/pro-plugins/?utm_source=milestones#chat-pro',
+    is_pro: true,
+  },
+
   // Pro
   'smart_plugins_oauth_completed': {
     group: 'Pro',
@@ -161,21 +235,21 @@ export const EVENTS_CHECKLIST_ITEMS_BY_EVENT_KEY = {
     link: 'https://smartconnections.app/pro-plugins/?utm_source=milestones',
   },
 
-  // Inline connections (Pro)
+  // Connections Pro (Inline Connections)
   'inline_connections:show': {
-    group: 'Inline connections',
+    group: 'Connections Pro',
     milestone: 'Opened inline connections in-note (used the inline workflow).',
     link: 'https://smartconnections.app/smart-connections/inline/?utm_source=milestones',
     is_pro: true,
   },
   'inline_connections:open_result': {
-    group: 'Inline connections',
+    group: 'Connections Pro',
     milestone: 'Opened an inline connections result (navigated from discovery to source).',
     link: 'https://smartconnections.app/smart-connections/inline/?utm_source=milestones',
     is_pro: true,
   },
   'inline_connections:drag_result': {
-    group: 'Inline connections',
+    group: 'Connections Pro',
     milestone: 'Inserted an inline link from an inline connection (converted discovery into a durable link).',
     link: 'https://smartconnections.app/smart-connections/inline/?utm_source=milestones',
     is_pro: true,
@@ -194,7 +268,9 @@ const EVENTS_CHECKLIST_GROUP_ORDER = [
   'Context',
   'Chat',
   'Pro',
-  'Inline connections',
+  'Connections Pro',
+  'Context Pro',
+  'Chat Pro',
 ];
 
 /**
@@ -229,4 +305,27 @@ export function derive_events_checklist_groups(items_by_event_key) {
     const items = (group_map[group] || []).slice();
     return { group, items };
   });
+}
+
+function resolve_plugin_install_event(env, event_key) {
+  const config = PLUGIN_INSTALL_EVENT_CONFIG[event_key];
+  if (!config) return null;
+
+  const manifests = env?.plugin?.app?.plugins?.manifests || {};
+  const plugin_ids = Array.isArray(config.ids) ? config.ids : [];
+
+  for (const plugin_id of plugin_ids) {
+    const manifest = manifests[plugin_id];
+    if (!manifest) continue;
+    if (config.require_pro_name && !is_pro_manifest(manifest)) continue;
+    return true;
+  }
+
+  return false;
+}
+
+function is_pro_manifest(manifest) {
+  const name = manifest?.name;
+  if (typeof name !== 'string') return false;
+  return name.toLowerCase().includes('pro');
 }
