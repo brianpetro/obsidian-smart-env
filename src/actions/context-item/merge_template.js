@@ -1,12 +1,31 @@
 import { convert_to_time_ago } from 'smart-utils/convert_to_time_ago.js';
+
+/**
+ * Extract a context item's file name without directories or fragments.
+ * @param {string} key
+ * @returns {string}
+ */
+const derive_item_name_from_key = (key = '') => {
+  if (typeof key !== 'string' || key.trim().length === 0) return '';
+  const [filename_with_fragment] = key.split(/[\\/]/).slice(-1);
+  return (filename_with_fragment || '').split('#')[0];
+};
+const get_item_name = (context_item) => {
+  if (context_item.item_ref && typeof context_item.item_ref.get_display_name === 'function') {
+    return context_item.item_ref.get_display_name({ show_full_path: false });
+  }
+  return derive_item_name_from_key(context_item.key);
+}
+
 // THIS SHOULD BE HANDLED MUCH BETTER IN ARCHITECTURE AND REPLACEMENT LOGIC
 // LEZER?
 export async function merge_template(context_items_text, context_items) {
   const MERGE_VARS = {
     'KEY': this.key,
+    'ITEM_NAME': get_item_name(this),
     'TIME_AGO': convert_to_time_ago(this.mtime) || 'Missing',
     'LINK_DEPTH': this.data.d || 0,
-  }
+  };
   const replace_vars = async (template) => {
     const re_var = /{{([\w_]+)}}/g;
     const number_of_var_matches = (template.match(re_var) || []).length;
@@ -30,6 +49,7 @@ export const settings_config = {
         <b>Available variables:</b>
         <ul>
           <li><code>{{KEY}}</code> - Full path of the item</li>
+          <li><code>{{ITEM_NAME}}</code> - Source file or block name without folder path</li>
           <li><code>{{TIME_AGO}}</code> - Time since the item was last modified</li>
           <li><code>{{LINK_DEPTH}}</code> - Depth level of the item</li>
         </ul>

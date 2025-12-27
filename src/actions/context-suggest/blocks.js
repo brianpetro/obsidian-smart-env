@@ -24,6 +24,9 @@ export function context_suggest_blocks(params={}) {
   ;
 }
 
+/**
+ * @deprecated 2025-12-27 Use SmartBlocks.get_block_display_name instead.
+ */
 function get_block_display_name(item, settings = {}) {
   if (!item?.key) return '';
   const show_full_path = settings.show_full_path ?? true;
