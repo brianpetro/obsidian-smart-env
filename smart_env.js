@@ -212,6 +212,12 @@ export class SmartEnv extends BaseSmartEnv {
     remove_smart_plugins_plugin({ app: this.plugin.app, plugin_ids: ['smart-plugins'] });
     remove_smart_plugins_plugin({ app: this.plugin.app, plugin_ids: ['smart-editor'] });
     remove_smart_plugins_plugin({ app: this.plugin.app, plugin_ids: ['smart-sources'] });
+    remove_smart_plugins_plugin({ app: this.plugin.app, plugin_ids: ['smart-claude'] });
+    remove_smart_plugins_plugin({ app: this.plugin.app, plugin_ids: ['smart-gemini'] });
+    remove_smart_plugins_plugin({ app: this.plugin.app, plugin_ids: ['smart-deepseek'] });
+    remove_smart_plugins_plugin({ app: this.plugin.app, plugin_ids: ['smart-perplexity'] });
+    remove_smart_plugins_plugin({ app: this.plugin.app, plugin_ids: ['smart-grok'] });
+    remove_smart_plugins_plugin({ app: this.plugin.app, plugin_ids: ['smart-aistudio'] });
   }
 }
 
