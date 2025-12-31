@@ -9,11 +9,11 @@ import {
 import {
   merge_template as merge_context_template,
   default_settings as context_default_settings,
-} from './context/merge_template.js';
+} from '../../actions/context/merge_template.js';
 import {
   merge_template as merge_item_template,
   default_settings as item_default_settings,
-} from './context-item/merge_template.js';
+} from '../../actions/context-item/merge_template.js';
 
 const get_context = (settings = {}) => ({
   settings,
