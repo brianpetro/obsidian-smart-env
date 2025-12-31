@@ -1,5 +1,5 @@
 // import { SettingGroup } from 'obsidian';
-import { Setting, setIcon } from 'obsidian';
+import { Setting, setIcon, Notice } from 'obsidian';
 import { get_by_path, set_by_path } from 'smart-utils';
 // polyfill for Obsidian's SettingGroup not being available in older versions
 // jsdocs using imported SettingGroup for type hinting purposes
@@ -108,6 +108,8 @@ export function render_settings_group(group_name, scope, settings_config, contai
       console.warn(`Invalid setting config for ${setting_path}:`, setting_config);
       continue;
     }
+    const settng_is_pro = setting_config.scope_class === 'pro-setting';
+    const env_is_pro = !!scope.env?.is_pro;
     setting_group.addSetting(setting => {
       // console.log('Rendering setting:', setting);
       if (setting_config.name) setting.setName(setting_config.name);
@@ -187,8 +189,15 @@ export function render_settings_group(group_name, scope, settings_config, contai
           setting.addTextArea((text) => {
             text.setValue(String(get_by_path(scope.settings, setting_path) || ''));
             text.onChange((value) => {
+              if(settng_is_pro && !env_is_pro) {
+                new Notice('Nice try! This is a PRO feature. Please upgrade to access this setting.');
+                return;
+              }
               set_by_path(scope.settings, setting_path, value);
             });
+            if(settng_is_pro && !env_is_pro) {
+              text.setDisabled(true);
+            }
           });
           break;
         case 'slider':
