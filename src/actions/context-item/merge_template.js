@@ -1,4 +1,8 @@
 import { convert_to_time_ago } from 'smart-utils/convert_to_time_ago.js';
+import {
+  get_item_templates,
+  get_template_preset_options,
+} from '../template_presets.js';
 
 /**
  * Extract a context item's file name without directories or fragments.
@@ -36,12 +40,34 @@ export async function merge_template(context_items_text, context_items) {
     }
     return template;
   };
-  const before = await replace_vars(this.settings.template_before || default_settings.template_before);
-  const after = await replace_vars(this.settings.template_after || default_settings.template_after);
+  const templates = get_item_templates(this.settings, default_settings);
+  const before = await replace_vars(templates.template_before);
+  const after = await replace_vars(templates.template_after);
   return ['', before, context_items_text, after, ''].join('\n');
 }
 
 export const settings_config = {
+  template_preset: {
+    group: 'Item templates',
+    type: 'dropdown',
+    name: 'Select template',
+    description: 'Wraps each context item with a pre-configured template.',
+    options_callback: () => get_template_preset_options(),
+  },
+  template_before: {
+    group: 'Item templates',
+    type: 'textarea',
+    name: 'Template Before',
+    description: 'Template to wrap before the context item content.',
+    scope_class: 'pro-setting',
+  },
+  template_after: {
+    group: 'Item templates',
+    type: 'textarea',
+    name: 'Template After',
+    description: 'Template to wrap after the context item content.',
+    scope_class: 'pro-setting',
+  },
   item_explanation: {
     type: 'html',
     group: 'Item templates',
@@ -55,21 +81,10 @@ export const settings_config = {
         </ul>
     `
   },
-  template_before: {
-    group: 'Item templates',
-    type: 'textarea',
-    name: 'Template Before',
-    description: 'Template to wrap before the context item content.',
-  },
-  template_after: {
-    group: 'Item templates',
-    type: 'textarea',
-    name: 'Template After',
-    description: 'Template to wrap after the context item content.',
-  },
 };  
 
 export const default_settings = {
+  template_preset: 'xml_structured',
   template_before: '<item loc="{{KEY}}" at="{{TIME_AGO}}">',
   template_after: '</item>',
 };
