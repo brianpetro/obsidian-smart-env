@@ -2,13 +2,13 @@ const DEFAULT_TEMPLATE_PRESET = 'xml_structured';
 
 export const template_presets = {
   xml_structured: {
-    label: 'XML (default)',
+    label: 'XML-style (default)',
     context_template_before: '<context>\n{{FILE_TREE}}',
     context_template_after: '</context>',
     item_template_before: '<item loc="{{KEY}}" at="{{TIME_AGO}}" depth="{{LINK_DEPTH}}">',
     item_template_after: '</item>',
   },
-  human_readable: {
+  markdown_headings: {
     label: 'Markdown headings',
     context_template_before: '{{FILE_TREE}}',
     context_template_after: '',
@@ -18,8 +18,8 @@ export const template_presets = {
     ].join('\n'),
     item_template_after: '',
   },
-  kv_header_blocks: {
-    label: 'KV header blocks',
+  code_block_labels: {
+    label: 'Code block labels',
     context_template_before: [
       '```context-tree',
       '{{FILE_TREE}}',
@@ -27,7 +27,7 @@ export const template_presets = {
     ].join('\n'),
     context_template_after: '',
     item_template_before: [
-      '```context-item',
+      '```item-label',
       'key: {{KEY}}',
       'name: {{ITEM_NAME}}',
       'updated: {{TIME_AGO}}',
@@ -36,8 +36,8 @@ export const template_presets = {
     ].join('\n'),
     item_template_after: '',
   },
-  diff_friendly: {
-    label: 'Diff-friendly delimiters',
+  dash_delimiters: {
+    label: 'Dash delimiters',
     context_template_before: [
       '{{FILE_TREE}}',
       '',
@@ -67,7 +67,7 @@ export const template_presets = {
     ].join('\n'),
   },
   token_saver: {
-    label: 'Token-saver',
+    label: 'Compact - Token saver',
     context_template_before: '<<<CONTEXT>>>',
     context_template_after: '<<<CONTEXT_END>>>',
     item_template_before: '<<<ITEM loc="{{KEY}}" depth="{{LINK_DEPTH}}" at="{{TIME_AGO}}">>>',
