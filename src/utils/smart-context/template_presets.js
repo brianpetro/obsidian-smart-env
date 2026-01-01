@@ -69,6 +69,7 @@ export function get_item_templates(settings = {}, defaults = {}) {
   const preset_key = get_preset_key(settings);
   const preset = template_presets[preset_key];
   return {
+    ...(preset_key === 'custom' ? {json_stringify: settings.json_stringify} : {}), // only include settings.json_stringify if custom
     ...(preset && typeof preset === 'object' ? preset : {}), // include all preset fields
     template_before: get_template_value(settings, defaults, 'item_template_before', 'template_before'),
     template_after: get_template_value(settings, defaults, 'item_template_after', 'template_after'),

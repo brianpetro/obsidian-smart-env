@@ -94,6 +94,13 @@ export const settings_config = {
         </ul>
     `,
   },
+  json_stringify: {
+    group: 'Item templates',
+    type: 'toggle',
+    name: 'JSON Stringify',
+    description: 'Convert the item content to a JSON string (forces full content into single line in quotes).',
+    scope_class: 'pro-setting',
+  }
 };
 
 export const default_settings = {
