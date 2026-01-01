@@ -6,7 +6,8 @@ import {
 
 // THIS SHOULD BE HANDLED MUCH BETTER IN ARCHITECTURE AND REPLACEMENT LOGIC
 // LEZER?
-export async function merge_template(context_items_text, context_items) {
+export async function merge_template(context_items_text, params={}) {
+  const context_items = params.context_items || [];
   const MERGE_VARS = {
     'FILE_TREE': () => {
       return build_file_tree_string(context_items.map(c => c.key));

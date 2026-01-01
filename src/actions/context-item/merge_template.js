@@ -12,24 +12,30 @@ import {
 const derive_item_name_from_key = (key = '') => {
   if (typeof key !== 'string' || key.trim().length === 0) return '';
   const [filename_with_fragment] = key.split(/[\\/]/).slice(-1);
-  return (filename_with_fragment || '').split('#')[0];
+  const [source_name, ...block_parts] = (filename_with_fragment || '').split('#');
+  const src_no_ext = source_name.includes('.')
+    ? source_name.slice(0, source_name.lastIndexOf('.'))
+    : source_name
+  ;
+  if (block_parts.length > 0) {
+    return `${src_no_ext}#${block_parts.join('#')}`;
+  }
+  return src_no_ext;
 };
 
 const get_item_name = (context_item) => {
-  if (context_item.item_ref && typeof context_item.item_ref.get_display_name === 'function') {
-    return context_item.item_ref.get_display_name({ show_full_path: false });
-  }
   return derive_item_name_from_key(context_item.key);
 };
 
 // THIS SHOULD BE HANDLED MUCH BETTER IN ARCHITECTURE AND REPLACEMENT LOGIC
 // LEZER?
-export async function merge_template(context_items_text, context_items) {
+export async function merge_template(item_text, params={}) {
   const MERGE_VARS = {
     'KEY': this.key,
     'ITEM_NAME': get_item_name(this),
     'TIME_AGO': convert_to_time_ago(this.mtime) || 'Missing',
     'LINK_DEPTH': this.data.d || '0',
+    'EXT': this.item_ref?.file_type || '',
   };
 
   const replace_vars = async (template) => {
@@ -44,9 +50,12 @@ export async function merge_template(context_items_text, context_items) {
   };
 
   const templates = get_item_templates(this.settings, default_settings);
+  if(params.json_stringify || templates.json_stringify) {
+    item_text = JSON.stringify(item_text);
+  }
   const before = await replace_vars(templates.template_before);
   const after = await replace_vars(templates.template_after);
-  return ['', before, context_items_text, after, ''].join('\n');
+  return ['', before, item_text, after, ''].join('\n');
 }
 
 export const settings_config = {
@@ -78,9 +87,10 @@ export const settings_config = {
         <b>Available variables:</b>
         <ul>
           <li><code>{{KEY}}</code> - Full path of the item</li>
-          <li><code>{{ITEM_NAME}}</code> - Source file or block name without folder path</li>
+          <li><code>{{ITEM_NAME}}</code> - Source file or block name without folder path or file extension</li>
           <li><code>{{TIME_AGO}}</code> - Time since the item was last modified</li>
           <li><code>{{LINK_DEPTH}}</code> - Depth level of the item</li>
+          <li><code>{{EXT}}</code> - File extension of the item</li>
         </ul>
     `,
   },

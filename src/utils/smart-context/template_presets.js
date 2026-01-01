@@ -15,63 +15,17 @@ export const template_presets = {
     item_template_before: [
       '## {{KEY}}',
       'Updated: {{TIME_AGO}} | Depth: {{LINK_DEPTH}}',
+      '````{{EXT}}',
     ].join('\n'),
-    item_template_after: '',
+    item_template_after: '````\n',
   },
-  code_block_labels: {
-    label: 'Code block labels',
-    context_template_before: [
-      '```context-tree',
-      '{{FILE_TREE}}',
-      '```',
-    ].join('\n'),
-    context_template_after: '',
-    item_template_before: [
-      '```item-label',
-      'key: {{KEY}}',
-      'name: {{ITEM_NAME}}',
-      'updated: {{TIME_AGO}}',
-      'depth: {{LINK_DEPTH}}',
-      '```',
-    ].join('\n'),
-    item_template_after: '',
-  },
-  dash_delimiters: {
-    label: 'Dash delimiters',
-    context_template_before: [
-      '{{FILE_TREE}}',
-      '',
-      '----------------',
-      'BEGIN CONTEXT',
-      '----------------',
-    ].join('\n'),
-    context_template_after: [
-      '',
-      '----------------',
-      'END CONTEXT',
-      '----------------',
-    ].join('\n'),
-    item_template_before: [
-      '--------------------',
-      'BEGIN {{KEY}}',
-      'NAME: {{ITEM_NAME}}',
-      'UPDATED: {{TIME_AGO}}',
-      'DEPTH: {{LINK_DEPTH}}',
-      '--------------------',
-    ].join('\n'),
-    item_template_after: [
-      '',
-      '----------------',
-      'END {{KEY}}',
-      '----------------',
-    ].join('\n'),
-  },
-  token_saver: {
-    label: 'Compact - Token saver',
-    context_template_before: '<<<CONTEXT>>>',
-    context_template_after: '<<<CONTEXT_END>>>',
-    item_template_before: '<<<ITEM loc="{{KEY}}" depth="{{LINK_DEPTH}}" at="{{TIME_AGO}}">>>',
-    item_template_after: '<<<ITEM_END>>>',
+  json_structured: {
+    label: 'JSON structured',
+    context_template_before: '{\n  "context": {',
+    context_template_after: '  }\n}',
+    item_template_before: '    "{{KEY}}": { "name": "{{ITEM_NAME}}", "updated": "{{TIME_AGO}}", "depth": {{LINK_DEPTH}}, "content": ',
+    item_template_after: '    },',
+    json_stringify: true,
   },
   // PRO
   custom: {
@@ -111,7 +65,11 @@ export function get_context_templates(settings = {}, defaults = {}) {
 }
 
 export function get_item_templates(settings = {}, defaults = {}) {
+  // get preset object
+  const preset_key = get_preset_key(settings);
+  const preset = template_presets[preset_key];
   return {
+    ...(preset && typeof preset === 'object' ? preset : {}), // include all preset fields
     template_before: get_template_value(settings, defaults, 'item_template_before', 'template_before'),
     template_after: get_template_value(settings, defaults, 'item_template_after', 'template_after'),
   };
