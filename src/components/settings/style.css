@@ -26,3 +26,10 @@
     border-top: none;
   }
 }
+
+.sc-inline-confirm-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
