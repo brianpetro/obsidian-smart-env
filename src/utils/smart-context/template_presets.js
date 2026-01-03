@@ -43,11 +43,17 @@ const get_template_value = (settings, defaults, preset_field_key, settings_field
   const preset_key = get_preset_key(settings);
   const preset = template_presets[preset_key];
 
+  const value_from_settings = settings?.[settings_field_key];
+
   if (preset_key !== 'custom' && preset && typeof preset[preset_field_key] === 'string') {
     return preset[preset_field_key];
   }
 
-  return settings?.[settings_field_key] || defaults?.[settings_field_key];
+  if (preset_key === 'custom' && typeof value_from_settings === 'string') {
+    return value_from_settings;
+  }
+
+  return defaults?.[settings_field_key];
 };
 
 export function get_template_preset_options() {
@@ -68,9 +74,10 @@ export function get_item_templates(settings = {}, defaults = {}) {
   // get preset object
   const preset_key = get_preset_key(settings);
   const preset = template_presets[preset_key];
+  const include_json_stringify = preset_key === 'custom' && typeof settings.json_stringify === 'boolean';
   return {
-    ...(preset_key === 'custom' ? {json_stringify: settings.json_stringify} : {}), // only include settings.json_stringify if custom
     ...(preset && typeof preset === 'object' ? preset : {}), // include all preset fields
+    ...(include_json_stringify ? { json_stringify: settings.json_stringify } : {}),
     template_before: get_template_value(settings, defaults, 'item_template_before', 'template_before'),
     template_after: get_template_value(settings, defaults, 'item_template_after', 'template_after'),
   };
