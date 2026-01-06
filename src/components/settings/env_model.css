@@ -18,3 +18,9 @@
     color: var(--color-red);
   }
 }
+
+.smart-model-modal{
+   pre, .model-note {
+    user-select: text;
+  }
+}
