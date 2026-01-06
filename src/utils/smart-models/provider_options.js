@@ -72,7 +72,7 @@ export const provider_options = {
     },
     {
       label: 'PRO: Google Gemini (cloud)',
-      value: 'google',
+      value: 'gemini',
       disabled: true,
     },
     {
