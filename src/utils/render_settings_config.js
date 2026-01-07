@@ -150,7 +150,7 @@ export function render_settings_group(group_name, scope, settings_config, contai
           break;
         case 'number':
           setting.addText((text) => {
-            text.setValue(String(get_by_path(scope.settings, setting_path) || ''));
+            text.setValue(String(get_by_path(scope.settings, setting_path) ?? '0'));
             text.inputEl.setAttribute('type', 'number');
             text.onChange((value) => {
               const num_value = Number(value);
