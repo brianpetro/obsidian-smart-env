@@ -22,6 +22,11 @@ export function build_tree_html(items) {
  */
 export function build_path_tree(selected_items = []) {
   /**
+   * @param {object} item
+   * @returns {string}
+   */
+  const get_item_key = (item) => item?.key || item?.path || '';
+  /**
    * split_path_segments
    * Expand an item path into an ordered list of tree segments, correctly
    * handling embedded block-key syntax.
@@ -102,17 +107,23 @@ export function build_path_tree(selected_items = []) {
   // Determine which user-selected items are folders so we can skip redundant children
   const selected_folders = selected_items
     .filter((it) => {
-      const for_ext_check = it.key.includes('#')
-        ? it.key.split('#')[0]
-        : it.key;
+      const item_key = get_item_key(it);
+      if (!item_key) return false;
+      const for_ext_check = item_key.includes('#')
+        ? item_key.split('#')[0]
+        : item_key;
       return !for_ext_check.match(/\.[a-zA-Z0-9]+$/u);
     })
-    .map((it) => it.key);
+    .map((it) => get_item_key(it))
+    .filter(Boolean);
 
-  for (const { key, exists } of selected_items) {
-    if (is_redundant(key, selected_folders.filter((p) => p !== key))) continue;
+  for (const item of selected_items) {
+    const item_key = get_item_key(item);
+    const exists = item?.exists;
+    if (!item_key) continue;
+    if (is_redundant(item_key, selected_folders.filter((p) => p !== item_key))) continue;
 
-    const { segments, has_block } = split_path_segments(key);
+    const { segments, has_block } = split_path_segments(item_key);
 
     let node = root;
     let running = '';
@@ -130,7 +141,7 @@ export function build_path_tree(selected_items = []) {
       if (!node.children[seg]) {
         node.children[seg] = {
           name: seg,
-          path: is_block_leaf ? key : running,
+          path: is_block_leaf ? item_key : running,
           // For blocks we store an empty *array* so AVA can assert `children.length === 0`
           children: is_block_leaf ? [] : {},
           selected: false,
@@ -171,4 +182,3 @@ export function tree_to_html(node, selected_paths) {
 
   return `<ul>${child_html}</ul>`;
 }
-

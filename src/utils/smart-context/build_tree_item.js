@@ -33,7 +33,7 @@ export function build_tree_item(item, selected_paths, child_html = '') {
   if (item.exists === false) label_classes.push('missing');
 
   return `<li data-path="${key}" class="sc-tree-item ${is_file ? 'file' : 'dir'}${key.startsWith('external:') ? ' sc-external' : ''}">
-    ${is_file ? remove_btn : ''}
+    ${remove_btn}
     <span class="${label_classes.join(' ')}">${name}</span>
     ${connections_btn}
     ${links_btn}

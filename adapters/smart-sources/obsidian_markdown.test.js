@@ -5,6 +5,8 @@ import test from 'ava';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const stub_path = path.join(__dirname, '..', '..', 'node_modules', 'obsidian', 'index.js');
+const stub_dir = path.dirname(stub_path);
+fs.mkdirSync(stub_dir, { recursive: true });
 fs.writeFileSync(stub_path, "export const MarkdownRenderer={render:async()=>{}};export const htmlToMarkdown=()=>'';export class Component{};");
 
 const { ObsidianMarkdownSourceContentAdapter } = await import('./obsidian_markdown.js');
