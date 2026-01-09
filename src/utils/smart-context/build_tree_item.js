@@ -20,7 +20,7 @@ export function build_tree_item(item, selected_paths, child_html = '') {
     selected_paths.has(key)
     || has_children
   ) {
-    remove_btn = `<span class="sc-tree-remove" data-path="${key}">×</span>`;
+    remove_btn = `<span class="sc-context-item-remove" data-path="${key}">×</span>`;
   }
   if (
     selected_paths.has(key)

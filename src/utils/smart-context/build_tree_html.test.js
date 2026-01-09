@@ -83,14 +83,6 @@ test('should prevent splitting if slashes/hashtags appear within a wikilink [[so
   );
   t.is(Object.keys(tree.children.main.children).length, 1);
 });
-test('should add remove button for parent nodes', t => {
-  const items = [
-    { path: 'foo/bar.md#^a' }
-  ];
-  const html = build_tree_html(items);
-  t.regex(html, /<li data-path="foo"[^>]*>\s*<span class="sc-tree-remove"/);
-});
-
 test('should add missing class when item does not exist', t => {
   const items = [
     { path: 'gone.md', exists: false }

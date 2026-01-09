@@ -1,5 +1,18 @@
 import { build_tree_html } from '../../utils/smart-context/build_tree_html.js';
 import tree_styles from './tree.css';
+import { get_nested_context_item_keys } from './tree_utils.js';
+
+/**
+ * @param {import('smart-contexts').SmartContext} ctx
+ * @param {object} params
+ * @param {string} params.target_path
+ * @returns {void}
+ */
+const remove_nested_context_items = (ctx, params = {}) => {
+  const { target_path } = params;
+  const nested_keys = get_nested_context_item_keys(ctx, { target_path });
+  nested_keys.forEach((item_key) => ctx.remove_item(item_key));
+};
 export function build_html(ctx, params = {}) {
   return `
     <div class="sc-context-tree" data-context-key="${ctx.data.key}"></div>
@@ -16,6 +29,9 @@ export async function render(ctx, params = {}) {
 }
 
 export async function post_process(ctx, container, params = {}) {
+  const plugin = ctx?.env?.plugin;
+  const register_dom_event =
+    plugin?.registerDomEvent?.bind(plugin) || ((el, evt, cb) => el.addEventListener(evt, cb));
   const render_tree_leaves = () => {
     const env = ctx.env;
     const items = ctx.context_items.filter(params.filter);
@@ -37,6 +53,15 @@ export async function post_process(ctx, container, params = {}) {
     }
   }
   render_tree_leaves();
+
+  register_dom_event(container, 'click', (event) => {
+    const target = event.target.closest('.sc-context-item-remove');
+    if (!target) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const target_path = target.getAttribute('data-path');
+    remove_nested_context_items(ctx, { target_path });
+  });
   
   const disposers = [];
   disposers.push(ctx.on_event('context:updated', render_tree_leaves));
