@@ -3,6 +3,34 @@ import tree_styles from './tree.css';
 import { get_nested_context_item_keys } from './tree_utils.js';
 
 /**
+ * @param {Function} callback
+ * @returns {void}
+ */
+const schedule_next_frame = (callback) => {
+  if (typeof requestAnimationFrame === 'function') {
+    requestAnimationFrame(callback);
+    return;
+  }
+  setTimeout(callback, 0);
+};
+
+/**
+ * @param {Function} render_fn
+ * @returns {Function}
+ */
+const create_render_scheduler = (render_fn) => {
+  let render_pending = false;
+  return () => {
+    if (render_pending) return;
+    render_pending = true;
+    schedule_next_frame(() => {
+      render_pending = false;
+      render_fn();
+    });
+  };
+};
+
+/**
  * @param {import('smart-contexts').SmartContext} ctx
  * @param {object} params
  * @param {string} params.target_path
@@ -11,7 +39,7 @@ import { get_nested_context_item_keys } from './tree_utils.js';
 const remove_nested_context_items = (ctx, params = {}) => {
   const { target_path } = params;
   const nested_keys = get_nested_context_item_keys(ctx, { target_path });
-  nested_keys.forEach((item_key) => ctx.remove_item(item_key));
+  ctx.remove_items(nested_keys);
 };
 export function build_html(ctx, params = {}) {
   return `
@@ -51,7 +79,8 @@ export async function post_process(ctx, container, params = {}) {
         li.appendChild(leaf);
       });
     }
-  }
+  };
+  const schedule_render_tree_leaves = create_render_scheduler(render_tree_leaves);
   render_tree_leaves();
 
   register_dom_event(container, 'click', (event) => {
@@ -64,7 +93,7 @@ export async function post_process(ctx, container, params = {}) {
   });
   
   const disposers = [];
-  disposers.push(ctx.on_event('context:updated', render_tree_leaves));
+  disposers.push(ctx.on_event('context:updated', schedule_render_tree_leaves));
   this.attach_disposer(container, disposers);
   return container;
 }

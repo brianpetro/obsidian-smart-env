@@ -21,7 +21,6 @@ export function get_nested_context_item_keys(ctx, params = {}) {
   if (!target_path) return [];
   // const context_items = Object.values(ctx?.context_items?.items || {}) || [];
   const context_item_keys = Object.keys(ctx?.data?.context_items || {});
-  console.log('get_nested_context_item_keys', { target_path, context_item_keys });
   const nested_keys = context_item_keys
     .filter((item_key) => is_nested_context_item(item_key, target_path));
   return [...new Set(nested_keys)];

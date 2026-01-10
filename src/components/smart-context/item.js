@@ -1,5 +1,34 @@
 import styles from './styles.css';
 import { copy_to_clipboard } from 'obsidian-smart-env/utils/copy_to_clipboard.js';
+
+/**
+ * @param {Function} callback
+ * @returns {void}
+ */
+const schedule_next_frame = (callback) => {
+  if (typeof requestAnimationFrame === 'function') {
+    requestAnimationFrame(callback);
+    return;
+  }
+  setTimeout(callback, 0);
+};
+
+/**
+ * @param {Function} render_fn
+ * @returns {Function}
+ */
+const create_render_scheduler = (render_fn) => {
+  let render_pending = false;
+  return () => {
+    if (render_pending) return;
+    render_pending = true;
+    schedule_next_frame(async () => {
+      render_pending = false;
+      await render_fn();
+    });
+  };
+};
+
 export function build_html(ctx, opts = {}) {
   return `<div>
     <div class="sc-context-view" data-context-key="${ctx.data.key}">
@@ -50,6 +79,7 @@ export async function post_process(ctx, container, opts = {}) {
       footer.appendChild(meta);
     });
   };
+  const schedule_render_children = create_render_scheduler(render_children);
   
   const plugin = ctx.env.plugin;
   const app = plugin?.app || window.app;
@@ -69,7 +99,7 @@ export async function post_process(ctx, container, opts = {}) {
   });
 
   await render_children();
-  disposers.push(ctx.on_event('context:updated', render_children));
+  disposers.push(ctx.on_event('context:updated', schedule_render_children));
   this.attach_disposer(container, disposers);
   return container;
 }
@@ -95,4 +125,3 @@ function tree_dom_to_wikilinks(container) {
   container.querySelectorAll(':scope > ul > li').forEach(li => walk(li, 0));
   return lines.join('\n');
 }
-
