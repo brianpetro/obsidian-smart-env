@@ -32,7 +32,7 @@ function reset_modal_input(modal) {
 }
 
 /**
- * @param {object} ctx
+ * @param {import('smart-contexts').SmartContext} ctx
  * @param {string} [folder_path]
  * @returns {Array<{ key: string }>}
  */
@@ -42,7 +42,7 @@ function get_sources_list(ctx, folder_path) {
 }
 
 /**
- * @param {object} ctx
+ * @param {import('smart-contexts').SmartContext} ctx
  * @param {Array<{ key: string }>} sources
  * @returns {Array<{ key: string, display: string, select_action: Function, mod_select_action: Function, arrow_right_action: Function }>}
  */
