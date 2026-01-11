@@ -11,6 +11,7 @@ import {
  * @property {string} display       text shown in the modal
  * @property {function} [select_action]     optional action on select
  * @property {function} [mod_select_action] optional action on mod+select
+ * @property {function} [shift_select_action] optional action on shift+select
  */
 
 /**
@@ -103,7 +104,10 @@ export class SmartFuzzySuggestModal extends FuzzySuggestModal {
   open(params = {}) {
     super.open();
     this.modalEl.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') this.selectActiveSuggestion(e);
+      if (e.key === 'Enter') {
+        if (e.shiftKey) this.use_shift_select = true;
+        this.selectActiveSuggestion(e);
+      }
       const is_cursor_end_of_input = this.inputEl.selectionStart === this.inputEl.value.length;
       // console.log({is_cursor_end_of_input, inputEl: this.inputEl});
       if (e.target !== this.inputEl || !this.inputEl.value || is_cursor_end_of_input || Keymap.isModEvent(e)) {
@@ -209,6 +213,7 @@ export class SmartFuzzySuggestModal extends FuzzySuggestModal {
     const suggestion = selected.item;
     const is_arrow_left = this.use_arrow_left;
     const is_arrow_right = this.use_arrow_right;
+    const is_shift_select = evt?.shiftKey || this.use_shift_select;
     const is_mod_select = Keymap.isModifier(evt, 'Mod')
       || this.use_mod_select
     ;
@@ -216,6 +221,7 @@ export class SmartFuzzySuggestModal extends FuzzySuggestModal {
     this.use_arrow_right = false;
     this.use_mod_select = false;
     this.use_arrow_left = false;
+    this.use_shift_select = false;
     if (is_arrow_left) {
       if (typeof suggestion.arrow_left_action === 'function') {
         this.handle_choose_action(suggestion, 'arrow_left_action');
@@ -238,6 +244,8 @@ export class SmartFuzzySuggestModal extends FuzzySuggestModal {
       this.handle_choose_action(suggestion, 'arrow_right_action');
     } else if (is_mod_select && typeof suggestion.mod_select_action === 'function') {
       this.handle_choose_action(suggestion, 'mod_select_action');
+    } else if (is_shift_select && typeof suggestion.shift_select_action === 'function') {
+      this.handle_choose_action(suggestion, 'shift_select_action');
     } else if(typeof suggestion.select_action === 'function') {
       this.handle_choose_action(suggestion, 'select_action');
     } else {
