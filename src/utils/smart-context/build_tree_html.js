@@ -17,12 +17,12 @@ export function build_tree_html(items) {
  * file it belongs to. Any forward-slashes that appear inside the block key
  * must **not** be interpreted as path separators.
  *
- * @param {Array<{path:string}>} selected_items
+ * @param {Array<import('smart-contexts').ContextItem>} selected_items
  * @returns {Object} root tree node
  */
 export function build_path_tree(selected_items = []) {
   /**
-   * @param {object} item
+   * @param {import('smart-contexts').ContextItem} item
    * @returns {string}
    */
   const get_item_key = (item) => item?.key || item?.path || '';

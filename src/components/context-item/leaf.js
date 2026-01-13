@@ -42,7 +42,7 @@ function build_badge_html(label, class_name) {
 
 /**
  * Build the HTML string for a context tree leaf.
- * @param {object} context_item
+ * @param {import('smart-contexts').ContextItem} context_item
  * @param {object} params
  * @returns {string}
  */
