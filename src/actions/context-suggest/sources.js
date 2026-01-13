@@ -1,4 +1,8 @@
 import { context_suggest_blocks } from "./blocks.js";
+import {
+  Platform
+} from 'obsidian';
+const MOD_CHAR = Platform.isMacOS ? '⌘' : 'Ctrl';
 
 /**
  * @param {string} folder_path
@@ -56,11 +60,11 @@ function build_source_suggestions(ctx, sources) {
     mod_select_action: ({ modal } = {}) => {
       reset_modal_input(modal);
       // DO: decedied: replace with adding all blocks?
-      return context_suggest_blocks.call(ctx, { source_key: source.key });
+      return context_suggest_blocks.call(ctx, { source_key: source.key, modal });
     },
     arrow_right_action: ({ modal } = {}) => {
       reset_modal_input(modal);
-      return context_suggest_blocks.call(ctx, { source_key: source.key });
+      return context_suggest_blocks.call(ctx, { source_key: source.key, modal });
     }
   }));
 }
@@ -71,6 +75,14 @@ function build_source_suggestions(ctx, sources) {
  * @returns {Array<{ key: string, display: string, select_action: Function, mod_select_action: Function, arrow_right_action: Function }>}
  */
 export function context_suggest_sources(params = {}) {
+  console.log('context_suggest_sources', params);
+  const modal = params?.modal;
+  if (modal) {
+    modal.setInstructions([
+      { command: 'Enter', purpose: 'Add source to context' },
+      { command: `${MOD_CHAR} + Enter / →`, purpose: 'Suggest source blocks' },
+    ]);
+  }
   const sources = get_sources_list(this, params?.folder_path || '');
   return build_source_suggestions(this, sources);
 }

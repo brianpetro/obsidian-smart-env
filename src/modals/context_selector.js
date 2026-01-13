@@ -20,12 +20,16 @@ export class ContextModal extends SmartFuzzySuggestModal {
     this.params = { ...params };
     this.smart_context = smart_context;
     // this.shouldRestoreSelection = true; // does nothing?
+    this.set_default_instructions();
+  }
+  set_default_instructions() {
     this.setInstructions([
       { command: 'Enter', purpose: 'Add to context' },
       { command: `→ / ←`, purpose: 'Toggle block view' },
       { command: 'Esc', purpose: 'Close' },
     ]);
   }
+
   open(params={}) {
     this.params = { ...this.params, ...params };
     super.open();

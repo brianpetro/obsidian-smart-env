@@ -1,5 +1,9 @@
 
 export function context_suggest_blocks(params={}) {
+  params?.modal?.setInstructions([
+    { command: 'Enter', purpose: 'Add block to context' },
+    { command: '←', purpose: 'Back to sources' },
+  ]);
   let blocks = [];
   if(params.source_key) {
     const src = this.env.smart_sources.get(params.source_key);
@@ -20,6 +24,9 @@ export function context_suggest_blocks(params={}) {
       select_action: () => {
         this.add_item(block.key);
       },
+      arrow_left_action: ({modal}) => {
+        modal.update_suggestions('context_suggest_sources');
+      }
     }))
   ;
 }

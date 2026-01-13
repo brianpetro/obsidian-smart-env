@@ -29,6 +29,7 @@ export class SmartFuzzySuggestModal extends FuzzySuggestModal {
     this.plugin = plugin;
     this.item_or_collection = item_or_collection;
     this.emptyStateText = 'No suggestions available';
+    this._set_custom_instructions = false;
   }
 
 
@@ -99,6 +100,17 @@ export class SmartFuzzySuggestModal extends FuzzySuggestModal {
   static resolve_item_from_payload(env, payload) {
     const item = env?.[payload.collection_key]?.items?.[payload.item_key];
     return item;
+  }
+
+  setInstructions(instructions, is_custom = true) {
+    this._set_custom_instructions = is_custom;
+    super.setInstructions(instructions);
+  }
+
+  set_default_instructions() {
+    this.setInstructions([
+      { command: 'Enter', purpose: 'Select' }
+    ], false);
   }
 
   open(params = {}) {
@@ -178,6 +190,7 @@ export class SmartFuzzySuggestModal extends FuzzySuggestModal {
       suggest_ref = this.item_or_collection.actions[suggest_ref];
     }
     if (typeof suggest_ref === 'function') {
+      this._set_custom_instructions = false;
       const result = await suggest_ref({modal: this});
       console.log('Suggestion action result', result);
       if(Array.isArray(result) && result.length) {
@@ -191,6 +204,9 @@ export class SmartFuzzySuggestModal extends FuzzySuggestModal {
     } else {
       this.env.events.emit('notification:error', {message: 'Invalid suggestion action'});
       console.warn('Invalid suggestion action', suggest_ref);
+    }
+    if(!this._set_custom_instructions) {
+      this.set_default_instructions();
     }
   }
   get default_suggest_action_keys() {
