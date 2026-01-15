@@ -5,14 +5,7 @@ import {
   Platform
 } from 'obsidian';
 
-/**
- * @typedef {object} SuggestionItem
- * @property {string} key           key to add to a SmartContext instance
- * @property {string} display       text shown in the modal
- * @property {function} [select_action]     optional action on select
- * @property {function} [mod_select_action] optional action on mod+select
- * @property {function} [shift_select_action] optional action on shift+select
- */
+import { build_suggest_scope_items } from '../utils/smart_fuzzy_suggest_utils.js';
 
 /**
  * Base smart fuzzy suggest modal with registration helpers.
@@ -168,21 +161,9 @@ export class SmartFuzzySuggestModal extends FuzzySuggestModal {
     return [];
   }
   get_suggest_scopes() {
-    return this.default_suggest_action_keys
-      .map(action_key => {
-        const action_config = this.env.config.actions[action_key];
-        if (!action_config) return null;
-        const display_name = action_config.display_name || action_key;
-        return {
-          select_action: () => {
-            this.update_suggestions(action_key);
-          },
-          key: action_key,
-          display: display_name,
-        };
-      })
-      .filter(Boolean)
-    ;
+    return build_suggest_scope_items(this, {
+      action_keys: this.default_suggest_action_keys,
+    });
   }
 
   async update_suggestions(suggest_ref) {
