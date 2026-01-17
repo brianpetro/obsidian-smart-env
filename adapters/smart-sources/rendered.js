@@ -1,13 +1,13 @@
 import { FileSourceContentAdapter } from "smart-sources/adapters/_file.js";
 /**
- * @class BasesSourceContentAdapter
+ * @class RenderedSourceContentAdapter
  * @extends FileSourceContentAdapter
  * @description
- * Adapter for handling a SmartSource that is backed by a Markdown file.
+ * Adapter for handling a SmartSource that is backed by a Rendered file.
  * Responsible for importing file content into `item.data.blocks`, computing hashes, and identifying outlinks.
  */
-export class BasesSourceContentAdapter extends FileSourceContentAdapter {
-  static extensions = ['base'];
+export class RenderedSourceContentAdapter extends FileSourceContentAdapter {
+  static extensions = ['rendered'];
   async import() {
     /* quietly skip import (for now) */
   }
@@ -15,5 +15,5 @@ export class BasesSourceContentAdapter extends FileSourceContentAdapter {
 
 export default {
   collection: null, // No collection adapter needed for markdown sources
-  item: BasesSourceContentAdapter
+  item: RenderedSourceContentAdapter
 };

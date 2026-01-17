@@ -6,6 +6,7 @@ import { SmartSources, SmartSource } from 'smart-sources';
 import { AjsonMultiFileSourcesDataAdapter } from "smart-sources/adapters/data/ajson_multi_file.js";
 import { ObsidianMarkdownSourceContentAdapter } from "./adapters/smart-sources/obsidian_markdown.js";
 import { BasesSourceContentAdapter } from "./adapters/smart-sources/bases.js";
+import { RenderedSourceContentAdapter } from "./adapters/smart-sources/rendered.js";
 import { CanvasSourceContentAdapter } from "./adapters/smart-sources/canvas.js";
 import { ExcalidrawSourceContentAdapter } from "./adapters/smart-sources/excalidraw.js";
 import { SmartBlocks, SmartBlock } from 'smart-blocks';
@@ -122,6 +123,7 @@ const smart_env_config = {
         "excalidraw.md": ExcalidrawSourceContentAdapter,
         "base": BasesSourceContentAdapter,
         "canvas": CanvasSourceContentAdapter,
+        "rendered": RenderedSourceContentAdapter,
         // "canvas": MarkdownSourceContentAdapter,
         // "default": MarkdownSourceContentAdapter,
       },
