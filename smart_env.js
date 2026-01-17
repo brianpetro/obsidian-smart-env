@@ -40,7 +40,7 @@ export class SmartEnv extends BaseSmartEnv {
   }
   async load(force_load = false) {
     this.run_migrations();
-    if(!Platform.isMobile && !this.plugin.app.workspace.protocolHandlers.has('smart-plugins/callback')) {
+    if(!this.plugin.app.workspace.protocolHandlers.has('smart-plugins/callback')) {
       // Register protocol handler for obsidian://smart-plugins/callback
       this.plugin.registerObsidianProtocolHandler("smart-plugins/callback", async (params) => {
         await this.handle_smart_plugins_oauth_callback(params);
