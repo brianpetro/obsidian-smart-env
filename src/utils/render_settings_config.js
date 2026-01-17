@@ -1,6 +1,10 @@
 // import { SettingGroup } from 'obsidian';
 import { Setting, setIcon, Notice } from 'obsidian';
 import { get_by_path, set_by_path } from 'smart-utils';
+import {
+  build_settings_group_map,
+  resolve_group_settings_config,
+} from './settings_config_utils.js';
 // polyfill for Obsidian's SettingGroup not being available in older versions
 // jsdocs using imported SettingGroup for type hinting purposes
 /**
@@ -35,15 +39,8 @@ export function render_settings_config(settings_config, scope, container, params
   const {
     default_group_name = 'Settings',
   } = params;
-  settings_config = ensure_settings_config(settings_config, scope);
-  const group_map = Object.entries(settings_config || {})
-    .reduce((acc, [key, config]) => {
-      const group = config.group || default_group_name;
-      if (!acc[group]) acc[group] = {};
-      acc[group][key] = config;
-      return acc;
-    }, { [default_group_name]: {} })
-  ;
+  const settings_config_source = settings_config;
+  const group_map = build_settings_group_map(settings_config, scope, default_group_name);
   const settings_groups = Object.entries(group_map)
     // sort group_name first
     .sort(([a], [b]) => (a === default_group_name ? -1 : b === default_group_name ? 1 : 0))
@@ -55,6 +52,7 @@ export function render_settings_config(settings_config, scope, container, params
       const group_params = {
         ...params,
         ...(params.group_params?.[group_name] || {}),
+        settings_config_source,
       };
       return render_settings_group(
         group_name,
@@ -73,9 +71,21 @@ export function render_settings_config(settings_config, scope, container, params
  * @param {object} scope - The scope containing settings.
  * @param {import('smart-types').SettingsConfig} settings_config - The configuration for the settings.
  * @param {HTMLElement} container - The container to render the settings into.
+ * @param {object} params - Additional parameters for rendering.
+ * @param {object|object[]} [params.heading_btn] - Optional heading button config(s).
+ * @param {object|function} [params.settings_config_source] - Optional full settings config source.
  * @return {SettingGroup} The rendered settings group.
  */
 export function render_settings_group(group_name, scope, settings_config, container, params = {}) {
+  const settings_config_source = params.settings_config_source || settings_config;
+  const settings_config_group = params.settings_config_source
+    ? resolve_group_settings_config(
+      settings_config_source,
+      scope,
+      group_name,
+      params.default_group_name || 'Settings'
+    )
+    : settings_config;
   // attempt to use Obsidian's SettingGroup if available
   let SettingGroup;
   try {
@@ -88,10 +98,28 @@ export function render_settings_group(group_name, scope, settings_config, contai
   } catch (e) {
     SettingGroup = SettingGroupPolyfill; // use polyfill
   }
-  settings_config = ensure_settings_config(settings_config, scope);
+  settings_config = settings_config_group;
   const {
     heading_btn = null,
   } = params;
+  const render_group = params.settings_config_source
+    ? (group_name, scope, settings_config, container, group_params) => {
+      const group_config = resolve_group_settings_config(
+        settings_config,
+        scope,
+        group_name,
+        group_params.default_group_name || 'Settings'
+      );
+      return render_settings_group(group_name, scope, group_config, container, group_params);
+    }
+    : render_settings_group;
+  const rerender_settings_group = create_settings_group_rerender(scope, {
+    container,
+    group_name,
+    settings_config: settings_config_source,
+    group_params: params,
+    render_group,
+  });
   let setting_group = new SettingGroup(container);
   if (heading_btn && typeof heading_btn === 'object') {
     if(Array.isArray(heading_btn)) {
@@ -182,6 +210,7 @@ export function render_settings_group(group_name, scope, settings_config, contai
               if (typeof setting_config.callback === 'function') {
                 handle_config_callback(setting, value, setting_config.callback, { scope });
               }
+              rerender_settings_group();
             });
           });
           break;
@@ -283,15 +312,29 @@ async function handle_config_callback(setting, event_or_value, cb, params = {}) 
     return await cb(event_or_value, setting);
   }
 }
-function ensure_settings_config(settings_config, scope) {
-  try {
-    if (typeof settings_config === 'function') {
-      settings_config = settings_config(scope);
-    }
-  } catch (e) {
-    console.error('Error evaluating settings_config function:', e);
-    settings_config = { error: { name: 'Error', description: `Failed to load settings. ${e.message} (logged to console)` } };
-  }
-  return settings_config;
-}
 
+/**
+ * Create a rerender callback for a settings group.
+ * @param {object} scope - The scope containing settings.
+ * @param {object} params - Parameters for rerendering.
+ * @param {HTMLElement} params.container - The container to clear and re-render into.
+ * @param {string} params.group_name - The name of the settings group.
+ * @param {import('smart-types').SettingsConfig} params.settings_config - The configuration for the settings.
+ * @param {object} [params.group_params] - Additional params for the settings group.
+ * @param {function} params.render_group - Render function for the settings group.
+ * @return {function} Rerender callback.
+ */
+export function create_settings_group_rerender(scope, params = {}) {
+  const {
+    container,
+    group_name,
+    settings_config,
+    group_params = {},
+    render_group,
+  } = params;
+  return () => {
+    if (!container || typeof render_group !== 'function') return null;
+    container.replaceChildren();
+    return render_group(group_name, scope, settings_config, container, group_params);
+  };
+}
