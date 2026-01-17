@@ -1,6 +1,9 @@
 import test from 'ava';
 
-import { build_suggest_scope_items } from './smart_fuzzy_suggest_utils.js';
+import {
+  build_suggest_scope_items,
+  should_handle_arrow_left
+} from './smart_fuzzy_suggest_utils.js';
 
 test('build_suggest_scope_items filters missing handlers and uses display_name', (t) => {
   const updates = [];
@@ -57,4 +60,40 @@ test('build_suggest_scope_items dedupes keys and falls back to key label', (t) =
     result.map((item) => item.display),
     ['alpha', 'beta'],
   );
+});
+
+test('should_handle_arrow_left returns false when input has text and is focused', (t) => {
+  const input_el = {};
+  const modal = { inputEl: input_el };
+
+  const result = should_handle_arrow_left(modal, {
+    event_target: input_el,
+    input_value: 'has text',
+  });
+
+  t.false(result);
+});
+
+test('should_handle_arrow_left returns true when input is empty', (t) => {
+  const input_el = {};
+  const modal = { inputEl: input_el };
+
+  const result = should_handle_arrow_left(modal, {
+    event_target: input_el,
+    input_value: '',
+  });
+
+  t.true(result);
+});
+
+test('should_handle_arrow_left returns true when target is not input', (t) => {
+  const input_el = {};
+  const modal = { inputEl: input_el };
+
+  const result = should_handle_arrow_left(modal, {
+    event_target: {},
+    input_value: 'value',
+  });
+
+  t.true(result);
 });

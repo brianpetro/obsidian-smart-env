@@ -5,7 +5,10 @@ import {
   Platform
 } from 'obsidian';
 
-import { build_suggest_scope_items } from '../utils/smart_fuzzy_suggest_utils.js';
+import {
+  build_suggest_scope_items,
+  should_handle_arrow_left
+ } from '../utils/smart_fuzzy_suggest_utils.js';
 
 /**
  * Base smart fuzzy suggest modal with registration helpers.
@@ -114,20 +117,25 @@ export class SmartFuzzySuggestModal extends FuzzySuggestModal {
         this.selectActiveSuggestion(e);
       }
       const is_cursor_end_of_input = this.inputEl.selectionStart === this.inputEl.value.length;
+      const should_handle_arrow_right = is_cursor_end_of_input
+        || e.target !== this.inputEl
+        || !this.inputEl.value;
+      const should_handle_arrow_left_action = should_handle_arrow_left(this, {
+        event_target: e.target,
+        input_value: this.inputEl.value,
+      });
       // console.log({is_cursor_end_of_input, inputEl: this.inputEl});
-      if (e.target !== this.inputEl || !this.inputEl.value || is_cursor_end_of_input || Keymap.isModEvent(e)) {
-        if (e.key === 'ArrowLeft') {
-          this.use_arrow_left = true;
-          this.selectActiveSuggestion(e);
-          return;
-        }
-        if (e.key === 'ArrowRight' && (is_cursor_end_of_input || e.target !== this.inputEl || !this.inputEl.value)) {
-          e.preventDefault();
-          this.use_mod_select = true;
-          this.use_arrow_right = true;
-          this.selectActiveSuggestion(e);
-          return;
-        }
+      if (e.key === 'ArrowLeft' && should_handle_arrow_left_action) {
+        this.use_arrow_left = true;
+        this.selectActiveSuggestion(e);
+        return;
+      }
+      if (e.key === 'ArrowRight' && should_handle_arrow_right) {
+        e.preventDefault();
+        this.use_mod_select = true;
+        this.use_arrow_right = true;
+        this.selectActiveSuggestion(e);
+        return;
       }
     });
   }

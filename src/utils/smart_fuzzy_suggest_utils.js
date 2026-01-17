@@ -34,3 +34,26 @@ export function build_suggest_scope_items(modal, params = {}) {
     return acc;
   }, []);
 }
+
+/**
+ * Determine if the left arrow should trigger suggestion handling.
+ *
+ * @param {object} modal
+ * @param {object} params
+ * @param {EventTarget} params.event_target
+ * @param {string} params.input_value
+ * @returns {boolean}
+ */
+export const should_handle_arrow_left = (modal, params = {}) => {
+  const input_el = modal?.inputEl;
+  const event_target = params.event_target;
+  const input_value = typeof params.input_value === 'string'
+    ? params.input_value
+    : (input_el?.value || '');
+
+  if (event_target === input_el && input_value) {
+    return false;
+  }
+
+  return true;
+};
