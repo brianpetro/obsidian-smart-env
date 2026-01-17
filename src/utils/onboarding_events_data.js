@@ -87,6 +87,16 @@ export const EVENTS_CHECKLIST_ITEMS_BY_EVENT_KEY = {
     milestone: 'Opened a random connection from Smart Connections.',
     link: 'https://smartconnections.app/smart-connections/getting-started/?utm_source=milestones#open-a-random-connection',
   },
+  "connections:hidden_item": {
+    group: 'Connections',
+    milestone: 'Hidden a connection item from the list.',
+    link: 'https://smartconnections.app/smart-connections/list-feature/?utm_source=milestones#manage-noise',
+  },
+  "connections:pinned_item": {
+    group: 'Connections',
+    milestone: 'Pinned a connection item in the list.',
+    link: 'https://smartconnections.app/smart-connections/list-feature/?utm_source=milestones#manage-noise',
+  },
 
   // Connections Pro
   'connections_pro:installed': {
