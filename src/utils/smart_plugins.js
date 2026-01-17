@@ -351,3 +351,32 @@ export async function fetch_server_plugin_list(token) {
   }
   return resp.json;
 }
+
+/**
+ * Fetch referral stats for the authenticated user.
+ *
+ * @param {object} params
+ * @param {string} params.token
+ * @returns {Promise<object>}
+ */
+export async function fetch_referral_stats(params = {}) {
+  const token = String(params.token || '').trim();
+  if (!token) return { ok: false, error: 'missing_token' };
+
+  const resp = await requestUrl({
+    url: `${get_smart_server_url()}/api/referrals/stats`,
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    }
+  });
+
+  if (resp.status === 401) {
+    return { ok: false, unauthorized: true };
+  }
+  if (resp.status !== 200) {
+    throw new Error(`referrals stats error ${resp.status}: ${resp.text}`);
+  }
+
+  return resp.json;
+}
