@@ -1,5 +1,6 @@
 import { setIcon } from 'obsidian';
 import { register_status_bar_context_menu } from '../utils/register_status_bar_context_menu.js';
+import { get_status_bar_state } from '../utils/status_bar_state.js';
 import styles from './status_bar.css';
 
 /**
@@ -54,24 +55,17 @@ function post_process(env, container, opts = {}) {
   const icon_slot = container?.querySelector?.('.smart-env-status-icon');
   const status_indicator = container?.querySelector?.('.smart-env-status-indicator');
   const status_msg = container?.querySelector?.('.smart-env-status-msg');
-  const version = env.is_pro ? 'Pro' : env.constructor?.version;
-  const get_session_event_count = () => {
-    return env.event_logs?.session_events?.length || 0;
-  }
   const get_embed_queue = () => {
-    return Object.keys(env.smart_sources.sources_re_import_queue || {}).length;
+    return Object.keys(env?.smart_sources?.sources_re_import_queue || {}).length;
   }
   const render_status_elm = () => {
-    const embed_queue = get_embed_queue();
-    let message = `Smart Env${version ? ' ' + version : ''}`;
-    let title = 'Smart Environment status';
-    let indicator_count = get_session_event_count();
-    let indicator_level = env.event_logs?.notification_status || 'info';
-    if(embed_queue > 0) {
-      message = `Embed now (${embed_queue})`;
-      title = 'Click to re-import.';
-      indicator_level = 'attention';
-    }
+    const status_state = get_status_bar_state(env);
+    const {
+      message,
+      title,
+      indicator_count,
+      indicator_level,
+    } = status_state;
     if (icon_slot) {
       setIcon(icon_slot, 'smart-connections');
     }
@@ -86,12 +80,12 @@ function post_process(env, container, opts = {}) {
       if (indicator_count > 0) {
         status_indicator.dataset.count = String(indicator_count);
       } else {
-        delete status_indicator.dataset.count;
+        status_indicator.dataset.count = '';
       }
       if (indicator_level) {
         status_indicator.dataset.level = String(indicator_level);
       } else {
-        delete status_indicator.dataset.level;
+        status_indicator.dataset.level = 'info';
       }
     }
     // Text and title
