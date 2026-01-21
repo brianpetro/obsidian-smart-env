@@ -214,17 +214,17 @@ export class SmartFuzzySuggestModal extends FuzzySuggestModal {
       setIcon(icon_el, icon);
     }
 
-    const right_display_raw = (sug && Object.prototype.hasOwnProperty.call(sug, 'right_display'))
-      ? sug.right_display
-      : sug?.item?.right_display;
+    const display_right_raw = (sug && Object.prototype.hasOwnProperty.call(sug, 'display_right'))
+      ? sug.display_right
+      : sug?.item?.display_right;
 
-    const right_display = (right_display_raw === null || right_display_raw === undefined)
+    const display_right = (display_right_raw === null || display_right_raw === undefined)
       ? ''
-      : String(right_display_raw).trim();
+      : String(display_right_raw).trim();
 
-    if (right_display) {
+    if (display_right) {
       const right_el = el.createEl('span');
-      right_el.textContent = right_display;
+      right_el.textContent = display_right;
       right_el.style.marginLeft = 'auto';
       right_el.style.textAlign = 'right';
       right_el.style.whiteSpace = 'nowrap';
