@@ -206,13 +206,37 @@ export class SmartFuzzySuggestModal extends FuzzySuggestModal {
   }
   renderSuggestion(sug, el) {
     super.renderSuggestion(sug, el);
-    if (sug.item.icon) {
+
+    const icon = sug?.icon || sug?.item?.icon;
+    if (icon) {
       el.addClass('sc-modal-suggestion-has-icon');
       const icon_el = el.createEl('span');
-      setIcon(icon_el, sug.item.icon);
+      setIcon(icon_el, icon);
     }
+
+    const right_display_raw = (sug && Object.prototype.hasOwnProperty.call(sug, 'right_display'))
+      ? sug.right_display
+      : sug?.item?.right_display;
+
+    const right_display = (right_display_raw === null || right_display_raw === undefined)
+      ? ''
+      : String(right_display_raw).trim();
+
+    if (right_display) {
+      const right_el = el.createEl('span');
+      right_el.textContent = right_display;
+      right_el.style.marginLeft = 'auto';
+      right_el.style.textAlign = 'right';
+      right_el.style.whiteSpace = 'nowrap';
+      right_el.style.fontSize = 'var(--font-ui-smaller)';
+      right_el.style.color = 'var(--text-muted)';
+      right_el.style.fontVariantNumeric = 'tabular-nums';
+      right_el.style.float = 'right';
+    }
+
     return el;
   }
+
   onChooseSuggestion(selected, evt, ...other) {
     this.prevent_close = true;
     const suggestion = selected.item;
