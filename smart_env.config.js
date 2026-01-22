@@ -26,6 +26,7 @@ import { render as smart_context_meta_component } from './src/components/smart-c
 import { render as smart_context_tree_component } from './src/components/smart-context/tree.js';
 import { render as source_inspector_component } from './src/components/source_inspector.js';
 import { render as status_bar_component } from './src/components/status_bar.js';
+import { render as suggest_display_right_component } from './src/components/suggest_display_right.js';
 import { render as supporter_callout_component } from './src/components/supporter_callout.js';
 import { render as user_agreement_callout_component } from './src/components/user_agreement_callout.js';
 import { copy_to_clipboard as context_copy_to_clipboard_action } from './src/actions/context/copy_to_clipboard.js';
@@ -76,6 +77,7 @@ export const smart_env_config = {
     smart_context_tree: { render: smart_context_tree_component },
     source_inspector: { render: source_inspector_component },
     status_bar: { render: status_bar_component },
+    suggest_display_right: { render: suggest_display_right_component },
     supporter_callout: { render: supporter_callout_component },
     user_agreement_callout: { render: user_agreement_callout_component }
   },

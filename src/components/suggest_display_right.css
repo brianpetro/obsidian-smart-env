@@ -1,0 +1,9 @@
+.sc-modal-suggestion-right {
+  margin-left: auto;
+  text-align: right;
+  white-space: nowrap;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  float: right;
+}

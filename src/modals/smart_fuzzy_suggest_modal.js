@@ -223,15 +223,9 @@ export class SmartFuzzySuggestModal extends FuzzySuggestModal {
       : String(display_right_raw).trim();
 
     if (display_right) {
-      const right_el = el.createEl('span');
-      right_el.textContent = display_right;
-      right_el.style.marginLeft = 'auto';
-      right_el.style.textAlign = 'right';
-      right_el.style.whiteSpace = 'nowrap';
-      right_el.style.fontSize = 'var(--font-ui-smaller)';
-      right_el.style.color = 'var(--text-muted)';
-      right_el.style.fontVariantNumeric = 'tabular-nums';
-      right_el.style.float = 'right';
+      this.env.smart_components.render_component('suggest_display_right', display_right).then((right_el) => {
+        el.appendChild(right_el);
+      });
     }
 
     return el;
