@@ -206,7 +206,20 @@ export async function post_process(env, container, params = {}) {
     empty_container(referral_container);
 
     const token = String(params.token || '').trim();
-    if (!token) return;
+    if (!token) {
+      const setting = new Setting(referral_container)
+        .setName('Get 30 days of Pro for each referral')
+        .setDesc('Give $30 off Pro. Get 30 days of Pro after their first paid invoice succeeds.');
+
+      setting.addButton((btn) => {
+        btn.setButtonText('Start free trial');
+        btn.onClick(() => {
+          window.open('https://smartconnections.app/pro-plugins/', '_external');
+        });
+      });
+
+      return;
+    }
 
     const sub_exp = Number(params.sub_exp ?? 0) || 0;
     if (sub_exp && sub_exp < Date.now()) return;
@@ -218,7 +231,7 @@ export async function post_process(env, container, params = {}) {
 
       const setting = new Setting(referral_container)
         .setName('Referral link')
-        .setDesc('Share your link to give $30 off Pro and earn 30 days of Pro credit.');
+        .setDesc('Give $30 off Pro. Get 30 days of Pro after their first paid invoice succeeds.');
 
       setting.addButton((btn) => {
         btn.setButtonText('Copy link');
