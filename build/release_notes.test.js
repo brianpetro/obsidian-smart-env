@@ -43,6 +43,11 @@ test('parse_cli_options surfaces draft flag', (t) => {
   t.false(parse_cli_options([]).draft);
 });
 
+test('parse_cli_options surfaces replace-existing flag', (t) => {
+  t.true(parse_cli_options(['--replace-existing']).replace_existing);
+  t.false(parse_cli_options([]).replace_existing);
+});
+
 test('parse_patches reads patch sections from markdown', (t) => {
   const md = ['intro', '## patch `v1.1.0`', '- fix', '## patch `v1.0.0`', '- prev'].join('\n');
   const patches = parse_patches(md);

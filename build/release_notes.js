@@ -51,6 +51,7 @@ function build_combined_notes(current_version, prior_notes, user_desc) {
 /**
  * @typedef {Object} CliOptions
  * @property {boolean} draft
+ * @property {boolean} replace_existing
  */
 
 /**
@@ -61,6 +62,7 @@ function build_combined_notes(current_version, prior_notes, user_desc) {
 function parse_cli_options(argv) {
   return {
     draft: argv.includes('--draft'),
+    replace_existing: argv.includes('--replace-existing'),
   };
 }
 
