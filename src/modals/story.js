@@ -17,10 +17,15 @@ export class StoryModal extends Modal {
   onOpen() {
     this.titleEl.setText(this.title);
     this.modalEl.addClass('sc-story-modal');
+    this.modalEl.style.width = '80%';
+    this.modalEl.style.height = '80%';
 
     const container = this.contentEl.createEl('div', {
       cls: 'sc-story-container',
     });
+    container.style.display = 'flex';
+    container.style.flexDirection = 'column';
+    container.style.height = '100%';
 
     if (Platform.isMobile) {
       // Add a button to open the URL externally
