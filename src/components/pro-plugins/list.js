@@ -208,8 +208,8 @@ export async function post_process(env, container, params = {}) {
     const token = String(params.token || '').trim();
     if (!token) {
       const setting = new Setting(referral_container)
-        .setName('Get 30 days of Pro for each referral')
-        .setDesc('Give $30 off Pro. Get 30 days of Pro after their first paid invoice succeeds.');
+        .setName('Give $30 off Pro. Get 30 days of Pro')
+        .setDesc('Start a free trial to unlock your referral link.');
 
       setting.addButton((btn) => {
         btn.setButtonText('Start free trial');
@@ -231,7 +231,7 @@ export async function post_process(env, container, params = {}) {
 
       const setting = new Setting(referral_container)
         .setName('Referral link')
-        .setDesc('Give $30 off Pro. Get 30 days of Pro after their first paid invoice succeeds.');
+        .setDesc('Give $30 off Pro. Get 30 days of Pro.');
 
       setting.addButton((btn) => {
         btn.setButtonText('Copy link');
