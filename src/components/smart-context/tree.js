@@ -40,6 +40,8 @@ const remove_nested_context_items = (ctx, params = {}) => {
   const { target_path } = params;
   const nested_keys = get_nested_context_item_keys(ctx, { target_path });
   ctx.remove_items(nested_keys);
+  // add removed folder item to data
+  ctx.data.context_items[target_path] = { exclude: true, key: target_path, folder: true };
 };
 export function build_html(ctx, params = {}) {
   return `
