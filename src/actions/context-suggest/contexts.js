@@ -16,7 +16,7 @@
  * @property {any} [item]
  */
 
-export const display_name = 'Named contexts';
+export const display_name = 'Add named contexts';
 
 /**
  * @param {any} env

@@ -34,6 +34,7 @@ export class ContextModal extends SmartFuzzySuggestModal {
     this.params = { ...this.params, ...params };
     super.open();
     this.render(this.params);
+    // console.log('Opened context selector modal with params:', {ctx: this, params});
   }
 
   async render(params=this.params) {
