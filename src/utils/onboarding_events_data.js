@@ -205,13 +205,6 @@ export const EVENTS_CHECKLIST_ITEMS_BY_EVENT_KEY = {
     is_pro: true,
   },
 
-  // Pro
-  'smart_plugins_oauth_completed': {
-    group: 'Pro',
-    milestone: 'Connected account (enabled Pro plugins).',
-    link: 'https://smartconnections.app/pro-plugins/?utm_source=milestones',
-  },
-
   // Connections Pro (Inline Connections)
   'inline_connections:show': {
     group: 'Connections Pro',
@@ -229,6 +222,25 @@ export const EVENTS_CHECKLIST_ITEMS_BY_EVENT_KEY = {
     group: 'Connections Pro',
     milestone: 'Inserted an inline link from an inline connection (converted discovery into a durable link).',
     link: 'https://smartconnections.app/smart-connections/inline/?utm_source=milestones',
+    is_pro: true,
+  },
+
+  // Pro
+  'smart_plugins_oauth_completed': {
+    group: 'Pro',
+    milestone: 'Connected account (enabled Pro plugins).',
+    link: 'https://smartconnections.app/pro-plugins/?utm_source=milestones',
+  },
+  'referrals:copied_link': {
+    group: 'Pro',
+    milestone: 'Copied your referral link to share Pro.',
+    link: 'https://smartconnections.app/pro-plugins/?utm_source=milestones#referrals',
+    is_pro: true,
+  },
+  'referrals:opened_dashboard': {
+    group: 'Pro',
+    milestone: 'Opened the referrals dashboard to view bonuses.',
+    link: 'https://smartconnections.app/my-referrals/?utm_source=milestones',
     is_pro: true,
   },
 };

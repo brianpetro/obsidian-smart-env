@@ -89,6 +89,11 @@ export async function post_process(env, container, params = {}) {
     el.innerHTML = '';
   };
 
+  const emit_referral_event = (event_key) => {
+    if (!env?.events || typeof env.events.emit !== 'function') return;
+    env.events.emit(event_key, { event_source: 'pro_plugins_referrals' });
+  };
+
   const render_manual_login_link = (login_url) => {
     if (!login_container) return;
     if (!login_url) return;
@@ -238,6 +243,7 @@ export async function post_process(env, container, params = {}) {
         btn.onClick(async () => {
           const ok = await copy_to_clipboard(referral_link);
           new Notice(ok ? 'Referral link copied.' : 'Copy failed. Please try again.');
+          if (ok) emit_referral_event('referrals:copied_link');
         });
       });
 
@@ -245,6 +251,7 @@ export async function post_process(env, container, params = {}) {
         btn.setButtonText('Open referrals');
         btn.onClick(() => {
           window.open('https://smartconnections.app/my-referrals/', '_external');
+          emit_referral_event('referrals:opened_dashboard');
         });
       });
     } catch (err) {
