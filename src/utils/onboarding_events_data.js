@@ -254,12 +254,12 @@ const EVENTS_CHECKLIST_GROUP_ORDER = [
   'Environment',
   'Connections',
   'Lookup',
-  'Context',
   'Chat',
-  'Pro',
   'Connections Pro',
+  'Context',
   'Context Pro',
   'Chat Pro',
+  'Pro',
 ];
 
 /**
