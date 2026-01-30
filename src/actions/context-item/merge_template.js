@@ -65,6 +65,12 @@ export const settings_config = {
     name: 'Select template',
     description: 'Wraps each context item with a pre-configured template.',
     options_callback: () => get_template_preset_options(),
+    callback(template_value) {
+      const is_pro = this?.env?.is_pro;
+      if (!is_pro) return;
+      if (template_value !== 'custom') return;
+      this.emit_event('context_item:custom_template_set');
+    },
   },
   template_before: {
     group: 'Item templates',

@@ -165,6 +165,18 @@ export const EVENTS_CHECKLIST_ITEMS_BY_EVENT_KEY = {
     link: 'https://smartconnections.app/smart-context/clipboard/?utm_source=milestones#copy-modes',
     is_pro: true,
   },
+  'context:custom_template_set': {
+    group: 'Context Pro',
+    milestone: 'Set a custom context template.',
+    link: 'https://smartconnections.app/smart-context/settings/?utm_source=milestones#context-templates',
+    is_pro: true,
+  },
+  'context_item:custom_template_set': {
+    group: 'Context Pro',
+    milestone: 'Set a custom context item template.',
+    link: 'https://smartconnections.app/smart-context/settings/?utm_source=milestones#item-templates',
+    is_pro: true,
+  },
 
   // Context Pro
   'context_pro:installed': {
