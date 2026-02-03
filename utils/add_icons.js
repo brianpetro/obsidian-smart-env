@@ -104,6 +104,22 @@ export function add_inline_connections_icon() {
   addIcon("smart-inline-connections", smart_inline_connections_svg);
 }
 
+const smart_footer_connections_svg = svg_wrap_24(`
+  <path d="M4 6h16"></path>
+  <path d="M4 12h16"></path>
+  <circle cx="12" cy="18" r="3"></circle>
+  <circle cx="7" cy="18" r="1" fill="currentColor" stroke="none"></circle>
+  <circle cx="17" cy="18" r="1" fill="currentColor" stroke="none"></circle>
+`);
+/**
+ * Registers the Footer Connections icon (small-size safe).
+ * Icon names: smart-footer-connections
+ */
+export function add_footer_connections_icon() {
+  addIcon("smart-footer-connections", smart_footer_connections_svg);
+}
+
+
 /**
  * Convenience: register all "sc-*" icons in this module.
  */
@@ -111,4 +127,5 @@ export function add_smart_icons() {
   add_smart_copy_context_icon();
   add_smart_context_icon();
   add_inline_connections_icon();
+  add_footer_connections_icon();
 }
