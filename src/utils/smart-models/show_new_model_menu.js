@@ -7,6 +7,7 @@ import { SmartModelModal } from '../../modals/smart_model_modal.js';
 export function show_new_model_menu(models_collection, event, params = {}) {
   const providers = (provider_options[models_collection.collection_key] || [])
     .map(p => ({ ...p, disabled: !models_collection.env_config.providers[p.value] }));
+    console.log('show_new_model_menu providers', providers);
   if (providers.length === 0) {
     if (event.target.tagName.toLowerCase() === 'button') {
       event.target.disabled = true;

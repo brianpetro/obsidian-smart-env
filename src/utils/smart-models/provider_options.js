@@ -49,6 +49,11 @@ export const provider_options = {
       value: 'azure',
       disabled: true,
     },
+    {
+      label: 'Experimental: Lite LLM (self-hosted proxy)',
+      value: 'litellm',
+      disabled: true,
+    }
   ],
   embedding_models: [
     {

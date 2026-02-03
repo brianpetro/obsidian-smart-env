@@ -1,0 +1,3 @@
+.modal-content.smart-model-modal .setting-component:has(.dropdown-no-options) {
+  display: block;
+}

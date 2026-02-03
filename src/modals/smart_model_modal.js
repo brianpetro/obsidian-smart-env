@@ -1,4 +1,5 @@
 import { Modal } from 'obsidian';
+import styles from './smart_model_modal.css';
 
 /**
  * @typedef {object} EditModelModalOpts
@@ -44,6 +45,7 @@ export class SmartModelModal extends Modal {
     container.appendChild(model_actions_bar);
 
     const settings = model.settings_config;
+    this.env.smart_view.apply_style_sheet(styles);
     // TODO: update callbacks to functions or add string handling to render_settings_config before migration
     // ex. `model_changed` callback
     const form = await this.env.smart_view.render_settings(settings, {
