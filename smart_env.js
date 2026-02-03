@@ -6,7 +6,12 @@ import {
 import { SmartEnv as BaseSmartEnv } from 'smart-environment';
 import { merge_env_config } from 'smart-environment/utils/merge_env_config.js';
 import default_config from './default.config.js';
-import { add_smart_chat_icon, add_smart_connections_icon, add_smart_lookup_icon } from './utils/add_icons.js';
+import {
+  add_smart_icons,
+  add_smart_chat_icon,
+  add_smart_connections_icon,
+  add_smart_lookup_icon,
+} from './utils/add_icons.js';
 import { SmartNotices } from "smart-notices/smart_notices.js"; // TODO: move to jsbrains
 import { exchange_code_for_tokens, install_smart_plugins_plugin, get_smart_server_url, enable_plugin } from './utils/sc_oauth.js';
 import { register_completion_variable_adapter_replacements } from './utils/register_completion_variable_adapter_replacements.js';
@@ -27,6 +32,7 @@ export class SmartEnv extends BaseSmartEnv {
     add_smart_chat_icon();
     add_smart_connections_icon();
     add_smart_lookup_icon();
+    add_smart_icons();
     if(window.smart_env && !window.smart_env.constructor.version) {
       const update_notice = "Detected ancient SmartEnv. Removing it to prevent issues with new plugins. Make sure your Smart Plugins are up-to-date!";
       console.warn(update_notice);
