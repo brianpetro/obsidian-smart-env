@@ -10,6 +10,7 @@ import {
   enqueue_event_key,
   get_idle_delay_ms,
   is_valid_milestone_event,
+  update_visibility_idle_state,
 } from './onboarding_events_utils.js';
 
 export { EVENTS_CHECKLIST_ITEMS_BY_EVENT_KEY, check_if_event_emitted, derive_events_checklist_groups };
@@ -63,10 +64,18 @@ export function register_first_of_event_notifications(env) {
   };
 
   const handle_visibility_change = () => {
-    if (!is_window_visible()) return;
-    if (should_restart_idle) {
+    const is_visible = is_window_visible();
+    const visibility_state = update_visibility_idle_state({
+      is_visible,
+      should_restart_idle,
+    });
+
+    if (visibility_state.clear_idle_timeout) clear_idle_timeout();
+    should_restart_idle = visibility_state.should_restart_idle;
+    if (!is_visible) return;
+
+    if (visibility_state.reset_last_input_at) {
       last_input_at = Date.now();
-      should_restart_idle = false;
     }
     schedule_next_notice();
   };
@@ -109,6 +118,7 @@ export function register_first_of_event_notifications(env) {
     if (is_notice_active || notice_queue.length === 0) return;
     if (!is_window_visible()) {
       should_restart_idle = true;
+      clear_idle_timeout();
       return;
     }
 
@@ -130,13 +140,15 @@ export function register_first_of_event_notifications(env) {
   register_input_listeners();
   register_visibility_listener();
 
-  env.events.on('event_log:first', (data) => {
+  const handle_first_event = (data) => {
     const event_key = data?.first_of_event_key;
     if (!is_valid_milestone_event(event_key, { items_by_event_key: EVENTS_CHECKLIST_ITEMS_BY_EVENT_KEY })) return;
 
     notice_queue = enqueue_event_key(notice_queue, { event_key });
     schedule_next_notice();
-  });
+  };
+
+  env?.events?.on?.('event_log:first', handle_first_event);
 
   return () => {
     teardown_callbacks.forEach((teardown) => teardown());
@@ -144,6 +156,11 @@ export function register_first_of_event_notifications(env) {
     if (notice_timeout_id) {
       clearTimeout(notice_timeout_id);
       notice_timeout_id = null;
+    }
+    if (env?.events?.off) {
+      env.events.off('event_log:first', handle_first_event);
+    } else if (env?.events?.removeListener) {
+      env.events.removeListener('event_log:first', handle_first_event);
     }
   };
 }

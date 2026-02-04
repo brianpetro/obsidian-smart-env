@@ -2,6 +2,37 @@ export const DEFAULT_IDLE_DELAY_MS = 3000;
 
 /**
  * @param {object} params
+ * @param {boolean} params.is_visible
+ * @param {boolean} params.should_restart_idle
+ * @returns {{ should_restart_idle: boolean, reset_last_input_at: boolean, clear_idle_timeout: boolean }}
+ */
+export function update_visibility_idle_state(params = {}) {
+  const { is_visible, should_restart_idle } = params;
+  if (!is_visible) {
+    return {
+      should_restart_idle: true,
+      reset_last_input_at: false,
+      clear_idle_timeout: true,
+    };
+  }
+
+  if (should_restart_idle) {
+    return {
+      should_restart_idle: false,
+      reset_last_input_at: true,
+      clear_idle_timeout: false,
+    };
+  }
+
+  return {
+    should_restart_idle: false,
+    reset_last_input_at: false,
+    clear_idle_timeout: false,
+  };
+}
+
+/**
+ * @param {object} params
  * @param {number} [params.last_input_at]
  * @param {number} [params.now]
  * @param {number} [params.idle_delay_ms]

@@ -5,6 +5,7 @@ import {
   enqueue_event_key,
   get_idle_delay_ms,
   is_valid_milestone_event,
+  update_visibility_idle_state,
 } from './onboarding_events_utils.js';
 
 test('get_idle_delay_ms returns remaining idle delay', (t) => {
@@ -35,4 +36,24 @@ test('is_valid_milestone_event checks map membership', (t) => {
   t.true(is_valid_milestone_event('events:ok', { items_by_event_key: items }));
   t.false(is_valid_milestone_event('events:nope', { items_by_event_key: items }));
   t.false(is_valid_milestone_event(null, { items_by_event_key: items }));
+});
+
+test('update_visibility_idle_state resets idle when returning visible', (t) => {
+  t.deepEqual(update_visibility_idle_state({ is_visible: false, should_restart_idle: false }), {
+    should_restart_idle: true,
+    reset_last_input_at: false,
+    clear_idle_timeout: true,
+  });
+
+  t.deepEqual(update_visibility_idle_state({ is_visible: true, should_restart_idle: true }), {
+    should_restart_idle: false,
+    reset_last_input_at: true,
+    clear_idle_timeout: false,
+  });
+
+  t.deepEqual(update_visibility_idle_state({ is_visible: true, should_restart_idle: false }), {
+    should_restart_idle: false,
+    reset_last_input_at: false,
+    clear_idle_timeout: false,
+  });
 });
