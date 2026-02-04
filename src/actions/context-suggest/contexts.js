@@ -154,7 +154,7 @@ export async function context_suggest_contexts(params = {}) {
   if (modal?.setInstructions) {
     modal.setInstructions([
       { command: 'Enter', purpose: 'Merge selected context into current context' },
-      { command: 'Mod + Enter', purpose: 'Open in Context Selector' },
+      { command: '⌘/Ctrl + Enter', purpose: 'Open in Context Selector' },
     ]);
   }
 
