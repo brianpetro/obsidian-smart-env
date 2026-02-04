@@ -137,7 +137,7 @@ export function render_settings_group(group_name, scope, settings_config, contai
       continue;
     }
     const settng_is_pro = setting_config.scope_class === 'pro-setting';
-    const env_is_pro = !!scope.env?.is_pro;
+    const env_is_pro = !!scope.env?.is_pro || !!scope.is_pro;
     setting_group.addSetting(setting => {
       // console.log('Rendering setting:', setting);
       if (setting_config.name) setting.setName(setting_config.name);
