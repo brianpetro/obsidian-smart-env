@@ -3,7 +3,7 @@
  * @property {string} key           key to add to a SmartContext instance
  * @property {string} display       text shown in the modal
  * @property {function} [select_action]     optional action on select
- * @property {function} [mod_select_action] optional action on mod+select
+ * @property {function} [mod_select_action] optional action on ⌘/Ctrl+select
  * @property {function} [shift_select_action] optional action on shift+select
  */
 
