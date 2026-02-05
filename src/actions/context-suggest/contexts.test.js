@@ -31,6 +31,9 @@ const build_ctx = () => {
     add_items: (items) => {
       added_items.push(...items);
     },
+    add_item: (item) => {
+      added_items.push(item);
+    },
     emit_event: (event_name, payload) => {
       emitted_events.push({ event_name, payload });
     },
@@ -58,7 +61,7 @@ const build_modal = () => ({
   },
 });
 
-test('context_suggest_contexts sets instructions and merges items', async (t) => {
+test('context_suggest_contexts returns item suggestions on select', async (t) => {
   const { ctx, added_items } = build_ctx();
   const modal = build_modal();
 
@@ -67,21 +70,36 @@ test('context_suggest_contexts sets instructions and merges items', async (t) =>
   t.true(modal.instructions_log.length > 0);
   t.true(suggestions.length > 0);
 
-  await suggestions[0].select_action({ modal });
+  const item_suggestions = await suggestions[0].select_action({ modal });
+  t.true(Array.isArray(item_suggestions));
+  t.true(item_suggestions.length > 0);
+  t.is(added_items.length, 0);
+
+  await item_suggestions[0].select_action({ modal });
   t.true(added_items.length > 0);
   t.true(modal.instructions_log.length > 1);
 });
 
-test('context_suggest_contexts mod_select_action emits open event', async (t) => {
-  const { ctx, emitted_events } = build_ctx();
+test('context_suggest_contexts arrow_right_action mirrors select behavior', async (t) => {
+  const { ctx } = build_ctx();
+  const modal = build_modal();
+
+  const suggestions = await context_suggest_contexts.call(ctx, { modal });
+  const item_suggestions = await suggestions[0].arrow_right_action({ modal });
+
+  t.true(Array.isArray(item_suggestions));
+  t.true(item_suggestions.length > 0);
+});
+
+test('context_suggest_contexts mod_select_action adds all items', async (t) => {
+  const { ctx, added_items } = build_ctx();
   const modal = build_modal();
 
   const suggestions = await context_suggest_contexts.call(ctx, { modal });
   await suggestions[0].mod_select_action({ modal });
 
-  t.true(modal.closed);
-  t.is(emitted_events.length, 1);
-  t.is(emitted_events[0].event_name, 'context_selector:open');
+  t.true(added_items.length > 0);
+  t.true(added_items.every((item) => item.from_named_context === 'Alpha'));
 });
 
 test('context_suggest_contexts stores named context line for codeblock ctx', async (t) => {
@@ -89,7 +107,7 @@ test('context_suggest_contexts stores named context line for codeblock ctx', asy
   const modal = build_modal();
 
   const suggestions = await context_suggest_contexts.call(codeblock_ctx, { modal });
-  await suggestions[0].select_action({ modal });
+  await suggestions[0].mod_select_action({ modal });
 
   t.deepEqual(codeblock_ctx.data.codeblock_named_contexts, ['Alpha']);
   t.true(added_items.length > 0);

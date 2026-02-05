@@ -19,6 +19,31 @@
 export const display_name = 'Add named contexts';
 
 /**
+ * @param {object} modal
+ * @returns {void}
+ */
+function set_named_context_list_instructions(modal) {
+  modal?.setInstructions?.([
+    { command: 'Enter / →', purpose: 'Browse context items' },
+    { command: '⌘/Ctrl + Enter', purpose: 'Add all items from context' },
+  ]);
+}
+
+/**
+ * @param {object} modal
+ * @param {object} params
+ * @param {string} params.context_name
+ * @returns {void}
+ */
+function set_named_context_item_instructions(modal, params = {}) {
+  const context_name = params.context_name;
+  modal?.setInstructions?.([
+    { command: 'Enter', purpose: `Add item from ${context_name || 'context'}` },
+    { command: '←', purpose: 'Back to named contexts' },
+  ]);
+}
+
+/**
  * @param {any} env
  * @returns {any[]}
  */
@@ -100,25 +125,6 @@ function build_codeblock_named_context_items(ctx, params = {}) {
 }
 
 /**
- * @param {import('smart-contexts').SmartContext} ctx
- * @param {object} params
- * @param {any} params.other_ctx
- * @param {string} params.context_name
- * @returns {Array<{ key: string, d: number, from_named_context: string }>}
- */
-function apply_codeblock_named_context(ctx, params = {}) {
-  const other_ctx = params.other_ctx;
-  const context_name = params.context_name;
-  const items = get_items_from_context(other_ctx);
-  const payloads = build_codeblock_named_context_items(ctx, { items, context_name });
-
-  update_codeblock_named_contexts(ctx, { context_name });
-  ctx.add_items(payloads);
-
-  return payloads;
-}
-
-/**
  * @param {any} other_ctx
  * @returns {Array<{ key: string, d: number }>}
  */
@@ -141,6 +147,110 @@ function get_items_from_context(other_ctx) {
 }
 
 /**
+ * @param {import('smart-contexts').SmartContext} ctx
+ * @param {object} params
+ * @param {any} params.other_ctx
+ * @param {string} params.context_name
+ * @param {boolean} [params.include_named_context]
+ * @returns {Array<{ key: string, d: number, from_named_context?: string }>}
+ */
+function build_named_context_item_payloads(ctx, params = {}) {
+  const other_ctx = params.other_ctx;
+  const context_name = params.context_name;
+  const include_named_context = Boolean(params.include_named_context);
+  const items = get_items_from_context(other_ctx);
+  if (is_codeblock_context(ctx)) {
+    return build_codeblock_named_context_items(ctx, { items, context_name });
+  }
+  const normalized_items = normalize_items_preserving_depth(ctx, items);
+  if (!include_named_context) return normalized_items;
+  return normalized_items.map((item) => ({
+    ...item,
+    from_named_context: context_name,
+  }));
+}
+
+/**
+ * @param {import('smart-contexts').SmartContext} ctx
+ * @param {Array<{ key: string, d: number, from_named_context?: string }>} payloads
+ * @returns {void}
+ */
+function add_context_payloads(ctx, payloads = []) {
+  if (!payloads.length) return;
+  if (typeof ctx?.add_items === 'function') {
+    ctx.add_items(payloads);
+    return;
+  }
+  if (typeof ctx?.add_item === 'function') {
+    payloads.forEach((payload) => ctx.add_item(payload));
+  }
+}
+
+/**
+ * @param {import('smart-contexts').SmartContext} ctx
+ * @param {object} params
+ * @param {any} params.other_ctx
+ * @param {string} params.context_name
+ * @param {Array<{ key: string, d: number, from_named_context?: string }>} [params.payloads]
+ * @param {boolean} [params.include_named_context]
+ * @returns {Array<{ key: string, d: number, from_named_context?: string }>}
+ */
+function add_named_context_items(ctx, params = {}) {
+  const payloads = Array.isArray(params.payloads)
+    ? params.payloads
+    : build_named_context_item_payloads(ctx, params);
+  if (!payloads.length) return [];
+  if (is_codeblock_context(ctx)) {
+    update_codeblock_named_contexts(ctx, { context_name: params.context_name });
+  }
+  add_context_payloads(ctx, payloads);
+  return payloads;
+}
+
+/**
+ * @param {unknown} depth
+ * @returns {string}
+ */
+function format_depth_label(depth) {
+  if (!Number.isFinite(depth)) return '';
+  return `depth ${depth}`;
+}
+
+/**
+ * @param {import('smart-contexts').SmartContext} ctx
+ * @param {object} params
+ * @param {any} params.other_ctx
+ * @param {string} params.context_name
+ * @param {object} params.modal
+ * @returns {Suggestion[]}
+ */
+function build_named_context_item_suggestions(ctx, params = {}) {
+  const payloads = build_named_context_item_payloads(ctx, {
+    ...params,
+    include_named_context: false,
+  });
+  set_named_context_item_instructions(params?.modal, { context_name: params.context_name });
+  return payloads
+    .filter((payload) => typeof payload?.key === 'string' && payload.key.length)
+    .map((payload) => ({
+      key: payload.key,
+      display: payload.key,
+      display_right: format_depth_label(payload.d),
+      select_action: ({ modal } = {}) => {
+        add_named_context_items(ctx, {
+          context_name: params.context_name,
+          payloads: [payload],
+          include_named_context: false,
+        });
+        set_named_context_item_instructions(modal, { context_name: params.context_name });
+      },
+      arrow_left_action: ({ modal } = {}) => {
+        return context_suggest_contexts.call(ctx, { modal });
+      },
+    }));
+}
+
+/**
  * @this {import('smart-contexts').SmartContext}
  * @param {object} [params]
  * @param {object} [params.modal]
@@ -151,12 +261,7 @@ export async function context_suggest_contexts(params = {}) {
   const env = ctx?.env;
 
   const modal = params?.modal;
-  if (modal?.setInstructions) {
-    modal.setInstructions([
-      { command: 'Enter', purpose: 'Merge selected context into current context' },
-      { command: '⌘/Ctrl + Enter', purpose: 'Open in Context Selector' },
-    ]);
-  }
+  set_named_context_list_instructions(modal);
 
   const contexts = list_context_items(env)
     .filter((context_item) => {
@@ -195,31 +300,32 @@ export async function context_suggest_contexts(params = {}) {
       display: `${other_name} (${item_count})`,
       item: other,
       select_action: ({ modal }) => {
-        let payloads;
-        if (is_codeblock_context(ctx)) {
-          payloads = apply_codeblock_named_context(ctx, {
-            other_ctx: other,
-            context_name: other_name,
-          });
-        } else {
-          const items = get_items_from_context(other);
-          payloads = normalize_items_preserving_depth(ctx, items);
-          ctx.add_items(payloads);
-        }
-
+        return build_named_context_item_suggestions(ctx, {
+          other_ctx: other,
+          context_name: other_name,
+          modal,
+        });
+      },
+      arrow_right_action: ({ modal }) => {
+        return build_named_context_item_suggestions(ctx, {
+          other_ctx: other,
+          context_name: other_name,
+          modal,
+        });
+      },
+      mod_select_action: ({ modal } = {}) => {
+        const payloads = add_named_context_items(ctx, {
+          other_ctx: other,
+          context_name: other_name,
+          include_named_context: true,
+        });
         if (modal?.setInstructions) {
-          const purpose = is_codeblock_context(ctx)
-            ? `Added ${other_name} as a codeblock named context`
-            : `Merged ${payloads.length} item(s) from ${other_name}`;
+          const purpose = payloads.length
+            ? `Added ${payloads.length} item(s) from ${other_name}`
+            : `No items to add from ${other_name}`;
           modal.setInstructions([{ command: 'Enter', purpose }]);
         }
-      },
-      mod_select_action: ({ modal }) => {
-        if (modal?.close) modal.close();
-        ctx.emit_event('context_selector:open', {
-          collection_key: 'smart_contexts',
-          item_key: other_key,
-        });
+        return context_suggest_contexts.call(ctx, { modal });
       },
     });
   }
