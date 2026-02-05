@@ -126,7 +126,7 @@ export class SmartItemView extends ItemView {
 
   /**
    * Opens the view. If `this.default_open_location` is "root",
-   * it opens (or reveals) in a root leaf; otherwise in the right leaf.
+   * it opens (or reveals) in a root leaf; otherwise in a sidebar leaf.
    *
    * @param {import("obsidian").Workspace} workspace
    * @param {boolean} [active=true]
@@ -136,14 +136,28 @@ export class SmartItemView extends ItemView {
       active = true,
     } = params;
     const existing_leaf = this.get_leaf(workspace);
+    const open_location = this.default_open_location;
 
-    if (this.default_open_location === "root") {
+    if (open_location === "root") {
       // If there's already a leaf with this view, just set it active.
       // Otherwise, create/open in a leaf in the root (left/main) area.
       if (existing_leaf) {
         existing_leaf.setViewState({ type: this.view_type, active });
       } else {
         workspace.getLeaf(false).setViewState({ type: this.view_type, active });
+      }
+    } else if (open_location === "left") {
+      if (existing_leaf) {
+        existing_leaf.setViewState({ type: this.view_type, active });
+      } else {
+        workspace.getLeftLeaf(false).setViewState({
+          type: this.view_type,
+          active,
+        });
+      }
+
+      if (workspace.leftSplit?.collapsed) {
+        workspace.leftSplit.toggle();
       }
     } else {
       // If there's already a leaf with this view, just set it active.
