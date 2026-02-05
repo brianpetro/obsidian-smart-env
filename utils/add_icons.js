@@ -120,6 +120,22 @@ export function add_footer_connections_icon() {
 }
 
 
+// register smart-dupe-detector icon
+export function add_smart_dupe_detector_icon() {
+  addIcon("smart-dupe-detector", `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <rect x="3" y="5" width="8" height="14" rx="2"></rect>
+  <rect x="13" y="5" width="8" height="14" rx="2"></rect>
+  <path d="M8 10H16"></path>
+  <path d="M8 14H16"></path>
+  <circle cx="7" cy="10" r="1" fill="currentColor" stroke="none"></circle>
+  <circle cx="7" cy="14" r="1" fill="currentColor" stroke="none"></circle>
+  <circle cx="17" cy="10" r="1" fill="currentColor" stroke="none"></circle>
+  <circle cx="17" cy="14" r="1" fill="currentColor" stroke="none"></circle>
+</svg>
+`);
+}
+
 /**
  * Convenience: register all "sc-*" icons in this module.
  */
@@ -128,4 +144,5 @@ export function add_smart_icons() {
   add_smart_context_icon();
   add_inline_connections_icon();
   add_footer_connections_icon();
+  add_smart_dupe_detector_icon();
 }
