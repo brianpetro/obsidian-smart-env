@@ -1,3 +1,4 @@
+import {Platform} from 'obsidian';
 /**
  * @file contexts.js
  *
@@ -18,6 +19,8 @@
 
 export const display_name = 'Add named contexts';
 
+const MOD_CHAR = Platform.isMacOS ? '⌘' : 'Ctrl';
+
 /**
  * @param {object} modal
  * @returns {void}
@@ -25,7 +28,7 @@ export const display_name = 'Add named contexts';
 function set_named_context_list_instructions(modal) {
   modal?.setInstructions?.([
     { command: 'Enter / →', purpose: 'Browse context items' },
-    { command: '⌘/Ctrl + Enter', purpose: 'Add all items from context' },
+    { command: `${MOD_CHAR} + Enter`, purpose: 'Add all items from context' },
   ]);
 }
 

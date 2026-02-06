@@ -68,6 +68,7 @@ test('context_suggest_contexts returns item suggestions on select', async (t) =>
   const suggestions = await context_suggest_contexts.call(ctx, { modal });
 
   t.true(modal.instructions_log.length > 0);
+  t.true(modal.instructions_log[0].some((entry) => /^(⌘|Ctrl) \+ Enter$/.test(entry.command)));
   t.true(suggestions.length > 0);
 
   const item_suggestions = await suggestions[0].select_action({ modal });
