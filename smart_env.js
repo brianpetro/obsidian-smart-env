@@ -33,6 +33,7 @@ export class SmartEnv extends BaseSmartEnv {
     add_smart_connections_icon();
     add_smart_lookup_icon();
     add_smart_icons();
+    // TODO: can this be safely removed? Does downsteram version detection handle this case (no version)? 2026-02-07
     if(window.smart_env && !window.smart_env.constructor.version) {
       const update_notice = "Detected ancient SmartEnv. Removing it to prevent issues with new plugins. Make sure your Smart Plugins are up-to-date!";
       console.warn(update_notice);
