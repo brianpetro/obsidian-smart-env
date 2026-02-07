@@ -50,13 +50,6 @@ function render_milestones_modal_title(title_el, env) {
     evt.preventDefault();
     evt.stopPropagation();
 
-    // optional lightweight analytics hook (safe if env/events not present)
-    try {
-      env?.events?.emit?.('milestones:help', {});
-    } catch (err) {
-      // ignore
-    }
-
     window.open(MILESTONES_HELP_URL, '_external');
   });
 

@@ -74,7 +74,6 @@ export function render_btn_clear_context(ctx, container) {
   container.appendChild(clear_btn);
   clear_btn.addEventListener('click', () => {
     ctx.clear_all();
-    ctx.emit_event('context:cleared');
   });
 }
 
@@ -88,6 +87,5 @@ export function render_btn_help(ctx, container) {
   setIcon(help_btn, 'help-circle');
   help_btn.addEventListener('click', () => {
     window.open('https://smartconnections.app/smart-context/builder/?utm_source=context-selector-modal', '_external');
-    ctx.emit_event('context_selector:help');
   });
 }
