@@ -1,42 +1,429 @@
+/* Smart Env notifications feed modal - refined, theme-friendly UI */
+
+.smart-env-notifications-modal {
+  width: min(860px, 92vw);
+  max-height: min(780px, 88vh);
+}
+
+.smart-env-notifications-modal .modal-header {
+  padding: 0.9rem 0.95rem 0.6rem;
+}
+
+.smart-env-notifications-modal .modal-title {
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.smart-env-notifications-modal .modal-content {
+  padding: 0.75rem 0.85rem 1rem;
+}
+
+.smart-env-notifications {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.smart-env-notifications__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.smart-env-notifications__summary {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  user-select: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.smart-env-notifications__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Buttons */
+.smart-env-btn {
+  appearance: none;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-modifier-form-field);
+  color: var(--text-normal);
+  border-radius: 10px;
+  padding: 0.45rem 0.75rem;
+  font-size: var(--font-ui-small);
+  line-height: 1.1;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
+}
+
+.smart-env-btn:hover {
+  background: var(--background-modifier-hover);
+}
+
+.smart-env-btn:active {
+  transform: translateY(1px);
+}
+
+.smart-env-btn:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+}
+
+.smart-env-btn[disabled] {
+  opacity: 0.55;
+  cursor: default;
+  transform: none;
+}
+
+.smart-env-btn--primary {
+  background: var(--interactive-accent);
+  border-color: transparent;
+  color: var(--text-on-accent, var(--text-normal));
+}
+
+.smart-env-btn--primary:hover {
+  background: var(--interactive-accent-hover);
+}
+
+.smart-env-btn--ghost {
+  background: transparent;
+}
+
+.smart-env-btn--ghost:hover {
+  background: var(--background-modifier-hover);
+}
+
+.smart-env-btn.is-copied {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent) 35%, transparent);
+}
+
+/* Filter pills */
+.smart-env-notifications-filter-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem;
+  border-radius: 999px;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+}
+
+.smart-env-notifications-filter {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.smart-env-notifications-filter input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.smart-env-notifications-filter__content {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  line-height: 1.1;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease, box-shadow 120ms ease;
+}
+
+.smart-env-notifications-filter:hover .smart-env-notifications-filter__content {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.smart-env-notifications-filter input:checked + .smart-env-notifications-filter__content {
+  background: var(--background-primary);
+  border-color: var(--background-modifier-border);
+  color: var(--text-normal);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
+}
+
+.smart-env-notifications-filter input:focus-visible + .smart-env-notifications-filter__content {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+}
+
+.smart-env-notifications-filter__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--text-faint);
+}
+
+.smart-env-notifications-filter__count {
+  margin-left: 0.1rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+  color: var(--text-muted);
+  font-size: 0.78em;
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
+}
+
+.smart-env-notifications-filter__count.is-zero {
+  display: none;
+}
+
+.smart-env-notifications-filter[data-level='attention'] .smart-env-notifications-filter__dot {
+  background: var(--color-yellow);
+}
+
+.smart-env-notifications-filter[data-level='warning'] .smart-env-notifications-filter__dot {
+  background: var(--color-orange);
+}
+
+.smart-env-notifications-filter[data-level='error'] .smart-env-notifications-filter__dot {
+  background: var(--color-red);
+}
+
+.smart-env-notifications-filter[data-level='info'] .smart-env-notifications-filter__dot {
+  background: var(--interactive-accent);
+}
+
+/* Feed */
 .smart-env-notifications-feed {
   display: flex;
   flex-direction: column;
-  padding: 0.5rem 0;
-  gap: 0.42rem;
-}
-
-.smart-env-notifications-empty {
-  margin: 0;
-  color: var(--text-muted);
+  padding: 0.25rem 0;
+  gap: 0.55rem;
 }
 
 .smart-env-notification {
-  font-size: var(--font-smaller);
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+}
+
+.smart-env-notification:hover {
+  border-color: var(--background-modifier-border-hover, var(--background-modifier-border));
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04), 0 10px 26px rgba(0, 0, 0, 0.12);
+}
+
+details.smart-env-notification[open] {
+  border-color: var(--interactive-accent);
+}
+
+.smart-env-notification__summary {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.65rem 0.75rem;
+  list-style: none;
+}
+
+details.smart-env-notification > .smart-env-notification__summary {
+  cursor: pointer;
+}
+
+details.smart-env-notification > .smart-env-notification__summary:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+  border-radius: 12px;
+}
+
+.smart-env-notification__summary::-webkit-details-marker {
+  display: none;
+}
+
+.smart-env-notification__accent {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  margin-top: 0.25rem;
+  flex: 0 0 auto;
+  background: var(--interactive-accent);
+}
+
+.smart-env-notification[data-level='attention'] .smart-env-notification__accent {
+  background: var(--color-yellow);
+}
+
+.smart-env-notification[data-level='warning'] .smart-env-notification__accent {
+  background: var(--color-orange);
+}
+
+.smart-env-notification[data-level='error'] .smart-env-notification__accent {
+  background: var(--color-red);
+}
+
+.smart-env-notification__summary-body {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  border-left: 3px solid var(--interactive-accent);
-  padding-left: 0.75rem;
+  gap: 0.3rem;
 }
 
-.smart-env-notification[data-level='attention'] {
+.smart-env-notification__summary-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.smart-env-notification__event-key {
+  color: var(--text-normal);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.smart-env-notification__time {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.smart-env-notification__summary-bottom {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.smart-env-notification__collection {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.12rem 0.42rem;
+  border-radius: 999px;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  line-height: 1.1;
+}
+
+.smart-env-notification__level {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.12rem 0.42rem;
+  border-radius: 999px;
+  border: 1px solid var(--background-modifier-border);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  line-height: 1.1;
+}
+
+.smart-env-notification[data-level='attention'] .smart-env-notification__level {
   border-color: var(--color-yellow);
+  color: var(--color-yellow);
 }
 
-.smart-env-notification[data-level='warning'] {
+.smart-env-notification[data-level='warning'] .smart-env-notification__level {
   border-color: var(--color-orange);
+  color: var(--color-orange);
 }
 
-.smart-env-notification[data-level='error'] {
+.smart-env-notification[data-level='error'] .smart-env-notification__level {
   border-color: var(--color-red);
+  color: var(--color-red);
+}
+
+.smart-env-notification[data-level='info'] .smart-env-notification__level {
+  border-color: var(--interactive-accent);
+  color: var(--interactive-accent);
+}
+
+.smart-env-notification__chevron {
+  width: 18px;
+  height: 18px;
+  margin-top: 0.1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-faint);
+  flex: 0 0 auto;
+  transition: transform 140ms ease, color 140ms ease;
+}
+
+.smart-env-notification__chevron::before {
+  content: '>';
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+details.smart-env-notification[open] .smart-env-notification__chevron {
+  transform: rotate(90deg);
+  color: var(--text-muted);
 }
 
 .smart-env-notification__message {
   margin: 0;
-  font-weight: 500;
+  padding: 0.75rem 0.85rem 0.85rem;
+  border-top: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+  font-family: var(--font-monospace);
+  font-size: var(--font-smaller);
   white-space: pre-wrap;
+  word-break: break-word;
 }
 
-.smart-env-notification__meta {
+/* Empty states */
+.smart-env-notifications-empty-state {
+  padding: 1.65rem 1rem;
+  border-radius: 12px;
+  border: 1px dashed var(--background-modifier-border);
+  background: color-mix(in srgb, var(--background-secondary) 65%, transparent);
+  text-align: center;
+}
+
+.smart-env-notifications-empty-state__title {
+  color: var(--text-normal);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  margin-bottom: 0.25rem;
+}
+
+.smart-env-notifications-empty-state__detail {
   color: var(--text-muted);
-  padding: 0.37rem 0;
+  font-size: var(--font-ui-small);
+  margin-bottom: 0.75rem;
+}
+
+/* Footer */
+.smart-env-notifications__footer {
+  display: flex;
+  justify-content: center;
+  padding-top: 0.25rem;
+}
+
+.smart-env-notifications__footer .smart-env-btn {
+  width: 100%;
+  max-width: 320px;
+}
+
+@media (max-width: 540px) {
+  .smart-env-notifications-modal .modal-content {
+    padding: 0.65rem 0.65rem 0.9rem;
+  }
+
+  .smart-env-notifications-filter-controls {
+    border-radius: 14px;
+  }
+
+  .smart-env-notifications__footer .smart-env-btn {
+    max-width: none;
+  }
 }
