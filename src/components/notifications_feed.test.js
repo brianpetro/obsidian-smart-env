@@ -1,11 +1,33 @@
 import test from 'ava';
 
 import {
+  get_entry_level,
+  get_filtered_entries,
   get_next_visible_count,
   get_visible_count,
   get_visible_entries,
   should_show_load_more,
 } from './notifications_feed.js';
+
+test('get_entry_level prioritizes notification namespace', (t) => {
+  t.is(get_entry_level({ event_key: 'notification:warning' }), 'warning');
+  t.is(get_entry_level({ event_key: 'sync:error' }), 'error');
+  t.is(get_entry_level({ event_key: 'sync:ok' }), 'info');
+  t.is(get_entry_level({ event_key: null }), 'info');
+});
+
+test('get_filtered_entries keeps only selected levels', (t) => {
+  const entries = [
+    { id: 1, event_key: 'notification:info' },
+    { id: 2, event_key: 'notification:warning' },
+    { id: 3, event_key: 'sync:error' },
+    { id: 4, event_key: 'notification:attention' },
+  ];
+
+  const result = get_filtered_entries(entries, { active_levels: new Set(['warning', 'error']) });
+
+  t.deepEqual(result.map((entry) => entry.id), [2, 3]);
+});
 
 test('get_visible_entries returns most recent entries up to limit', (t) => {
   const entries = Array.from({ length: 5 }, (_, index) => ({ id: index + 1 }));

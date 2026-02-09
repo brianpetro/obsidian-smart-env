@@ -1,0 +1,42 @@
+.smart-env-notifications-feed {
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem 0;
+  gap: 0.42rem;
+}
+
+.smart-env-notifications-empty {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.smart-env-notification {
+  font-size: var(--font-smaller);
+  display: flex;
+  flex-direction: column;
+  border-left: 3px solid var(--interactive-accent);
+  padding-left: 0.75rem;
+}
+
+.smart-env-notification[data-level='attention'] {
+  border-color: var(--color-yellow);
+}
+
+.smart-env-notification[data-level='warning'] {
+  border-color: var(--color-orange);
+}
+
+.smart-env-notification[data-level='error'] {
+  border-color: var(--color-red);
+}
+
+.smart-env-notification__message {
+  margin: 0;
+  font-weight: 500;
+  white-space: pre-wrap;
+}
+
+.smart-env-notification__meta {
+  color: var(--text-muted);
+  padding: 0.37rem 0;
+}
