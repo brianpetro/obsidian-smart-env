@@ -180,6 +180,15 @@ export function render_settings_group(group_name, scope, settings_config, contai
             });
           });
           break;
+        case 'password':
+          setting.addText((text) => {
+            text.setValue(String(get_by_path(scope.settings, setting_path) || ''));
+            text.inputEl.setAttribute('type', 'password');
+            text.onChange((value) => {
+              set_by_path(scope.settings, setting_path, value);
+            });
+          });
+          break;
         case 'number':
           setting.addText((text) => {
             text.setValue(String(get_by_path(scope.settings, setting_path) ?? '0'));
@@ -196,10 +205,10 @@ export function render_settings_group(group_name, scope, settings_config, contai
           });
           break;
         case 'dropdown':
-          setting.addDropdown((dropdown) => {
+          setting.addDropdown(async (dropdown) => {
             const options_callback = setting_config.options_callback;
             if (typeof options_callback === 'function') {
-              const options = options_callback.call(scope, scope); // available as 'this' and param and scope arg
+              const options = await options_callback.call(scope, scope); // available as 'this' and param and scope arg
               options.forEach(opt => {
                 const label = opt.label
                   || opt.name // DEPRECATED 2025-12-11
