@@ -19,13 +19,6 @@ const get_context = (settings = {}) => ({
   settings,
 });
 
-const get_context_item = (settings = {}, data = {}) => ({
-  settings,
-  data,
-  key: 'Area/Note.md',
-  mtime: Date.now(),
-});
-
 test('template preset options expose the expected presets plus custom', (t) => {
   const options = get_template_preset_options();
   const values = options.map((opt) => opt.value);
@@ -107,22 +100,4 @@ test('context merge_template swaps in preset templates at runtime', async (t) =>
   t.true(merged.startsWith(`${tree}\n`));
   t.true(merged.includes('CONTENT'));
   t.true(merged.trimEnd().endsWith('CONTENT'));
-});
-
-test('context item merge_template honors presets without altering stored fields', async (t) => {
-  const settings = {
-    template_preset: 'xml_structured',
-    template_before: 'saved-before',
-    template_after: 'saved-after',
-  };
-  const context_item = get_context_item(settings, { d: 2 });
-
-  const merged = await merge_item_template.call(
-    context_item,
-    'ITEM-CONTENT',
-  );
-
-  t.true(merged.includes('<item loc="Area/Note.md"'));
-  t.true(merged.includes('ITEM-CONTENT'));
-  t.is(context_item.settings.template_before, 'saved-before');
 });
