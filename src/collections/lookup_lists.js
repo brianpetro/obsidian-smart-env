@@ -1,7 +1,6 @@
 import { Collection } from 'smart-collections';
 import { LookupList } from '../items/lookup_list.js';
 import { murmur_hash_32_alphanumeric } from 'smart-utils/create_hash.js';
-import { create_settings_section_heading } from '../utils/create_settings_section_heading.js';
 
 export const settings_config = {
   results_collection_key: {
