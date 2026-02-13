@@ -1,4 +1,4 @@
-import { register_item_hover_popover } from 'obsidian-smart-env/src/utils/register_item_hover_popover.js';
+import { register_item_hover_popover } from '../../utils/register_item_hover_popover.js';
 import { Platform } from 'obsidian';
 
 /**

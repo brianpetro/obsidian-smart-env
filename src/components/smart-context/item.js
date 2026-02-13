@@ -1,5 +1,5 @@
 import styles from './styles.css';
-import { copy_to_clipboard } from 'obsidian-smart-env/utils/copy_to_clipboard.js';
+import { copy_to_clipboard } from '../../../utils/copy_to_clipboard.js';
 
 /**
  * @param {Function} callback
