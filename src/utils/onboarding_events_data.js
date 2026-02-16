@@ -303,7 +303,10 @@ export function derive_events_checklist_groups(items_by_event_key) {
   });
 
   return sorted_groups.map((group) => {
-    const items = (group_map[group] || []).slice();
+    const items = (group_map[group] || [])
+      .slice()
+      .sort((a, b) => a.event_key.localeCompare(b.event_key))
+    ;
     return { group, items };
   });
 }
