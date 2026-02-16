@@ -5,6 +5,10 @@ import {
   fetch_server_plugin_list,
   fetch_referral_stats,
 } from '../../utils/smart_plugins.js';
+import {
+  build_onboarding_start_url,
+  get_onboarding_signup_setting_copy,
+} from './onboarding_signup.js';
 import styles from './style.css';
 
 const PRO_PLUGINS_DESC = `<a href="https://smartconnections.app/core-plugins/" target="_external">Core plugins</a> provide essential functionality and a "just works" experience. <a href="https://smartconnections.app/pro-plugins/" target="_external">Pro plugins</a> enable advanced configuration and features for Obsidian AI experts.`;
@@ -92,6 +96,24 @@ export async function post_process(env, container, params = {}) {
   const emit_referral_event = (event_key) => {
     if (!env?.events || typeof env.events.emit !== 'function') return;
     env.events.emit(event_key, { event_source: 'pro_plugins_referrals' });
+  };
+
+  const render_onboarding_signup_section = () => {
+    if (!referral_container) return;
+
+    const copy = get_onboarding_signup_setting_copy();
+    const setting = new Setting(referral_container)
+      .setName(copy.name)
+      .setDesc(copy.description);
+
+    setting.addButton((btn) => {
+      btn.setButtonText(copy.button_text);
+      btn.onClick(() => {
+        const onboarding_url = build_onboarding_start_url({ source: 'plugins_settings' });
+        window.open(onboarding_url, '_external');
+        emit_referral_event('onboarding:opened_signup');
+      });
+    });
   };
 
   const render_manual_login_link = (login_url) => {
@@ -209,6 +231,7 @@ export async function post_process(env, container, params = {}) {
    */
   const render_referral_section = async (params = {}) => {
     empty_container(referral_container);
+    render_onboarding_signup_section();
 
     const token = String(params.token || '').trim();
     if (!token) {
