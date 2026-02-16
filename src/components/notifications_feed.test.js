@@ -11,6 +11,7 @@ import {
 
 test('get_entry_level prioritizes notification namespace', (t) => {
   t.is(get_entry_level({ event_key: 'notification:warning' }), 'warning');
+  t.is(get_entry_level({ event_key: 'notification:milestone' }), 'milestone');
   t.is(get_entry_level({ event_key: 'sync:error' }), 'error');
   t.is(get_entry_level({ event_key: 'sync:ok' }), 'info');
   t.is(get_entry_level({ event_key: null }), 'info');
@@ -22,11 +23,12 @@ test('get_filtered_entries keeps only selected levels', (t) => {
     { id: 2, event_key: 'notification:warning' },
     { id: 3, event_key: 'sync:error' },
     { id: 4, event_key: 'notification:attention' },
+    { id: 5, event_key: 'notification:milestone' },
   ];
 
-  const result = get_filtered_entries(entries, { active_levels: new Set(['warning', 'error']) });
+  const result = get_filtered_entries(entries, { active_levels: new Set(['warning', 'error', 'milestone']) });
 
-  t.deepEqual(result.map((entry) => entry.id), [2, 3]);
+  t.deepEqual(result.map((entry) => entry.id), [2, 3, 5]);
 });
 
 test('get_visible_entries returns most recent entries up to limit', (t) => {

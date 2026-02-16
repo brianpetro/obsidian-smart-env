@@ -184,6 +184,10 @@
   background: var(--color-yellow);
 }
 
+.smart-env-notifications-filter[data-level='milestone'] .smart-env-notifications-filter__dot {
+  background: var(--color-purple);
+}
+
 .smart-env-notifications-filter[data-level='warning'] .smart-env-notifications-filter__dot {
   background: var(--color-orange);
 }
@@ -254,6 +258,10 @@ details.smart-env-notification > .smart-env-notification__summary:focus-visible 
 
 .smart-env-notification[data-level='attention'] .smart-env-notification__accent {
   background: var(--color-yellow);
+}
+
+.smart-env-notification[data-level='milestone'] .smart-env-notification__accent {
+  background: var(--color-purple);
 }
 
 .smart-env-notification[data-level='warning'] .smart-env-notification__accent {
@@ -329,6 +337,11 @@ details.smart-env-notification > .smart-env-notification__summary:focus-visible 
 .smart-env-notification[data-level='attention'] .smart-env-notification__level {
   border-color: var(--color-yellow);
   color: var(--color-yellow);
+}
+
+.smart-env-notification[data-level='milestone'] .smart-env-notification__level {
+  border-color: var(--color-purple);
+  color: var(--color-purple);
 }
 
 .smart-env-notification[data-level='warning'] .smart-env-notification__level {

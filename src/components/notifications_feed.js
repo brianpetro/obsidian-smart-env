@@ -21,7 +21,7 @@ function build_html() {
 
 const default_page_size = 100;
 const load_more_step = 100;
-const notification_levels = ['attention', 'error', 'warning', 'info'];
+const notification_levels = ['milestone', 'attention', 'error', 'warning', 'info'];
 
 /**
  * @param {Array} entries

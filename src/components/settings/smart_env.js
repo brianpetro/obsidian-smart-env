@@ -1,4 +1,5 @@
 import styles from './style.css';
+import { render_settings_config } from '../../utils/render_settings_config.js';
 export async function build_html(env, params = {}) {
   return `<div class="smart-env-settings-container">
     <div class="sources-container">
@@ -6,6 +7,8 @@ export async function build_html(env, params = {}) {
     </div>
     <div class="models-container">
       <h1>Models</h1>
+    </div>
+    <div class="smart-notifications-container">
     </div>
     <div class="notifications-container">
       <h1>Notifications</h1>
@@ -32,14 +35,20 @@ export async function post_process(env, container, opts = {}) {
   const models_container = container.querySelector('.models-container');
   const sources_container = container.querySelector('.sources-container');
   const notifications_container = container.querySelector('.notifications-container');
-  // render_if_available.call(this, 'settings_reimport_sources', env, sources_container);
-  // render_if_available.call(this, 'settings_sources_folder_exclusions', env, sources_container);
-  // render_if_available.call(this, 'settings_sources_file_exclusions', env, sources_container);
-  // render_if_available.call(this, 'settings_sources_excluded_info', env, sources_container);
-  // render_if_available.call(this, 'settings_sources_pro', env, sources_container);
+  const smart_notifications_container = container.querySelector('.smart-notifications-container');
   render_if_available.call(this, 'settings_env_sources', env, sources_container);
   render_if_available.call(this, 'settings_env_models', env, models_container);
-  render_if_available.call(this, 'settings_notifications', env, notifications_container);
+  render_if_available.call(this, 'settings_notifications', env, notifications_container); // OLD
+
+  render_settings_config(
+    env.event_logs.settings_config,
+    env.event_logs,
+    smart_notifications_container,
+    {
+      default_group_name: 'Notifications',
+    }
+  );
+
   return container;
 }
 

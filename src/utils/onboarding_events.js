@@ -146,6 +146,11 @@ export function register_first_of_event_notifications(env) {
 
     notice_queue = enqueue_event_key(notice_queue, { event_key });
     schedule_next_notice();
+
+    env.events.emit('notification:milestone', {
+      event_key,
+      ...(EVENTS_CHECKLIST_ITEMS_BY_EVENT_KEY[event_key] || {}),
+    });
   };
 
   env?.events?.on?.('event_log:first', handle_first_event);
