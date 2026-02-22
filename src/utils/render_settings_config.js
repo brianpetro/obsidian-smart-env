@@ -41,9 +41,18 @@ export function render_settings_config(settings_config, scope, container, params
   } = params;
   const settings_config_source = settings_config;
   const group_map = build_settings_group_map(settings_config, scope, default_group_name);
+  const group_params = params.group_params || {};
   const settings_groups = Object.entries(group_map)
     // sort group_name first
-    .sort(([a], [b]) => (a === default_group_name ? -1 : b === default_group_name ? 1 : 0))
+    .sort(([a], [b]) => {
+      // if has order property, use it
+      const a_order = group_params[a]?.order ?? Number.POSITIVE_INFINITY;
+      const b_order = group_params[b]?.order ?? Number.POSITIVE_INFINITY;
+      if (a_order !== b_order) {
+        return a_order - b_order;
+      }
+      return a === default_group_name ? -1 : b === default_group_name ? 1 : 0;
+    })
     // filter has at least one setting
     .filter(([, group_config]) => Object.keys(group_config).length > 0)
     // render each group
