@@ -159,6 +159,11 @@ export const EVENTS_CHECKLIST_ITEMS_BY_EVENT_KEY = {
     milestone: 'Renamed a Smart Context (increased clarity).',
     link: 'https://smartconnections.app/smart-context/builder/?utm_source=milestones#save-reuse',
   },
+  'context:installed': {
+    group: 'Context',
+    milestone: 'Installed Smart Context (core plugin).',
+    link: 'https://smartconnections.app/smart-context/builder/?utm_source=milestones',
+  },
   'context:copied_with_media': {
     group: 'Context Pro',
     milestone: 'Copied context with media (images/PDF pages) for multimodal workflows.',
@@ -197,12 +202,6 @@ export const EVENTS_CHECKLIST_ITEMS_BY_EVENT_KEY = {
     milestone: 'Started a chat in a Smart Chat codeblock (opened the loop).',
     link: 'https://smartconnections.app/smart-chat/codeblock/?utm_source=milestones#quick-start',
   },
-  'completion:completed': {
-    group: 'Chat Pro',
-    milestone: 'Received the first Smart Chat response (a completion finished).',
-    link: 'https://smartconnections.app/smart-chat/api-integration/?utm_source=milestones#quick-start',
-    is_pro: true,
-  },
   'chat_codeblock:marked_done': {
     group: 'Chat',
     milestone: 'Marked the chat thread as done (closed the loop).',
@@ -214,6 +213,12 @@ export const EVENTS_CHECKLIST_ITEMS_BY_EVENT_KEY = {
     group: 'Chat Pro',
     milestone: 'Installed Smart Chat Pro.',
     link: 'https://smartconnections.app/pro-plugins/?utm_source=milestones#chat-pro',
+    is_pro: true,
+  },
+  'completion:completed': {
+    group: 'Chat Pro',
+    milestone: 'Received the first Smart Chat response (a completion finished).',
+    link: 'https://smartconnections.app/smart-chat/api-integration/?utm_source=milestones#quick-start',
     is_pro: true,
   },
 
