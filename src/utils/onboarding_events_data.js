@@ -242,6 +242,21 @@ export const EVENTS_CHECKLIST_ITEMS_BY_EVENT_KEY = {
     is_pro: true,
   },
 
+
+  // Connect Pro
+  'connect_pro:ping': {
+    group: 'Connect Pro',
+    milestone: 'Connect Pro ping observed (local route hit or tunnel health check ran).',
+    link: 'https://smartconnections.app/connect-pro/?utm_source=milestones#health-check',
+    is_pro: true,
+  },
+  'connect_pro:request': {
+    group: 'Connect Pro',
+    milestone: 'Connect Pro request received (remote action hit /obsidian-cli).',
+    link: 'https://smartconnections.app/connect-pro/?utm_source=milestones#request-flow',
+    is_pro: true,
+  },
+
   // Pro
   'smart_plugins_oauth_completed': {
     group: 'Pro',
@@ -276,6 +291,7 @@ const EVENTS_CHECKLIST_GROUP_ORDER = [
   'Context',
   'Context Pro',
   'Chat Pro',
+  'Connect Pro',
   'Pro',
 ];
 
