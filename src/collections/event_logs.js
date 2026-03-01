@@ -8,27 +8,27 @@ const milestone_notice_timeout_ms = 12000;
 export const settings_config = {
   native_notice_info: {
     name: 'Native notice: Info',
-    description: 'Show Obsidian native notices for notification:info events.',
+    description: 'Show Obsidian native notices for info level events.',
     type: 'toggle',
   },
   native_notice_warning: {
     name: 'Native notice: Warning',
-    description: 'Show Obsidian native notices for notification:warning events.',
+    description: 'Show Obsidian native notices for warning level events.',
     type: 'toggle',
   },
   native_notice_error: {
     name: 'Native notice: Error',
-    description: 'Show Obsidian native notices for notification:error events.',
+    description: 'Show Obsidian native notices for error level events.',
     type: 'toggle',
   },
   native_notice_attention: {
     name: 'Native notice: Attention',
-    description: 'Show Obsidian native notices for notification:attention events.',
+    description: 'Show Obsidian native notices for attention level events.',
     type: 'toggle',
   },
   native_notice_milestone: {
     name: 'Native notice: Milestone',
-    description: 'Show Obsidian native notices for notification:milestone events.',
+    description: 'Show Obsidian native notices for milestone level events.',
     type: 'toggle',
   },
 };
