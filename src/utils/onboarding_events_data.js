@@ -202,6 +202,11 @@ export const EVENTS_CHECKLIST_ITEMS_BY_EVENT_KEY = {
     milestone: 'Started a chat in a Smart Chat codeblock (opened the loop).',
     link: 'https://smartconnections.app/smart-chat/codeblock/?utm_source=milestones#quick-start',
   },
+  'chat_codeblock:marked_active': {
+    group: 'Chat',
+    milestone: 'Marked a chat thread as active from the Smart Chat inbox.',
+    link: 'https://smartconnections.app/smart-chat/codeblock/?utm_source=milestones#chat-inbox',
+  },
   'chat_codeblock:marked_done': {
     group: 'Chat',
     milestone: 'Marked the chat thread as done (closed the loop).',
@@ -286,9 +291,9 @@ const EVENTS_CHECKLIST_GROUP_ORDER = [
   'Environment',
   'Connections',
   'Lookup',
+  'Context',
   'Chat',
   'Connections Pro',
-  'Context',
   'Context Pro',
   'Chat Pro',
   'Connect Pro',
