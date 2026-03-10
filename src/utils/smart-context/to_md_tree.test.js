@@ -1,5 +1,5 @@
 import test from 'ava';
-import { context_to_md_tree } from './context_to_md_tree.js';
+import { context_to_md_tree } from './to_md_tree.js';
 
 function build_smart_context(keys = []) {
   return {
