@@ -1,7 +1,7 @@
 import styles from './styles.css';
 import { copy_to_clipboard } from '../../../utils/copy_to_clipboard.js';
 import { Menu } from 'obsidian';
-import { ctx_tree_dom_to_wikilinks } from '../../utils/ctx_tree_dom_to_wikilinks.js';
+import { context_to_md_tree } from '../../utils/smart-context/to_md_tree.js';
 
 /**
  * @param {Function} callback
@@ -94,7 +94,7 @@ export async function post_process(ctx, container, opts = {}) {
     menu.addItem((mi) =>
       mi.setTitle('Copy link tree').setIcon('copy').onClick(async () => {
         console.log({container});
-        const md = ctx_tree_dom_to_wikilinks(container);
+        const md = context_to_md_tree(ctx);
         await copy_to_clipboard(md);
       })
     );
@@ -105,26 +105,4 @@ export async function post_process(ctx, container, opts = {}) {
   disposers.push(ctx.on_event('context:updated', schedule_render_children));
   this.attach_disposer(container, disposers);
   return container;
-}
-// Prob replace with using ctx.data.context_items keys
-function tree_dom_to_wikilinks(container) {
-  const lines = [];
-  const walk = (li, depth) => {
-    const path = li.dataset.path;
-    if (!path) return;
-    // Remove external/selection prefixes
-    let rel = path.replace(/^external:/, '').replace(/^selection:/, '');
-    const label = li.querySelector('.sc-context-item-name')?.textContent?.trim() || '';
-    if (li.classList.contains('file')) {
-      // Only use the filename without extension for wikilinks
-      let file = rel.split('/').pop().replace(/\.md$/, '');
-      lines.push(`${'\t'.repeat(depth)}- [[${file}]]`);
-    } else if (li.classList.contains('dir')) {
-      // Use the label for directories (not a wikilink)
-      lines.push(`${'\t'.repeat(depth)}- ${label}`);
-    }
-    li.querySelectorAll('ul > li').forEach(child => walk(child, depth + 1));
-  };
-  container.querySelectorAll('ul > li').forEach(li => walk(li, 0));
-  return lines.join('\n');
 }
