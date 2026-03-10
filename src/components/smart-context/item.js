@@ -1,5 +1,6 @@
 import styles from './styles.css';
 import { copy_to_clipboard } from '../../../utils/copy_to_clipboard.js';
+import { Menu } from 'obsidian';
 
 /**
  * @param {Function} callback
