@@ -1,3 +1,6 @@
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+
 /**
  * Normalize a Smart Context item key for wikilink tree output.
  *
@@ -18,6 +21,42 @@ export function normalize_context_item_key(key = '') {
     .replace(/\/+/g, '/')
     .replace(/^\.\//, '')
   ;
+}
+
+/**
+ * Parse a Smart Context item key into normalized and display variants.
+ *
+ * External keys intentionally hide the synthetic leading `../` from the
+ * rendered tree because it represents the parent directory of the vault,
+ * not a folder that should appear in the export.
+ *
+ * @param {string} key
+ * @returns {{
+ *   raw_key: string,
+ *   normalized_key: string,
+ *   display_key: string,
+ *   is_external: boolean,
+ *   is_selection: boolean,
+ * }}
+ */
+function parse_context_item_key(key = '') {
+  const raw_key = typeof key === 'string' ? key.trim() : '';
+  const is_external = raw_key.startsWith('external:');
+  const is_selection = raw_key.startsWith('selection:');
+  const normalized_key = normalize_context_item_key(raw_key);
+
+  let display_key = normalized_key;
+  if (is_external && display_key.startsWith('../')) {
+    display_key = display_key.slice(3);
+  }
+
+  return {
+    raw_key,
+    normalized_key,
+    display_key,
+    is_external,
+    is_selection,
+  };
 }
 
 /**
@@ -62,15 +101,36 @@ export function format_wikilink_target(file_segment = '') {
 }
 
 /**
+ * Escape a Markdown link label.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+function escape_markdown_link_text(text = '') {
+  return String(text)
+    .replace(/\\/g, '\\\\')
+    .replace(/\]/g, '\\]')
+  ;
+}
+
+/**
  * Create a path tree node that preserves first-seen child order.
  *
- * @returns {{ children: Array<{ type: 'dir', name: string, node: any } | { type: 'file', target: string }>, dir_nodes: Map<string, any>, file_targets: Set<string> }}
+ * @returns {{
+ *   children: Array<
+ *     | { type: 'dir', name: string, node: any }
+ *     | { type: 'file', target: string }
+ *     | { type: 'external_file', label: string, href: string }
+ *   >,
+ *   dir_nodes: Map<string, any>,
+ *   file_keys: Set<string>,
+ * }}
  */
 function create_tree_node() {
   return {
     children: [],
     dir_nodes: new Map(),
-    file_targets: new Set(),
+    file_keys: new Set(),
   };
 }
 
@@ -111,6 +171,76 @@ function ensure_path(root_node, dir_segments = []) {
 }
 
 /**
+ * Resolve the current vault's absolute base path from Obsidian internals.
+ *
+ * Desktop `FileSystemAdapter` exposes `getBasePath()`. Mobile adapters expose
+ * `getFullPath(normalizedPath)`, so `getFullPath('')` is used as a best-effort
+ * fallback when available.
+ *
+ * @param {import('smart-contexts').SmartContext|any} smart_context
+ * @returns {string}
+ */
+function get_vault_base_path(smart_context) {
+  const app = smart_context?.env?.plugin?.app
+    || smart_context?.env?.app
+    || smart_context?.app
+    || globalThis.app
+    || null
+  ;
+  const adapter = app?.vault?.adapter;
+  if (!adapter) return '';
+
+  if (typeof adapter.getBasePath === 'function') {
+    const base_path = adapter.getBasePath();
+    if (typeof base_path === 'string' && base_path.trim()) {
+      return base_path.trim();
+    }
+  }
+
+  if (typeof adapter.getFullPath === 'function') {
+    try {
+      const full_path = adapter.getFullPath('');
+      if (typeof full_path === 'string' && full_path.trim()) {
+        return full_path.trim();
+      }
+    } catch (err) {
+      /* no-op */
+    }
+  }
+
+  if (typeof adapter.basePath === 'string' && adapter.basePath.trim()) {
+    return adapter.basePath.trim();
+  }
+
+  return '';
+}
+
+/**
+ * Resolve an external Smart Context key into a file URL.
+ *
+ * @param {import('smart-contexts').SmartContext|any} smart_context
+ * @param {string} key
+ * @returns {string}
+ */
+function resolve_external_href(smart_context, key = '') {
+  const parsed = parse_context_item_key(key);
+  if (!parsed.is_external) return '';
+  if (!parsed.normalized_key) return '';
+
+  if (/^[a-zA-Z][a-zA-Z\d+.-]*:\/\//.test(parsed.normalized_key)) {
+    return parsed.normalized_key;
+  }
+
+  const vault_base_path = get_vault_base_path(smart_context);
+  if (!vault_base_path) {
+    return parsed.normalized_key;
+  }
+
+  const absolute_path = path.resolve(vault_base_path, parsed.normalized_key);
+  return pathToFileURL(absolute_path).href;
+}
+
+/**
  * Render a path tree into the same bullet/tab structure.
  *
  * @param {ReturnType<typeof create_tree_node>} node
@@ -126,6 +256,12 @@ function render_tree_lines(node, depth = 0, lines = []) {
     if (child.type === 'dir') {
       lines.push(`${'\t'.repeat(depth)}- ${child.name}`);
       render_tree_lines(child.node, depth + 1, lines);
+      continue;
+    }
+
+    if (child.type === 'external_file') {
+      const safe_label = escape_markdown_link_text(child.label);
+      lines.push(`${'\t'.repeat(depth)}- [${safe_label}](${child.href})`);
       continue;
     }
 
@@ -172,6 +308,9 @@ function list_context_items(smart_context) {
 /**
  * Build a wikilink tree for a SmartContext using its context_items collection.
  *
+ * External items are rendered as Markdown file links with absolute `file://`
+ * URLs resolved from the vault root path.
+ *
  * @param {import('smart-contexts').SmartContext|any} smart_context
  * @returns {string}
  */
@@ -184,12 +323,15 @@ export function context_to_md_tree(smart_context) {
 
   for (let i = 0; i < items.length; i += 1) {
     const item = items[i];
-    const normalized_key = normalize_context_item_key(item?.key);
-    if (!normalized_key || seen_keys.has(normalized_key)) continue;
-    seen_keys.add(normalized_key);
+    const parsed_key = parse_context_item_key(item?.key);
+    if (!parsed_key.raw_key || seen_keys.has(parsed_key.raw_key)) continue;
+    seen_keys.add(parsed_key.raw_key);
 
-    const is_folder = Boolean(item?.data?.folder) || normalized_key.endsWith('/');
-    const path_segments = split_path_segments(normalized_key);
+    const is_folder = Boolean(item?.data?.folder)
+      || parsed_key.display_key.endsWith('/')
+      || parsed_key.normalized_key.endsWith('/')
+    ;
+    const path_segments = split_path_segments(parsed_key.display_key);
     if (!path_segments.length) continue;
 
     if (is_folder) {
@@ -199,10 +341,29 @@ export function context_to_md_tree(smart_context) {
 
     const file_segment = path_segments.pop();
     const parent_node = ensure_path(root_node, path_segments);
-    const wikilink_target = format_wikilink_target(file_segment);
-    if (!wikilink_target || parent_node.file_targets.has(wikilink_target)) continue;
 
-    parent_node.file_targets.add(wikilink_target);
+    if (parsed_key.is_external) {
+      const href = resolve_external_href(smart_context, parsed_key.raw_key);
+      if (!href) continue;
+
+      const external_key = `external:${href}`;
+      if (parent_node.file_keys.has(external_key)) continue;
+      parent_node.file_keys.add(external_key);
+      parent_node.children.push({
+        type: 'external_file',
+        label: file_segment,
+        href,
+      });
+      continue;
+    }
+
+    const wikilink_target = format_wikilink_target(file_segment);
+    if (!wikilink_target) continue;
+
+    const internal_key = `internal:${wikilink_target}`;
+    if (parent_node.file_keys.has(internal_key)) continue;
+
+    parent_node.file_keys.add(internal_key);
     parent_node.children.push({
       type: 'file',
       target: wikilink_target,

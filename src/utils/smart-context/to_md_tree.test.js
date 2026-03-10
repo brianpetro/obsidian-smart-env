@@ -1,16 +1,20 @@
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import test from 'ava';
 import { context_to_md_tree } from './to_md_tree.js';
 
-function build_smart_context(keys = []) {
+function build_smart_context(keys = [], params = {}) {
+  const item_data = params.item_data || {};
   return {
     context_items: {
       filter(predicate) {
         return keys
-          .map((key) => ({ key, data: {} }))
+          .map((key) => ({ key, data: item_data[key] || {} }))
           .filter(predicate)
         ;
       },
     },
+    ...(params.smart_context || {}),
   };
 }
 
@@ -38,18 +42,49 @@ test('context_to_md_tree builds a nested wikilink tree from context_items', (t) 
   );
 });
 
-test('context_to_md_tree strips external and selection prefixes', (t) => {
-  const smart_context = build_smart_context([
-    'external:../vault/spec.md',
-    'selection:daily/note.md',
-  ]);
+test('context_to_md_tree resolves external links against the vault root path', (t) => {
+  const vault_root_path = process.platform === 'win32'
+    ? 'C:\\Users\\brian\\Documents\\vault'
+    : '/Users/brian/Documents/vault'
+  ;
+  const external_href = pathToFileURL(
+    path.resolve(vault_root_path, '../smartconnections.app/main/smart-chat.html')
+  ).href;
+
+  const smart_context = build_smart_context(
+    [
+      'external:../',
+      'external:../smartconnections.app/main/smart-chat.html',
+      'selection:daily/note.md',
+    ],
+    {
+      item_data: {
+        'external:../': { folder: true },
+      },
+      smart_context: {
+        env: {
+          plugin: {
+            app: {
+              vault: {
+                adapter: {
+                  getBasePath() {
+                    return vault_root_path;
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  );
 
   t.is(
     context_to_md_tree(smart_context),
     [
-      '- ..',
-      '\t- vault',
-      '\t\t- [[spec]]',
+      '- smartconnections.app',
+      '\t- main',
+      `\t\t- [smart-chat.html](${external_href})`,
       '- daily',
       '\t- [[note]]',
     ].join('\n')
