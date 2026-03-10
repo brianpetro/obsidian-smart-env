@@ -1,6 +1,7 @@
 import styles from './styles.css';
 import { copy_to_clipboard } from '../../../utils/copy_to_clipboard.js';
 import { Menu } from 'obsidian';
+import { ctx_tree_dom_to_wikilinks } from '../../utils/ctx_tree_dom_to_wikilinks.js';
 
 /**
  * @param {Function} callback
@@ -92,7 +93,8 @@ export async function post_process(ctx, container, opts = {}) {
     const menu = new Menu(app);
     menu.addItem((mi) =>
       mi.setTitle('Copy link tree').setIcon('copy').onClick(async () => {
-        const md = tree_dom_to_wikilinks(container);
+        console.log({container});
+        const md = ctx_tree_dom_to_wikilinks(container);
         await copy_to_clipboard(md);
       })
     );
@@ -112,7 +114,7 @@ function tree_dom_to_wikilinks(container) {
     if (!path) return;
     // Remove external/selection prefixes
     let rel = path.replace(/^external:/, '').replace(/^selection:/, '');
-    const label = li.querySelector(':scope > .sc-tree-label')?.textContent?.trim() || '';
+    const label = li.querySelector('.sc-context-item-name')?.textContent?.trim() || '';
     if (li.classList.contains('file')) {
       // Only use the filename without extension for wikilinks
       let file = rel.split('/').pop().replace(/\.md$/, '');
@@ -121,8 +123,8 @@ function tree_dom_to_wikilinks(container) {
       // Use the label for directories (not a wikilink)
       lines.push(`${'\t'.repeat(depth)}- ${label}`);
     }
-    li.querySelectorAll(':scope > ul > li').forEach(child => walk(child, depth + 1));
+    li.querySelectorAll('ul > li').forEach(child => walk(child, depth + 1));
   };
-  container.querySelectorAll(':scope > ul > li').forEach(li => walk(li, 0));
+  container.querySelectorAll('ul > li').forEach(li => walk(li, 0));
   return lines.join('\n');
 }

@@ -22,6 +22,7 @@ export async function copy_to_clipboard(text) {
     else {
       new Notice('Unable to copy text: no valid method found.');
     }
+    new Notice(`Copied ${text.length} characters to clipboard`);
   } catch (err) {
     console.error('Failed to copy text:', err);
     new Notice('Failed to copy.');
