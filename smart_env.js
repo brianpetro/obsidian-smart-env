@@ -33,7 +33,7 @@ export class SmartEnv extends BaseSmartEnv {
     add_smart_connections_icon();
     add_smart_lookup_icon();
     add_smart_icons();
-    // TODO: can this be safely removed? Does downsteram version detection handle this case (no version)? 2026-02-07
+    // TODO: can this be safely removed? Does downstream version detection handle this case (no version)? 2026-02-07
     if(window.smart_env && !window.smart_env.constructor.version) {
       const update_notice = "Detected ancient SmartEnv. Removing it to prevent issues with new plugins. Make sure your Smart Plugins are up-to-date!";
       console.warn(update_notice);
@@ -45,6 +45,7 @@ export class SmartEnv extends BaseSmartEnv {
     opts.env_path = ''; // scope handled by Obsidian FS methods
     return await super.create(plugin, opts);
   }
+
   async load(force_load = false) {
     this.run_migrations();
     if(!this.plugin.app.workspace.protocolHandlers.has('smart-plugins/callback')) {
@@ -81,13 +82,41 @@ export class SmartEnv extends BaseSmartEnv {
     if(this._config.collections.smart_completions?.completion_adapters?.SmartCompletionVariableAdapter) {
       register_completion_variable_adapter_replacements(this._config.collections.smart_completions.completion_adapters.SmartCompletionVariableAdapter);
     }
-    // register modals
-    const ContextModal = this._config.modals.context_selector.class;
-    ContextModal.register_modal(this.main);
+
+    this.register_configured_modals();
+
     // register status bar
     this.register_status_bar();
     register_first_of_event_notifications(this);
   }
+
+  /**
+   * Register every modal declared in config that exposes a static register_modal helper.
+   * This keeps plugin-specific modals working without each plugin host having to
+   * manually register them after the environment loads.
+   *
+   * @returns {void}
+   */
+  register_configured_modals() {
+    const modal_entries = Object.entries(this._config?.modals || {});
+    if (!this._registered_modal_keys) {
+      this._registered_modal_keys = new Set();
+    }
+
+    for (const [modal_key, modal_config] of modal_entries) {
+      const ModalClass = modal_config?.class;
+      if (typeof ModalClass?.register_modal !== 'function') continue;
+      if (this._registered_modal_keys.has(modal_key)) continue;
+
+      try {
+        ModalClass.register_modal(this.main);
+        this._registered_modal_keys.add(modal_key);
+      } catch (error) {
+        console.error(`Failed to register modal "${modal_key}"`, error);
+      }
+    }
+  }
+
   emit_source_opened(current_path, event_source=null) {
     if (this._current_opened_source === current_path) return; // prevent duplicate events
     const current_source = this.smart_sources.get(current_path);
@@ -96,6 +125,7 @@ export class SmartEnv extends BaseSmartEnv {
       current_source.emit_event('sources:opened', { event_source });
     }
   }
+
   // queue re-import the file
   queue_source_re_import(source) {
     this.smart_sources?.queue_source_re_import?.(source);
@@ -123,6 +153,7 @@ export class SmartEnv extends BaseSmartEnv {
       this.status_elm.appendChild(container);
     });
   }
+
   /**
    * @deprecated see events
    */
@@ -134,6 +165,7 @@ export class SmartEnv extends BaseSmartEnv {
     }
     return this._notices;
   }
+
   // Smart Plugins
   /**
    * This is the function that is called by the new "Sign in with Smart Plugins" button.
@@ -148,6 +180,7 @@ export class SmartEnv extends BaseSmartEnv {
     window.open(url, '_external');
     return url;
   }
+
   /**
    * Handles the OAuth callback from the Smart Plugins server.
    * @param {Object} params - The URL parameters from the OAuth callback.
@@ -167,6 +200,7 @@ export class SmartEnv extends BaseSmartEnv {
       new Notice(`OAuth callback error: ${err.message}`);
     }
   }
+
   /**
    * Serializes the environment and, when in a browser, triggers a download.
    * @param {string} [filename='smart_env.json']
@@ -179,11 +213,13 @@ export class SmartEnv extends BaseSmartEnv {
     }
     return json;
   }
+
   // WAIT FOR OBSIDIAN SYNC
   async ready_to_load_collections() {
     await new Promise(r => setTimeout(r, 3000)); // wait 3 seconds for other processes to finish
     await this.wait_for_obsidian_sync();
   }
+
   async wait_for_obsidian_sync() {
     while (this.obsidian_is_syncing) {
       console.log("Smart Connections: Waiting for Obsidian Sync to finish");
@@ -191,6 +227,7 @@ export class SmartEnv extends BaseSmartEnv {
       if(!this.plugin) throw new Error("Plugin disabled while waiting for obsidian sync, reload required."); // if plugin is disabled, stop waiting for sync
     }
   }
+
   get obsidian_is_syncing() {
     const obsidian_sync_instance = this.plugin?.app?.internalPlugins?.plugins?.sync?.instance;
     if(!obsidian_sync_instance) return false; // if no obsidian sync instance, not syncing
@@ -198,22 +235,26 @@ export class SmartEnv extends BaseSmartEnv {
     if(obsidian_sync_instance?.syncStatus.startsWith('Fully synced')) return false; // if fully synced, don't wait for obsidian sync
     return obsidian_sync_instance?.syncing;
   }
+
   // get obsidian app instance
   get obsidian_app() {
     return this.plugin?.app ?? window.app;
   }
+
   // open notifications feed modal
   open_notifications_feed_modal() {
     const NotificationsModalClass = this.config.modals.notifications_feed_modal.class;
     const modal = new NotificationsModalClass(this.obsidian_app, this);
     modal.open();
   }
+
   // open milestones modal
   open_milestones_modal() {
     const MilestonesModalClass = this.config.modals.milestones_modal.class;
     const modal = new MilestonesModalClass(this.obsidian_app, this);
     modal.open();
   }
+
   run_migrations () {
     // remove old smart-plugins plugin if present
     remove_smart_plugins_plugin({ app: this.plugin.app, plugin_ids: ['smart-plugins'] });
@@ -234,6 +275,7 @@ async function disable_plugin(app, plugin_id) {
   await app.plugins.disablePluginAndSave(plugin_id);
   await app.plugins.loadManifests();
 }
+
 /**
  * Triggers a browser download for the provided JSON string.
  * @param {string} json
