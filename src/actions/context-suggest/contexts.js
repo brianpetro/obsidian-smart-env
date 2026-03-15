@@ -163,7 +163,10 @@ function build_named_context_item_payloads(ctx, params = {}) {
   const include_named_context = Boolean(params.include_named_context);
   const items = get_items_from_context(other_ctx);
   if (is_codeblock_context(ctx)) {
-    return build_codeblock_named_context_items(ctx, { items, context_name });
+    if (include_named_context) {
+      return build_codeblock_named_context_items(ctx, { items, context_name });
+    }
+    return normalize_items_preserving_depth(ctx, items);
   }
   const normalized_items = normalize_items_preserving_depth(ctx, items);
   if (!include_named_context) return normalized_items;
@@ -203,7 +206,7 @@ function add_named_context_items(ctx, params = {}) {
     ? params.payloads
     : build_named_context_item_payloads(ctx, params);
   if (!payloads.length) return [];
-  if (is_codeblock_context(ctx)) {
+  if (is_codeblock_context(ctx) && params.include_named_context) {
     update_codeblock_named_contexts(ctx, { context_name: params.context_name });
   }
   add_context_payloads(ctx, payloads);
@@ -340,3 +343,4 @@ export default {
   display_name,
   context_suggest_contexts,
 };
+
