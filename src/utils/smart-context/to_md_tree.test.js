@@ -91,6 +91,61 @@ test('context_to_md_tree resolves external links against the vault root path', (
   );
 });
 
+test('context_to_md_tree keeps expanded external-folder files as file links', (t) => {
+  const vault_root_path = process.platform === 'win32'
+    ? 'C:\\Users\\brian\\Documents\\vault'
+    : '/Users/brian/Documents/vault'
+  ;
+  const smart_chat_href = pathToFileURL(
+    path.resolve(vault_root_path, '../smartconnections.app/main/smart-chat.html')
+  ).href;
+  const readme_href = pathToFileURL(
+    path.resolve(vault_root_path, '../smartconnections.app/README.md')
+  ).href;
+
+  const smart_context = build_smart_context(
+    [
+      'external:../smartconnections.app/main/smart-chat.html',
+      'external:../smartconnections.app/README.md',
+    ],
+    {
+      item_data: {
+        'external:../smartconnections.app/main/smart-chat.html': {
+          folder: '../smartconnections.app',
+        },
+        'external:../smartconnections.app/README.md': {
+          folder: '../smartconnections.app',
+        },
+      },
+      smart_context: {
+        env: {
+          plugin: {
+            app: {
+              vault: {
+                adapter: {
+                  getBasePath() {
+                    return vault_root_path;
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  );
+
+  t.is(
+    context_to_md_tree(smart_context),
+    [
+      '- smartconnections.app',
+      '\t- main',
+      `\t\t- [smart-chat.html](${smart_chat_href})`,
+      `\t- [README.md](${readme_href})`,
+    ].join('\n')
+  );
+});
+
 test('context_to_md_tree supports folder items and skips excluded raw context_items', (t) => {
   const smart_context = {
     data: {
