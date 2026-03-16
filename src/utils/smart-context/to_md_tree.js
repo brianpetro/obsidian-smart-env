@@ -327,9 +327,18 @@ export function context_to_md_tree(smart_context) {
     if (!parsed_key.raw_key || seen_keys.has(parsed_key.raw_key)) continue;
     seen_keys.add(parsed_key.raw_key);
 
-    const is_folder = Boolean(item?.data?.folder)
+    const raw_folder_value = item?.data?.folder;
+    const normalized_folder_value = typeof raw_folder_value === 'string'
+      ? normalize_context_item_key(raw_folder_value)
+      : ''
+    ;
+    const is_folder = raw_folder_value === true
       || parsed_key.display_key.endsWith('/')
       || parsed_key.normalized_key.endsWith('/')
+      || (
+        normalized_folder_value.length > 0
+        && normalized_folder_value === parsed_key.normalized_key
+      )
     ;
     const path_segments = split_path_segments(parsed_key.display_key);
     if (!path_segments.length) continue;
