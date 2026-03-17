@@ -13,7 +13,6 @@ export function build_html() {
     <a
       class="smart-env-status-container"
       role="button"
-      title="Smart Environment status"
       aria-label="Smart Environment status"
       tabindex="0"
     >
@@ -21,8 +20,7 @@ export function build_html() {
       <span class="smart-env-status-msg" aria-live="polite"></span>
       <span
         class="smart-env-status-indicator"
-        title="Open notifications"
-        aria-label="Open notifications feed"
+        aria-label="Open events feed"
         role="button"
         tabindex="0"
       ></span>
@@ -86,7 +84,7 @@ function post_process(env, container, opts = {}) {
       }
 
       const has_unseen_notifications = indicator_count > 0;
-      status_indicator.hidden = !has_unseen_notifications;
+      // status_indicator.hidden = !has_unseen_notifications;
 
       if (has_unseen_notifications) {
         status_indicator.dataset.count = String(indicator_count);
@@ -100,12 +98,13 @@ function post_process(env, container, opts = {}) {
         ? `${indicator_count} unseen notification${indicator_count === 1 ? '' : 's'}`
         : 'Open notifications feed'
       ;
-      status_indicator.setAttribute('title', indicator_title);
+      // status_indicator.setAttribute('title', indicator_title); // use aria-label since it is the Obsidian-native tooltip
       status_indicator.setAttribute('aria-label', indicator_title);
     }
 
     status_msg.setText?.(message);
-    container.setAttribute?.('title', title);
+    // container.setAttribute?.('title', title); // use aria-label since it is the Obsidian-native tooltip
+    container.setAttribute?.('aria-label', title);
     container.removeAttribute?.('href');
     container.removeAttribute?.('target');
   };
