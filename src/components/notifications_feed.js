@@ -22,16 +22,24 @@ import {
   to_time_ago,
 } from '../utils/notifications_feed_utils.js';
 
+const feed_excluded_event_keys = new Set([
+  'collection:save_started',
+  'collection:save_completed',
+  'notifications:seen',
+  'notifications:seen_all',
+  'event_log:first',
+]);
+
 function build_html() {
   return `<div class="smart-env-notifications">
     <div class="smart-env-notifications__toolbar">
       <div class="smart-env-notifications__summary" aria-live="polite"></div>
       <div class="smart-env-notifications__actions">
-        <button class="smart-env-btn smart-env-btn--ghost copy-all-notifications-btn" type="button" title="Copy all filtered notifications to clipboard">Copy All</button>
+        <button class="smart-env-btn smart-env-btn--ghost copy-all-notifications-btn" type="button" title="Copy all filtered events to clipboard">Copy All</button>
       </div>
     </div>
 
-    <div class="smart-env-notifications-filter-controls" aria-label="Notification level filters"></div>
+    <div class="smart-env-notifications-filter-controls" aria-label="Event level filters"></div>
 
     <div class="smart-env-notifications-feed" role="list"></div>
 
@@ -89,14 +97,13 @@ async function post_process(env, container, params = {}) {
       ? [...env.event_logs.session_events]
       : []
     ;
-    return session_entries.filter((entry) => Boolean(get_entry_level(entry)));
+    return session_entries;
   };
 
-  const should_refresh_for_event = (event_key, event = {}) => {
+  const should_refresh_for_event = (event_key) => {
     if (event_key === 'event_logs:mute_changed') return true;
-    if (event_key === 'notifications:seen') return false;
-    if (event_key === 'notifications:seen_all') return false;
-    return Boolean(get_entry_level({ event_key, event }));
+    if (feed_excluded_event_keys.has(event_key)) return false;
+    return true;
   };
 
   const capture_expanded_entry_keys = () => {
@@ -121,6 +128,7 @@ async function post_process(env, container, params = {}) {
   const render_filters = (entries) => {
     render_filter_controls(filter_controls, {
       active_levels,
+      total_count: entries.length,
       level_counts: get_level_counts(entries),
       on_change: handle_filters_changed,
       on_select_all: () => {
@@ -165,8 +173,8 @@ async function post_process(env, container, params = {}) {
 
     if (filtered_entries.length === 0) {
       render_empty_state(feed_container, {
-        title: 'No notifications match your filters.',
-        detail: 'Try enabling more levels.',
+        title: 'No events match your filters.',
+        detail: 'Try enabling more levels or switch back to All.',
         action_text: 'Reset filters',
         on_action: reset_filters,
       });
@@ -207,8 +215,8 @@ async function post_process(env, container, params = {}) {
     if (!entries.length) {
       smart_env.empty(feed_container);
       render_empty_state(feed_container, {
-        title: 'No Smart Env notifications yet.',
-        detail: 'When Smart Env emits levelled events, they will appear here.',
+        title: 'No Smart Env events yet.',
+        detail: 'When Smart Env emits events, they will appear here.',
       });
       set_btn_disabled(copy_btn, true);
       if (load_more_btn) load_more_btn.style.display = 'none';
@@ -278,8 +286,8 @@ async function post_process(env, container, params = {}) {
 
   if (live_updates && typeof env?.events?.on === 'function') {
     let debounce_timeout = null;
-    const live_update_off = env.events.on('*', (event, event_key) => {
-      if (!should_refresh_for_event(event_key, event)) return;
+    const live_update_off = env.events.on('*', (_event, event_key) => {
+      if (!should_refresh_for_event(event_key)) return;
       if (debounce_timeout) clearTimeout(debounce_timeout);
       debounce_timeout = setTimeout(() => {
         debounce_timeout = null;
@@ -302,6 +310,7 @@ async function post_process(env, container, params = {}) {
  * @param {HTMLElement|null} container
  * @param {object} [params={}]
  * @param {Set<string>} [params.active_levels]
+ * @param {number} [params.total_count]
  * @param {Record<string, number>} [params.level_counts]
  * @param {Function} [params.on_change]
  * @param {Function} [params.on_select_all]
@@ -312,6 +321,7 @@ function render_filter_controls(container, params = {}) {
 
   const {
     active_levels = new Set(),
+    total_count = 0,
     level_counts = {},
     on_change = () => {},
     on_select_all = () => {},
@@ -320,7 +330,6 @@ function render_filter_controls(container, params = {}) {
   container.replaceChildren();
 
   const all_is_active = are_all_levels_active(active_levels);
-  const total_count = Object.values(level_counts).reduce((acc, count) => acc + (count || 0), 0);
 
   append_filter_button(container, {
     level: all_levels_filter_key,
@@ -430,8 +439,6 @@ function append_entry(feed_container, entry, params = {}) {
     on_toggle_mute = () => {},
   } = params;
   const level = get_entry_level(entry);
-  if (!level) return;
-
   const title = get_entry_title(entry);
   const timestamp = get_entry_timestamp(entry);
   const collection_key = entry?.event?.collection_key ?? '';
@@ -439,25 +446,19 @@ function append_entry(feed_container, entry, params = {}) {
   const payload_text = get_entry_payload_text(entry);
   const is_canonical = is_canonical_notification_entry(entry);
   const is_muted = is_canonical && Boolean(env?.event_logs?.is_event_key_muted?.(event_key));
+  const is_feed_only = Boolean(level) && !is_canonical;
   const entry_row_key = get_entry_row_key(entry);
+  const total_count = get_event_key_total_count(env, event_key);
 
-  const has_payload = payload_text.trim().length > 0;
-  const row = has_payload
-    ? feed_container.ownerDocument.createElement('details')
-    : feed_container.ownerDocument.createElement('div')
-  ;
-
+  const row = feed_container.ownerDocument.createElement('details');
   row.className = 'smart-env-notification';
   row.dataset.entryKey = entry_row_key;
-  row.dataset.level = level;
+  row.dataset.level = level || 'event';
   row.setAttribute('role', 'listitem');
   if (is_muted) row.dataset.muted = 'true';
-  if (has_payload && expanded_entry_keys.has(entry_row_key)) row.open = true;
+  if (expanded_entry_keys.has(entry_row_key)) row.open = true;
 
-  const summary = has_payload
-    ? feed_container.ownerDocument.createElement('summary')
-    : feed_container.ownerDocument.createElement('div')
-  ;
+  const summary = feed_container.ownerDocument.createElement('summary');
   summary.className = 'smart-env-notification__summary';
 
   const accent = feed_container.ownerDocument.createElement('span');
@@ -477,11 +478,7 @@ function append_entry(feed_container, entry, params = {}) {
   const time_el = feed_container.ownerDocument.createElement('div');
   time_el.className = 'smart-env-notification__time';
   time_el.textContent = to_time_ago(timestamp);
-  try {
-    time_el.title = new Date(timestamp).toLocaleString();
-  } catch (_err) {
-    /* no-op */
-  }
+  time_el.title = format_timestamp(timestamp);
 
   top.appendChild(event_el);
   top.appendChild(time_el);
@@ -490,36 +487,64 @@ function append_entry(feed_container, entry, params = {}) {
   bottom.className = 'smart-env-notification__summary-bottom';
 
   if (collection_key) {
-    const collection = feed_container.ownerDocument.createElement('span');
-    collection.className = 'smart-env-notification__collection';
-    collection.textContent = collection_key;
-    bottom.appendChild(collection);
+    bottom.appendChild(create_tag(feed_container, 'smart-env-notification__collection', collection_key));
   }
 
   if (title !== event_key) {
-    const event_key_tag = feed_container.ownerDocument.createElement('span');
-    event_key_tag.className = 'smart-env-notification__collection';
-    event_key_tag.textContent = event_key;
-    bottom.appendChild(event_key_tag);
+    bottom.appendChild(create_tag(feed_container, 'smart-env-notification__collection', event_key));
   }
 
-  const level_tag = feed_container.ownerDocument.createElement('span');
-  level_tag.className = 'smart-env-notification__level';
-  level_tag.textContent = format_level_label(level);
-  bottom.appendChild(level_tag);
+  bottom.appendChild(create_tag(
+    feed_container,
+    'smart-env-notification__level',
+    level ? format_level_label(level) : 'Event',
+  ));
+
+  if (is_feed_only) {
+    bottom.appendChild(create_tag(feed_container, 'smart-env-notification__feed-only', 'Feed only'));
+  }
 
   if (is_muted) {
-    const muted_tag = feed_container.ownerDocument.createElement('span');
-    muted_tag.className = 'smart-env-notification__muted';
-    muted_tag.textContent = 'Muted';
-    bottom.appendChild(muted_tag);
+    bottom.appendChild(create_tag(feed_container, 'smart-env-notification__muted', 'Muted'));
   }
+
+  body.appendChild(top);
+  body.appendChild(bottom);
+
+  const chevron = feed_container.ownerDocument.createElement('span');
+  chevron.className = 'smart-env-notification__chevron';
+  chevron.setAttribute('aria-hidden', 'true');
+
+  summary.appendChild(accent);
+  summary.appendChild(body);
+  summary.appendChild(chevron);
+
+  const expanded = feed_container.ownerDocument.createElement('div');
+  expanded.className = 'smart-env-notification__expanded';
+
+  const meta = feed_container.ownerDocument.createElement('div');
+  meta.className = 'smart-env-notification__expanded-meta';
+  append_meta_row(feed_container, meta, 'Occurred', format_timestamp(timestamp));
+  append_meta_row(feed_container, meta, 'Event key', event_key);
+  if (collection_key) {
+    append_meta_row(feed_container, meta, 'Collection', collection_key);
+  }
+  expanded.appendChild(meta);
+
+  const actions = feed_container.ownerDocument.createElement('div');
+  actions.className = 'smart-env-notification__expanded-actions';
+
+  actions.appendChild(create_tag(
+    feed_container,
+    'smart-env-notification__event-count',
+    `${Math.max(1, total_count)} total`,
+  ));
 
   if (is_canonical) {
     const mute_btn = feed_container.ownerDocument.createElement('button');
     mute_btn.className = 'smart-env-btn smart-env-btn--ghost smart-env-notification__mute';
     mute_btn.type = 'button';
-    mute_btn.textContent = is_muted ? 'Unmute' : 'Mute';
+    mute_btn.textContent = is_muted ? 'Unmute native notices' : 'Mute native notices';
     mute_btn.setAttribute(
       'aria-label',
       is_muted ? 'Allow native notices for this event key' : 'Mute native notices for this event key',
@@ -529,38 +554,25 @@ function append_entry(feed_container, entry, params = {}) {
       event.stopPropagation();
       on_toggle_mute(entry);
     });
-    bottom.appendChild(mute_btn);
-  } else {
-    const feed_only_tag = feed_container.ownerDocument.createElement('span');
-    feed_only_tag.className = 'smart-env-notification__feed-only';
-    feed_only_tag.textContent = 'Feed only';
-    bottom.appendChild(feed_only_tag);
+    actions.appendChild(mute_btn);
+  } else if (is_feed_only) {
+    actions.appendChild(create_tag(feed_container, 'smart-env-notification__feed-only', 'Display fallback only'));
   }
 
-  body.appendChild(top);
-  body.appendChild(bottom);
+  expanded.appendChild(actions);
 
-  summary.appendChild(accent);
-  summary.appendChild(body);
-
-  if (has_payload) {
-    const chevron = feed_container.ownerDocument.createElement('span');
-    chevron.className = 'smart-env-notification__chevron';
-    chevron.setAttribute('aria-hidden', 'true');
-    summary.appendChild(chevron);
-  }
-
-  row.appendChild(summary);
-
-  if (has_payload) {
+  if (payload_text.trim().length) {
     const message = feed_container.ownerDocument.createElement('pre');
     message.className = 'smart-env-notification__message';
     message.textContent = payload_text;
-    row.appendChild(message);
-    row.addEventListener('toggle', () => {
-      on_entry_toggle(entry_row_key, row.open === true);
-    });
+    expanded.appendChild(message);
   }
+
+  row.appendChild(summary);
+  row.appendChild(expanded);
+  row.addEventListener('toggle', () => {
+    on_entry_toggle(entry_row_key, row.open === true);
+  });
 
   feed_container.appendChild(row);
 }
@@ -700,4 +712,63 @@ async function write_text_to_clipboard(text = '') {
  */
 function get_entry_row_key(entry) {
   return `${get_entry_event_key(entry)}:${get_entry_timestamp(entry)}`;
+}
+
+/**
+ * @param {object|null} env
+ * @param {string} event_key
+ * @returns {number}
+ */
+function get_event_key_total_count(env, event_key) {
+  if (!event_key) return 0;
+  return env?.event_logs?.get?.(event_key)?.data?.ct || 0;
+}
+
+/**
+ * @param {HTMLElement} feed_container
+ * @param {string} class_name
+ * @param {string} text
+ * @returns {HTMLElement}
+ */
+function create_tag(feed_container, class_name, text) {
+  const el = feed_container.ownerDocument.createElement('span');
+  el.className = class_name;
+  el.textContent = text;
+  return el;
+}
+
+/**
+ * @param {HTMLElement} feed_container
+ * @param {HTMLElement} container
+ * @param {string} label
+ * @param {string} value
+ * @returns {void}
+ */
+function append_meta_row(feed_container, container, label, value) {
+  const row = feed_container.ownerDocument.createElement('div');
+  row.className = 'smart-env-notification__expanded-row';
+
+  const label_el = feed_container.ownerDocument.createElement('span');
+  label_el.className = 'smart-env-notification__expanded-label';
+  label_el.textContent = label;
+
+  const value_el = feed_container.ownerDocument.createElement('span');
+  value_el.className = 'smart-env-notification__expanded-value';
+  value_el.textContent = value;
+
+  row.appendChild(label_el);
+  row.appendChild(value_el);
+  container.appendChild(row);
+}
+
+/**
+ * @param {number} timestamp
+ * @returns {string}
+ */
+function format_timestamp(timestamp) {
+  try {
+    return new Date(timestamp).toLocaleString();
+  } catch (_error) {
+    return String(timestamp);
+  }
 }

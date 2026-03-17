@@ -18,6 +18,7 @@ import { register_completion_variable_adapter_replacements } from './utils/regis
 import { remove_smart_plugins_plugin } from './migrations/remove_smart_plugins_plugin.js';
 import { register_first_of_event_notifications } from './src/utils/onboarding_events.js';
 import { render as render_status_bar_component } from './src/components/status_bar.js';
+import { EmbeddingProgressView } from './src/views/embedding_progress_view.js';
 
 export class SmartEnv extends BaseSmartEnv {
   /**
@@ -50,6 +51,7 @@ export class SmartEnv extends BaseSmartEnv {
   async load(force_load = false) {
     this.run_migrations();
     this.register_notification_dispatchers();
+    this.register_env_item_views();
 
     if (typeof this._onboarding_events_teardown !== 'function') {
       this._onboarding_events_teardown = register_first_of_event_notifications(this);
@@ -63,9 +65,12 @@ export class SmartEnv extends BaseSmartEnv {
     }
 
     if (Platform.isMobile && !force_load && this.state !== 'loaded') {
-      // create doc frag with a button to run load_env
-      const frag = this.smart_view.create_doc_fragment('<div><p>Smart Environment loading deferred on mobile.</p><button>Load Environment</button></div>');
-      frag.querySelector('button').addEventListener('click', this.load.bind(this, true));
+      const frag = this.smart_view.create_doc_fragment(
+        '<div><p>Smart Environment loading deferred on mobile.</p><button>Load Smart Environment</button></div>',
+      );
+      frag.querySelector('button').addEventListener('click', () => {
+        this.start_mobile_env_load({ source: 'mobile_deferred_notice' });
+      });
       new Notice(frag, 0);
       return;
     }
@@ -109,6 +114,74 @@ export class SmartEnv extends BaseSmartEnv {
     this.events.on('notifications_feed_modal:open', () => {
       this.open_notifications_feed_modal?.();
     });
+  }
+
+  /**
+   * Register environment-owned item views once per plugin.
+   * @returns {void}
+   */
+  register_env_item_views() {
+    const plugin = this.main;
+    if (!plugin?.registerView) return;
+
+    if (!(this._registered_env_item_views instanceof Set)) {
+      this._registered_env_item_views = new Set();
+    }
+
+    const plugin_key = plugin.manifest?.id || plugin.constructor?.name || 'main';
+    const view_classes = [EmbeddingProgressView];
+
+    view_classes.forEach((ViewClass) => {
+      const registration_key = `${plugin_key}:${ViewClass.view_type}`;
+      if (this._registered_env_item_views.has(registration_key)) return;
+
+      try {
+        ViewClass.register_item_view(plugin);
+        this._registered_env_item_views.add(registration_key);
+      } catch (error) {
+        console.error(`Failed to register item view "${ViewClass.view_type}"`, error);
+      }
+    });
+  }
+
+  /**
+   * Open the mobile-friendly embedding progress item view.
+   *
+   * @param {object} [params={}]
+   * @returns {void}
+   */
+  open_embedding_progress_view(params = {}) {
+    this.register_env_item_views();
+    EmbeddingProgressView.open(this.obsidian_app.workspace, params);
+  }
+
+  /**
+   * Centralized mobile load flow used by native notices, settings tabs, and views.
+   * Opens the persistent progress surface first, then starts loading if needed.
+   *
+   * @param {object} [params={}]
+   * @param {boolean} [params.open_progress_view=true]
+   * @returns {Promise<SmartEnv>|SmartEnv}
+   */
+  start_mobile_env_load(params = {}) {
+    const {
+      open_progress_view = true,
+    } = params;
+
+    if (open_progress_view) {
+      this.open_embedding_progress_view({ active: true });
+    }
+
+    if (this.state === 'loaded') {
+      this.refresh_status_bar();
+      return this;
+    }
+
+    if (this.state === 'loading' && this._load_promise) {
+      return this._load_promise;
+    }
+
+    return this.load(true);
   }
 
   /**

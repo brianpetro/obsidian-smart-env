@@ -70,6 +70,16 @@ test('all-level filter helpers support the all token semantics', (t) => {
   t.true(are_all_levels_active(reset_to_all));
 });
 
+test('get_filtered_entries keeps all events visible when All is active', (t) => {
+  const entries = [
+    { event_key: 'sync:error', event: {} },
+    { event_key: 'domain:event', event: {} },
+    { event_key: 'notification:info', event: {} },
+  ];
+
+  t.deepEqual(get_filtered_entries(entries), entries);
+});
+
 test('get_filtered_entries and get_level_counts use derived levels', (t) => {
   const entries = [
     { event_key: 'sync:error', event: {} },

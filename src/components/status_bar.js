@@ -83,27 +83,35 @@ function post_process(env, container, opts = {}) {
         status_indicator.addEventListener('click', status_indicator._click_handler);
       }
 
-      const has_unseen_notifications = indicator_count > 0;
-      // status_indicator.hidden = !has_unseen_notifications;
-
-      if (has_unseen_notifications) {
-        status_indicator.dataset.count = String(indicator_count);
-        status_indicator.dataset.level = indicator_level ? String(indicator_level) : 'info';
-      } else {
-        status_indicator.removeAttribute('data-count');
-        status_indicator.removeAttribute('data-level');
+      if (!status_indicator._keydown_handler) {
+        status_indicator._keydown_handler = (event) => {
+          if (event.key !== 'Enter' && event.key !== ' ') return;
+          event.preventDefault();
+          event.stopPropagation();
+          env.open_notifications_feed_modal?.();
+        };
+        status_indicator.addEventListener('keydown', status_indicator._keydown_handler);
       }
 
-      const indicator_title = has_unseen_notifications
+      status_indicator.dataset.level = indicator_level || 'default';
+
+      if (indicator_count > 0) {
+        status_indicator.dataset.count = String(indicator_count);
+      } else {
+        status_indicator.removeAttribute('data-count');
+      }
+
+      const indicator_title = indicator_count > 0
         ? `${indicator_count} unseen notification${indicator_count === 1 ? '' : 's'}`
         : 'Open notifications feed'
       ;
-      // status_indicator.setAttribute('title', indicator_title); // use aria-label since it is the Obsidian-native tooltip
       status_indicator.setAttribute('aria-label', indicator_title);
     }
 
-    status_msg.setText?.(message);
-    // container.setAttribute?.('title', title); // use aria-label since it is the Obsidian-native tooltip
+    if (status_msg) {
+      if (typeof status_msg.setText === 'function') status_msg.setText(message);
+      else status_msg.textContent = message;
+    }
     container.setAttribute?.('aria-label', title);
     container.removeAttribute?.('href');
     container.removeAttribute?.('target');
@@ -132,13 +140,21 @@ function post_process(env, container, opts = {}) {
       case 'run_reimport':
         event.preventDefault();
         event.stopPropagation();
-        status_msg?.setText?.('Re-importing…');
+        if (status_msg) {
+          if (typeof status_msg.setText === 'function') status_msg.setText('Re-importing…');
+          else status_msg.textContent = 'Re-importing…';
+        }
         env.run_re_import?.();
         return;
       case 'noop':
         return;
       default: {
-        const context_event = new MouseEvent('contextmenu', event);
+        const context_event = new MouseEvent('contextmenu', {
+          bubbles: true,
+          cancelable: true,
+          clientX: event?.clientX || 0,
+          clientY: event?.clientY || 0,
+        });
         container.dispatchEvent?.(context_event);
       }
     }
@@ -180,6 +196,15 @@ function post_process(env, container, opts = {}) {
       run_container_action(event);
     };
     container.addEventListener('click', container._click_handler);
+  }
+
+  if (!container._keydown_handler) {
+    container._keydown_handler = (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      run_container_action(event);
+    };
+    container.addEventListener('keydown', container._keydown_handler);
   }
 
   let debounce_timeout = null;

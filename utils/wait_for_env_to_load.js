@@ -10,8 +10,12 @@ export async function wait_for_env_to_load(scope, opts = {}) {
         container.empty();
         scope.env.smart_view.safe_inner_html(container, '<button>Load Smart Environment</button>');
         container.querySelector('button').addEventListener('click', () => {
-          scope.env.load(true);
           clicked_load_env = true;
+          if (typeof scope.env.start_mobile_env_load === 'function') {
+            scope.env.start_mobile_env_load({ source: 'wait_for_env_to_load' });
+            return;
+          }
+          scope.env.load(true);
         });
       }else{
         console.log('Waiting for env to load (mobile)...');

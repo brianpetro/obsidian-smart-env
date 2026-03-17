@@ -1,4 +1,12 @@
-import { get_next_notification_status } from 'smart-events/event_level_utils.js';
+import { get_event_level } from 'smart-events/event_level_utils.js';
+
+const indicator_level_rank = {
+  info: 1,
+  milestone: 2,
+  attention: 3,
+  warning: 4,
+  error: 5,
+};
 
 /**
  * Return unseen canonical notification entries.
@@ -24,16 +32,37 @@ export function get_notification_event_count(event_logs) {
 }
 
 /**
- * Resolve the highest unseen notification severity.
- * Info notifications still count but do not escalate severity.
+ * Resolve the next display level for the status bar indicator.
+ *
+ * This preserves milestone and info as distinct display states while still
+ * ranking error > warning > attention > milestone > info.
+ *
+ * @param {'milestone'|'attention'|'error'|'warning'|'info'|null} current_level
+ * @param {string} [event_key='']
+ * @param {Record<string, unknown>} [event={}]
+ * @returns {'milestone'|'attention'|'error'|'warning'|'info'|null}
+ */
+export function get_next_indicator_level(current_level, event_key = '', event = {}) {
+  const next_level = get_event_level(event_key, event);
+  if (!next_level) return current_level ?? null;
+
+  const current_rank = indicator_level_rank[current_level] || 0;
+  const next_rank = indicator_level_rank[next_level] || 0;
+
+  if (next_rank > current_rank) return next_level;
+  return current_level ?? next_level;
+}
+
+/**
+ * Resolve the highest unseen notification display level.
  *
  * @param {Object} [event_logs]
- * @returns {'attention'|'warning'|'error'|null}
+ * @returns {'milestone'|'attention'|'error'|'warning'|'info'|null}
  */
 export function get_notification_indicator_level(event_logs) {
   return get_unseen_notification_entries(event_logs)
-    .reduce((current_status, entry) => {
-      return get_next_notification_status(current_status, entry?.event_key, entry?.event);
+    .reduce((current_level, entry) => {
+      return get_next_indicator_level(current_level, entry?.event_key, entry?.event);
     }, null)
   ;
 }
@@ -70,7 +99,7 @@ export function get_reimport_queue_count(env) {
  */
 export function get_status_bar_state(env) {
   const notification_count = get_notification_event_count(env?.event_logs);
-  const indicator_level = get_notification_indicator_level(env?.event_logs);
+  const notification_indicator_level = get_notification_indicator_level(env?.event_logs);
   const import_progress = get_import_progress_state(env);
   const embed_progress = get_embed_progress_state(env);
   const embed_queue_count = get_reimport_queue_count(env);
@@ -79,6 +108,7 @@ export function get_status_bar_state(env) {
   let message = `Smart Env${version ? ` ${version}` : ''}`;
   let title = 'Smart Environment status';
   let click_action = 'context_menu';
+  let indicator_level = notification_count > 0 ? notification_indicator_level : null;
 
   if (import_progress?.active) {
     const progress = typeof import_progress.progress === 'number' ? import_progress.progress : 0;
@@ -94,6 +124,7 @@ export function get_status_bar_state(env) {
     }
 
     click_action = 'noop';
+    indicator_level = null;
   } else if (embed_progress?.active) {
     const progress = typeof embed_progress.progress === 'number' ? embed_progress.progress : 0;
     const total = typeof embed_progress.total === 'number' ? embed_progress.total : 0;
@@ -102,21 +133,25 @@ export function get_status_bar_state(env) {
       message = `Embedding paused ${progress}/${total}`;
       title = 'Click to resume embedding.';
       click_action = 'resume_embed';
+      indicator_level = 'attention';
     } else {
       message = `Embedding ${progress}/${total}`;
       title = 'Click to pause embedding.';
       click_action = 'pause_embed';
+      indicator_level = 'milestone';
     }
   } else if (env?.state !== 'loaded') {
     if (env?.state === 'loading') {
       message = 'Loading Smart Env…';
       title = 'Smart Environment is loading.';
       click_action = 'noop';
+      indicator_level = null;
     }
   } else if (embed_queue_count > 0) {
     message = `Re-import (${embed_queue_count})`;
     title = 'Click to re-import queued sources.';
     click_action = 'run_reimport';
+    indicator_level = 'attention';
   } else if (notification_count > 0) {
     title = `${notification_count} unseen notification${notification_count === 1 ? '' : 's'}`;
   }

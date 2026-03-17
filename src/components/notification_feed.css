@@ -189,7 +189,7 @@
 }
 
 .smart-env-notifications-filter[data-level='milestone'] .smart-env-notifications-filter__dot {
-  background: var(--color-purple);
+  background: var(--interactive-accent);
 }
 
 .smart-env-notifications-filter[data-level='warning'] .smart-env-notifications-filter__dot {
@@ -201,7 +201,7 @@
 }
 
 .smart-env-notifications-filter[data-level='info'] .smart-env-notifications-filter__dot {
-  background: var(--interactive-accent);
+  background: var(--status-bar-text-color);
 }
 
 /* Feed */
@@ -257,7 +257,7 @@ details.smart-env-notification > .smart-env-notification__summary:focus-visible 
   border-radius: 999px;
   margin-top: 0.25rem;
   flex: 0 0 auto;
-  background: var(--interactive-accent);
+  background: var(--background-modifier-border);
 }
 
 .smart-env-notification[data-level='attention'] .smart-env-notification__accent {
@@ -265,7 +265,7 @@ details.smart-env-notification > .smart-env-notification__summary:focus-visible 
 }
 
 .smart-env-notification[data-level='milestone'] .smart-env-notification__accent {
-  background: var(--color-purple);
+  background: var(--interactive-accent);
 }
 
 .smart-env-notification[data-level='warning'] .smart-env-notification__accent {
@@ -274,6 +274,10 @@ details.smart-env-notification > .smart-env-notification__summary:focus-visible 
 
 .smart-env-notification[data-level='error'] .smart-env-notification__accent {
   background: var(--color-red);
+}
+
+.smart-env-notification[data-level='info'] .smart-env-notification__accent {
+  background: var(--status-bar-text-color);
 }
 
 .smart-env-notification__summary-body {
@@ -328,7 +332,8 @@ details.smart-env-notification > .smart-env-notification__summary:focus-visible 
 
 .smart-env-notification__level,
 .smart-env-notification__feed-only,
-.smart-env-notification__muted {
+.smart-env-notification__muted,
+.smart-env-notification__event-count {
   display: inline-flex;
   align-items: center;
   padding: 0.12rem 0.42rem;
@@ -338,6 +343,10 @@ details.smart-env-notification > .smart-env-notification__summary:focus-visible 
   color: var(--text-muted);
   font-size: var(--font-ui-small);
   line-height: 1.1;
+}
+
+.smart-env-notification__event-count {
+  background: var(--background-primary);
 }
 
 .smart-env-notification__feed-only {
@@ -351,8 +360,8 @@ details.smart-env-notification > .smart-env-notification__summary:focus-visible 
 }
 
 .smart-env-notification[data-level='milestone'] .smart-env-notification__level {
-  border-color: var(--color-purple);
-  color: var(--color-purple);
+  border-color: var(--interactive-accent);
+  color: var(--interactive-accent);
 }
 
 .smart-env-notification[data-level='warning'] .smart-env-notification__level {
@@ -366,8 +375,8 @@ details.smart-env-notification > .smart-env-notification__summary:focus-visible 
 }
 
 .smart-env-notification[data-level='info'] .smart-env-notification__level {
-  border-color: var(--interactive-accent);
-  color: var(--interactive-accent);
+  border-color: var(--status-bar-text-color);
+  color: var(--status-bar-text-color);
 }
 
 .smart-env-notification__chevron {
@@ -393,11 +402,53 @@ details.smart-env-notification[open] .smart-env-notification__chevron {
   color: var(--text-muted);
 }
 
-.smart-env-notification__message {
-  margin: 0;
+.smart-env-notification__expanded {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
   padding: 0.75rem 0.85rem 0.85rem;
   border-top: 1px solid var(--background-modifier-border);
   background: var(--background-secondary);
+}
+
+.smart-env-notification__expanded-meta {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.smart-env-notification__expanded-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.smart-env-notification__expanded-label {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  white-space: nowrap;
+}
+
+.smart-env-notification__expanded-value {
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+  text-align: right;
+  word-break: break-word;
+}
+
+.smart-env-notification__expanded-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.smart-env-notification__message {
+  margin: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 10px;
+  background: var(--background-primary);
   font-family: var(--font-monospace);
   font-size: var(--font-smaller);
   white-space: pre-wrap;
@@ -449,5 +500,14 @@ details.smart-env-notification[open] .smart-env-notification__chevron {
 
   .smart-env-notifications__footer .smart-env-btn {
     max-width: none;
+  }
+
+  .smart-env-notification__expanded-row {
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .smart-env-notification__expanded-value {
+    text-align: left;
   }
 }

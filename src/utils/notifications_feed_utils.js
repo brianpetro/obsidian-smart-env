@@ -113,6 +113,10 @@ export function get_filtered_entries(entries, params = {}) {
   const { active_levels = create_all_levels_set() } = params;
   if (!(active_levels instanceof Set) || active_levels.size === 0) return [];
 
+  if (are_all_levels_active(active_levels)) {
+    return Array.isArray(entries) ? [...entries] : [];
+  }
+
   return entries.filter((entry) => {
     const level = get_entry_level(entry);
     if (!level) return false;

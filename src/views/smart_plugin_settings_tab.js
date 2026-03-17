@@ -1,4 +1,4 @@
-import { PluginSettingTab } from 'obsidian';
+import { Platform, PluginSettingTab } from 'obsidian';
 import { wait_for_env_to_load } from '../../utils/wait_for_env_to_load.js';
 import styles from './settings.css';
 
@@ -152,6 +152,10 @@ function render_pre_env_load(scope) {
       load_btn.addEventListener('click', async () => {
         load_btn.disabled = true;
         load_btn.textContent = 'Loading Smart Environment…';
+        if (Platform.isMobile && typeof env.start_mobile_env_load === 'function') {
+          await env.start_mobile_env_load({ source: 'settings_tab' });
+          return;
+        }
         await env.load(true);
       });
     }

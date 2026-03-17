@@ -1,22 +1,25 @@
 import test from 'ava';
 
 import {
+  get_next_indicator_level,
   get_notification_event_count,
   get_notification_indicator_level,
   get_status_bar_state,
 } from './status_bar_state.js';
 
-test('notification helpers count unseen entries and escalate severity stably', (t) => {
+test('notification helpers count unseen entries and retain milestone and info display states', (t) => {
   const event_logs = {
     session_events: [
       { unseen: true, event_key: 'milestones:first_achieved', event: { level: 'milestone' } },
-      { unseen: true, event_key: 'sync:error', event: { level: 'error' } },
+      { unseen: true, event_key: 'domain:event', event: { level: 'info' } },
       { unseen: false, event_key: 'sync:warning', event: { level: 'warning' } },
     ],
   };
 
   t.is(get_notification_event_count(event_logs), 2);
-  t.is(get_notification_indicator_level(event_logs), 'error');
+  t.is(get_notification_indicator_level(event_logs), 'milestone');
+  t.is(get_next_indicator_level('milestone', 'domain:event', { level: 'attention' }), 'attention');
+  t.is(get_next_indicator_level('warning', 'domain:event', { level: 'info' }), 'warning');
 });
 
 test('status bar shows loading message before progress state exists', (t) => {
@@ -97,6 +100,7 @@ test('status bar shows re-import progress and queued re-import work distinctly',
 
   t.is(get_status_bar_state(reimporting_env).message, 'Re-importing 3/12');
   t.is(get_status_bar_state(reimporting_env).click_action, 'noop');
+  t.is(get_status_bar_state(reimporting_env).indicator_level, null);
 
   const queued_env = {
     state: 'loaded',
@@ -121,10 +125,11 @@ test('status bar shows re-import progress and queued re-import work distinctly',
 
   t.is(get_status_bar_state(queued_env).message, 'Re-import (3)');
   t.is(get_status_bar_state(queued_env).click_action, 'run_reimport');
+  t.is(get_status_bar_state(queued_env).indicator_level, 'attention');
 });
 
 test('status bar shows embedding pause and resume states', (t) => {
-  const env = {
+  const paused_env = {
     state: 'loaded',
     smart_sources: {
       get_import_progress_state() {
@@ -146,12 +151,32 @@ test('status bar shows embedding pause and resume states', (t) => {
     constructor: { version: '2.2.12' },
   };
 
-  t.deepEqual(get_status_bar_state(env), {
+  t.deepEqual(get_status_bar_state(paused_env), {
     message: 'Embedding paused 10/40',
     title: 'Click to resume embedding.',
     indicator_count: 0,
-    indicator_level: null,
+    indicator_level: 'attention',
     embed_queue_count: 0,
     click_action: 'resume_embed',
   });
+
+  const active_env = {
+    ...paused_env,
+    smart_sources: {
+      ...paused_env.smart_sources,
+      entities_vector_adapter: {
+        get_progress_state() {
+          return {
+            active: true,
+            paused: false,
+            progress: 12,
+            total: 40,
+          };
+        },
+      },
+    },
+  };
+
+  t.is(get_status_bar_state(active_env).indicator_level, 'milestone');
+  t.is(get_status_bar_state(active_env).click_action, 'pause_embed');
 });
