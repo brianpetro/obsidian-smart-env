@@ -218,7 +218,7 @@ export class SmartEnv extends BaseSmartEnv {
   }
 
   /**
-   * @deprecated see events
+   * @deprecated 2026-03-17 remove by next major release (keeping for backward compatibility during migration period)
    */
   get notices() {
     if (!this._notices) {
