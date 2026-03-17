@@ -43,7 +43,7 @@ export async function build_html(env, opts = {}) {
   }
 
   return `
-    <div class="sc-env-stats-container">
+    <div class="sc-env-stats-container" style="user-select: text;">
       ${lines.join("\n")}
     </div>
   `;
