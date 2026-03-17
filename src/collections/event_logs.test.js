@@ -2,6 +2,7 @@ import test from 'ava';
 
 import {
   EventLogs,
+  get_native_notice_component_key,
   get_notification_setting_key,
   is_event_log_muted,
   should_show_native_notice,
@@ -64,4 +65,14 @@ test('should_show_native_notice applies payload-first level, setting, and mute g
     event_key: 'sync:error',
     event: { level: 'unknown' },
   }));
+});
+
+test('get_native_notice_component_key stays closed and level-specific', (t) => {
+  t.truthy(get_native_notice_component_key('milestones:first_achieved', {
+    level: 'milestone',
+  }));
+
+  t.truthy(get_native_notice_component_key('notification:milestone', {}));
+  t.is(get_native_notice_component_key('domain:event', { level: 'warning' }), null);
+  t.is(get_native_notice_component_key('domain:event', { level: 'unknown' }), null);
 });

@@ -38,10 +38,30 @@ export const settings_config = {
   },
 };
 
+const native_notice_component_key_map = Object.freeze({
+  milestone: 'milestone_notification',
+});
+
 export { get_notification_setting_key, is_event_log_muted, should_show_native_notice };
 
+/**
+ * Resolve an optional native-notice component renderer.
+ *
+ * For now this stays intentionally closed and level-based so only known
+ * notification types can render richer content.
+ *
+ * @param {string} event_key
+ * @param {Record<string, unknown>} [event={}]
+ * @returns {string|null} The component key if a renderer is available, otherwise null.
+ */
+export function get_native_notice_component_key(event_key, event = {}) {
+  const level = get_event_level(event_key, event);
+  if (!level) return null;
+  return native_notice_component_key_map[level] || null;
+}
+
 export class EventLogs extends BaseEventLogs {
-  static version = 0.002;
+  static version = 0.003;
 
   static get default_settings() {
     return {
@@ -76,12 +96,12 @@ export class EventLogs extends BaseEventLogs {
    * @param {Record<string, unknown>} [params.event={}]
    * @returns {boolean}
    */
-  show_native_notice(session_entry, params = {}) {
+  async show_native_notice(session_entry, params = {}) {
     const { event_key = '', event = {} } = params;
     if (!should_show_native_notice(this, { event_key, event })) return false;
 
     const level = get_event_level(event_key, event);
-    const notice_content = this.build_native_notice_content(event_key, event);
+    const notice_content = await this.build_native_notice_content(event_key, event);
     const notice_timeout = get_notice_timeout_ms(level);
     new Notice(notice_content, notice_timeout);
 
@@ -96,7 +116,17 @@ export class EventLogs extends BaseEventLogs {
    * @param {Record<string, unknown>} [event={}]
    * @returns {string|DocumentFragment}
    */
-  build_native_notice_content(event_key, event = {}) {
+  async build_native_notice_content(event_key, event = {}) {
+    const component_key = get_native_notice_component_key(event_key, event);
+    if (this.env?.config?.components?.[component_key]) {
+      const component_content = await this.env.smart_components.render_component(component_key, this.env, {
+        event_key,
+        event,
+        on_action: (callback_key) => this.run_notice_callback(callback_key, { event_key, event }),
+      });
+      if (component_content) return component_content;
+    }
+
     const notice_message = get_native_notice_message(event_key, event);
     const btn_text = typeof event?.btn_text === 'string' ? event.btn_text.trim() : '';
     const btn_callback = typeof event?.btn_callback === 'string' ? event.btn_callback.trim() : '';

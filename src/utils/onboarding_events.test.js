@@ -1,7 +1,9 @@
 import test from 'ava';
 
-import { register_first_of_event_notifications } from './onboarding_events.js';
-import { is_valid_milestone_event } from './onboarding_events_utils.js';
+import {
+  is_valid_milestone_event,
+  register_first_of_event_notifications,
+} from './onboarding_events.js';
 
 function create_env() {
   const handlers = new Map();
