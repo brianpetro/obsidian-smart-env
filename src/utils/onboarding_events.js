@@ -22,13 +22,19 @@ export function register_first_of_event_notifications(env) {
     return () => {};
   }
 
+  if (!(env._milestone_first_event_keys instanceof Set)) {
+    env._milestone_first_event_keys = new Set();
+  }
+
   const handle_first_event = (data) => {
     const event_key = data?.first_of_event_key;
     if (!is_valid_milestone_event(event_key, { items_by_event_key: EVENTS_CHECKLIST_ITEMS_BY_EVENT_KEY })) return;
+    if (env._milestone_first_event_keys.has(event_key)) return;
 
     const item = EVENTS_CHECKLIST_ITEMS_BY_EVENT_KEY[event_key];
     if (!item) return;
 
+    env._milestone_first_event_keys.add(event_key);
     env.events.emit('milestones:first_achieved', {
       level: 'milestone',
       message: 'You achieved a new Smart Milestone',

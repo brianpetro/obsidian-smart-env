@@ -12,11 +12,17 @@ import {
   add_smart_connections_icon,
   add_smart_lookup_icon,
 } from './utils/add_icons.js';
-import { SmartNotices } from "smart-notices/smart_notices.js";
+import { SmartNotices } from 'smart-notices/smart_notices.js';
 import { exchange_code_for_tokens, install_smart_plugins_plugin, get_smart_server_url, enable_plugin } from './utils/sc_oauth.js';
 import { register_completion_variable_adapter_replacements } from './utils/register_completion_variable_adapter_replacements.js';
 import { remove_smart_plugins_plugin } from './migrations/remove_smart_plugins_plugin.js';
 import { register_first_of_event_notifications } from './src/utils/onboarding_events.js';
+import { render as render_status_bar_component } from './src/components/status_bar.js';
+
+const suppressed_legacy_notice_keys = new Set([
+  'loading_collection',
+  'saving_collection',
+]);
 
 export class SmartEnv extends BaseSmartEnv {
   /**
@@ -35,7 +41,7 @@ export class SmartEnv extends BaseSmartEnv {
     add_smart_icons();
     // TODO: can this be safely removed? Does downstream version detection handle this case (no version)? 2026-02-07
     if (window.smart_env && !window.smart_env.constructor.version) {
-      const update_notice = "Detected ancient SmartEnv. Removing it to prevent issues with new plugins. Make sure your Smart Plugins are up-to-date!";
+      const update_notice = 'Detected ancient SmartEnv. Removing it to prevent issues with new plugins. Make sure your Smart Plugins are up-to-date!';
       console.warn(update_notice);
       new Notice(update_notice, 0);
       window.smart_env = null;
@@ -56,14 +62,14 @@ export class SmartEnv extends BaseSmartEnv {
 
     if (!this.plugin.app.workspace.protocolHandlers.has('smart-plugins/callback')) {
       // Register protocol handler for obsidian://smart-plugins/callback
-      this.plugin.registerObsidianProtocolHandler("smart-plugins/callback", async (params) => {
+      this.plugin.registerObsidianProtocolHandler('smart-plugins/callback', async (params) => {
         await this.handle_smart_plugins_oauth_callback(params);
       });
     }
 
-    if (Platform.isMobile && !force_load) {
+    if (Platform.isMobile && !force_load && this.state !== 'loaded') {
       // create doc frag with a button to run load_env
-      const frag = this.smart_view.create_doc_fragment(`<div><p>Smart Environment loading deferred on mobile.</p><button>Load Environment</button></div>`);
+      const frag = this.smart_view.create_doc_fragment('<div><p>Smart Environment loading deferred on mobile.</p><button>Load Environment</button></div>');
       frag.querySelector('button').addEventListener('click', this.load.bind(this, true));
       new Notice(frag, 0);
       return;
@@ -73,28 +79,14 @@ export class SmartEnv extends BaseSmartEnv {
     await super.load();
 
     this.smart_sources?.register_source_watchers?.(this.smart_sources);
-    const plugin = this.main;
-    plugin.registerEvent(
-      plugin.app.workspace.on('active-leaf-change', (leaf) => {
-        this.smart_sources?.debounce_re_import_queue?.();
-        const current_path = leaf.view?.file?.path;
-        this.emit_source_opened(current_path, 'active-leaf-change');
-      })
-    );
-    plugin.registerEvent(
-      plugin.app.workspace.on('file-open', (file) => {
-        this.smart_sources?.debounce_re_import_queue?.();
-        const current_path = file?.path;
-        this.emit_source_opened(current_path, 'file-open');
-      })
-    );
+    this.register_workspace_source_events();
 
     if (this._config.collections.smart_completions?.completion_adapters?.SmartCompletionVariableAdapter) {
       register_completion_variable_adapter_replacements(this._config.collections.smart_completions.completion_adapters.SmartCompletionVariableAdapter);
     }
 
     this.register_configured_modals();
-    this.register_status_bar();
+    this.refresh_status_bar();
   }
 
   unload() {
@@ -102,6 +94,7 @@ export class SmartEnv extends BaseSmartEnv {
       this._onboarding_events_teardown();
       this._onboarding_events_teardown = null;
     }
+    this._workspace_source_events_registered = false;
     return super.unload?.();
   }
 
@@ -147,6 +140,28 @@ export class SmartEnv extends BaseSmartEnv {
     }
   }
 
+  register_workspace_source_events() {
+    if (this._workspace_source_events_registered) return;
+    const plugin = this.main;
+    if (!plugin?.registerEvent) return;
+
+    this._workspace_source_events_registered = true;
+    plugin.registerEvent(
+      plugin.app.workspace.on('active-leaf-change', (leaf) => {
+        this.smart_sources?.debounce_re_import_queue?.();
+        const current_path = leaf.view?.file?.path;
+        this.emit_source_opened(current_path, 'active-leaf-change');
+      }),
+    );
+    plugin.registerEvent(
+      plugin.app.workspace.on('file-open', (file) => {
+        this.smart_sources?.debounce_re_import_queue?.();
+        const current_path = file?.path;
+        this.emit_source_opened(current_path, 'file-open');
+      }),
+    );
+  }
+
   emit_source_opened(current_path, event_source = null) {
     if (this._current_opened_source === current_path) return; // prevent duplicate events
     const current_source = this.smart_sources.get(current_path);
@@ -169,17 +184,37 @@ export class SmartEnv extends BaseSmartEnv {
   }
 
   register_status_bar() {
+    const add_status_bar_item = this.main?.addStatusBarItem?.bind(this.main);
+    if (typeof add_status_bar_item !== 'function') return;
+
     const status_container = this.main?.app?.statusBar?.containerEl;
-    status_container
+    const existing_status_item = status_container
       ?.querySelector?.('.smart-env-status-container')
       ?.closest?.('.status-bar-item')
-      ?.remove?.()
     ;
-    this.status_elm = this.main.addStatusBarItem();
-    this.smart_components?.render_component('status_bar', this).then((container) => {
-      this.status_elm.empty?.();
-      this.status_elm.appendChild(container);
-    });
+
+    if (existing_status_item && this.status_elm !== existing_status_item) {
+      existing_status_item.remove?.();
+    }
+
+    if (!this.status_elm || !this.status_elm.isConnected) {
+      this.status_elm = add_status_bar_item();
+    }
+
+    this.refresh_status_bar();
+  }
+
+  refresh_status_bar() {
+    if (!this.status_elm) return;
+    render_status_bar_component.call(this.smart_view, this)
+      .then((container) => {
+        this.status_elm.empty?.();
+        this.status_elm.appendChild(container);
+      })
+      .catch((error) => {
+        console.error('Failed to render Smart Env status bar', error);
+      })
+    ;
   }
 
   /**
@@ -201,9 +236,9 @@ export class SmartEnv extends BaseSmartEnv {
    * It replicates the old 'initiate_oauth()' logic from sc_settings_tab.js
    */
   initiate_smart_plugins_oauth() {
-    console.log("initiate_smart_plugins_oauth");
+    console.log('initiate_smart_plugins_oauth');
     const state = Math.random().toString(36).slice(2);
-    const redirect_uri = encodeURIComponent("obsidian://smart-plugins/callback");
+    const redirect_uri = encodeURIComponent('obsidian://smart-plugins/callback');
     const url = `${get_smart_server_url()}/oauth?client_id=smart-plugins-op&redirect_uri=${redirect_uri}&state=${state}`;
     window.open(url, '_external');
     return url;
@@ -227,7 +262,7 @@ export class SmartEnv extends BaseSmartEnv {
       await exchange_code_for_tokens(code, this.plugin);
       this.events.emit('smart_plugins_oauth_completed');
     } catch (err) {
-      console.error("OAuth callback error", err);
+      console.error('OAuth callback error', err);
       this.events.emit('smart_plugins_oauth_failed', {
         level: 'error',
         message: `OAuth callback error: ${err.message}`,
@@ -252,23 +287,23 @@ export class SmartEnv extends BaseSmartEnv {
 
   // WAIT FOR OBSIDIAN SYNC
   async ready_to_load_collections() {
-    await new Promise(r => setTimeout(r, 3000)); // wait 3 seconds for other processes to finish
+    await new Promise((r) => setTimeout(r, 3000)); // wait 3 seconds for other processes to finish
     await this.wait_for_obsidian_sync();
   }
 
   async wait_for_obsidian_sync() {
     while (this.obsidian_is_syncing) {
-      console.log("Smart Connections: Waiting for Obsidian Sync to finish");
-      await new Promise(r => setTimeout(r, 1000));
-      if (!this.plugin) throw new Error("Plugin disabled while waiting for obsidian sync, reload required."); // if plugin is disabled, stop waiting for sync
+      console.log('Smart Connections: Waiting for Obsidian Sync to finish');
+      await new Promise((r) => setTimeout(r, 1000));
+      if (!this.plugin) throw new Error('Plugin disabled while waiting for obsidian sync, reload required.'); // if plugin is disabled, stop waiting for sync
     }
   }
 
   get obsidian_is_syncing() {
     const obsidian_sync_instance = this.plugin?.app?.internalPlugins?.plugins?.sync?.instance;
-    if(!obsidian_sync_instance) return false; // if no obsidian sync instance, not syncing
-    if(obsidian_sync_instance?.syncStatus.startsWith('Uploading')) return false; // if uploading, don't wait for obsidian sync
-    if(obsidian_sync_instance?.syncStatus.startsWith('Fully synced')) return false; // if fully synced, don't wait for obsidian sync
+    if (!obsidian_sync_instance) return false; // if no obsidian sync instance, not syncing
+    if (obsidian_sync_instance?.syncStatus.startsWith('Uploading')) return false; // if uploading, don't wait for obsidian sync
+    if (obsidian_sync_instance?.syncStatus.startsWith('Fully synced')) return false; // if fully synced, don't wait for obsidian sync
     return obsidian_sync_instance?.syncing;
   }
 

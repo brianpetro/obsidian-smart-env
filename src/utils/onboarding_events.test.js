@@ -55,6 +55,21 @@ test('register_first_of_event_notifications emits milestone event immediately fo
   });
 });
 
+test('register_first_of_event_notifications ignores duplicate first events for the same key', (t) => {
+  const env = create_env();
+  register_first_of_event_notifications(env);
+
+  env.events.emit('event_log:first', {
+    first_of_event_key: 'sources:import_completed',
+  });
+  env.events.emit('event_log:first', {
+    first_of_event_key: 'sources:import_completed',
+  });
+
+  const milestone_events = env.emitted.filter((event) => event.event_key === 'milestones:first_achieved');
+  t.is(milestone_events.length, 1);
+});
+
 test('register_first_of_event_notifications ignores non-checklist events', (t) => {
   const env = create_env();
   register_first_of_event_notifications(env);
