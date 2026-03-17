@@ -19,11 +19,6 @@ import { remove_smart_plugins_plugin } from './migrations/remove_smart_plugins_p
 import { register_first_of_event_notifications } from './src/utils/onboarding_events.js';
 import { render as render_status_bar_component } from './src/components/status_bar.js';
 
-const suppressed_legacy_notice_keys = new Set([
-  'loading_collection',
-  'saving_collection',
-]);
-
 export class SmartEnv extends BaseSmartEnv {
   /**
    * Creates and initializes a SmartEnv instance tailored for Obsidian.
