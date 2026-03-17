@@ -1,4 +1,26 @@
 import styles from './notification_feed.css';
+import {
+  all_levels_filter_key,
+  are_all_levels_active,
+  create_all_levels_set,
+  entries_to_clipboard_text,
+  format_level_label,
+  get_entry_event_key,
+  get_entry_level,
+  get_entry_payload_text,
+  get_entry_timestamp,
+  get_entry_title,
+  get_filtered_entries,
+  get_level_counts,
+  get_next_active_levels,
+  get_next_visible_count,
+  get_visible_count,
+  get_visible_entries,
+  is_canonical_notification_entry,
+  notification_levels,
+  should_show_load_more,
+  to_time_ago,
+} from '../utils/notifications_feed_utils.js';
 
 function build_html() {
   return `<div class="smart-env-notifications">
@@ -19,88 +41,12 @@ function build_html() {
   </div>`;
 }
 
-const default_page_size = 100;
-const load_more_step = 100;
-const notification_levels = ['milestone', 'attention', 'error', 'warning', 'info'];
-
-/**
- * @param {Array} entries
- * @param {object} params
- * @param {Set<string>} [params.active_levels]
- * @returns {Array}
- */
-export function get_filtered_entries(entries, params = {}) {
-  const { active_levels = new Set(notification_levels) } = params;
-  if (!(active_levels instanceof Set) || active_levels.size === 0) return [];
-  return entries.filter((entry) => active_levels.has(get_entry_level(entry)));
-}
-
-/**
- * @param {Array} entries
- * @param {object} params
- * @param {number} [params.limit]
- * @returns {Array}
- */
-export function get_visible_entries(entries, params = {}) {
-  const { limit = default_page_size } = params;
-  return entries.slice(-limit).reverse();
-}
-
-/**
- * @param {number} entries_length
- * @param {object} params
- * @param {number} [params.page_size]
- * @returns {number}
- */
-export function get_visible_count(entries_length, params = {}) {
-  const { page_size = default_page_size } = params;
-  return Math.min(entries_length, page_size);
-}
-
-/**
- * @param {number} entries_length
- * @param {object} params
- * @param {number} [params.current_count]
- * @param {number} [params.step_size]
- * @returns {number}
- */
-export function get_next_visible_count(entries_length, params = {}) {
-  const { current_count = 0, step_size = load_more_step } = params;
-  return Math.min(entries_length, current_count + step_size);
-}
-
-/**
- * @param {number} entries_length
- * @param {number} visible_count
- * @returns {boolean}
- */
-export function should_show_load_more(entries_length, visible_count) {
-  return entries_length > visible_count;
-}
-
-/**
- * @param {object} entry
- * @param {string} [entry.event_key]
- * @returns {string}
- */
-export function get_entry_level(entry) {
-  const event_key = typeof entry?.event_key === 'string' ? entry.event_key : '';
-  const [event_domain, event_type] = event_key.split(':');
-  if (event_domain === 'notification' && event_type) {
-    return event_type;
-  }
-  if (event_type === 'error') {
-    return 'error';
-  }
-  return 'info';
-}
-
 export async function render(env, params = {}) {
   this.apply_style_sheet(styles);
   const frag = this.create_doc_fragment(build_html());
   const container = frag.firstElementChild;
-  post_process.call(this, env, container, params);
-  return frag;
+  await post_process.call(this, env, container, params);
+  return container;
 }
 
 async function post_process(env, container, params = {}) {
@@ -113,11 +59,16 @@ async function post_process(env, container, params = {}) {
 
   this.empty(feed_container);
 
-  const entries = Array.isArray(env.event_logs.session_events) ? [...env.event_logs.session_events] : [];
+  const session_entries = Array.isArray(env?.event_logs?.session_events)
+    ? [...env.event_logs.session_events]
+    : []
+  ;
+  const entries = session_entries.filter((entry) => Boolean(get_entry_level(entry)));
+
   if (!entries.length) {
     render_empty_state(feed_container, {
       title: 'No Smart Env notifications yet.',
-      detail: 'When Smart Env emits notification events, they will appear here.',
+      detail: 'When Smart Env emits levelled events, they will appear here.',
     });
     set_btn_disabled(copy_btn, true);
     if (load_more_btn) load_more_btn.style.display = 'none';
@@ -125,21 +76,27 @@ async function post_process(env, container, params = {}) {
     return;
   }
 
-  const active_levels = new Set(notification_levels);
+  const active_levels = create_all_levels_set();
   const level_counts = get_level_counts(entries);
-  let visible_count = get_visible_count(entries.length, { page_size: default_page_size });
+  let visible_count = get_visible_count(entries.length);
 
-  const reset_filters = () => {
+  const set_active_levels = (next_active_levels) => {
     active_levels.clear();
-    notification_levels.forEach((level) => active_levels.add(level));
+    next_active_levels.forEach((level) => active_levels.add(level));
+  };
+
+  const render_filters = () => {
     render_filter_controls(filter_controls, {
       active_levels,
       level_counts,
       on_change: handle_filters_changed,
+      on_select_all: () => {
+        set_active_levels(create_all_levels_set());
+      },
+      on_select_level: (level) => {
+        set_active_levels(get_next_active_levels(active_levels, { level }));
+      },
     });
-    const filtered_entries = get_filtered_entries(entries, { active_levels });
-    visible_count = get_visible_count(filtered_entries.length, { page_size: default_page_size });
-    render_entries();
   };
 
   const render_entries = () => {
@@ -168,7 +125,10 @@ async function post_process(env, container, params = {}) {
     }
 
     get_visible_entries(filtered_entries, { limit: visible_count }).forEach((entry) => {
-      append_entry(feed_container, entry);
+      append_entry(feed_container, entry, {
+        env,
+        on_toggle_mute: handle_toggle_mute,
+      });
     });
 
     update_load_more_button(load_more_btn, {
@@ -177,30 +137,41 @@ async function post_process(env, container, params = {}) {
     });
   };
 
-  function handle_filters_changed() {
+  const handle_filters_changed = () => {
     const filtered_entries = get_filtered_entries(entries, { active_levels });
-    visible_count = get_visible_count(filtered_entries.length, { page_size: default_page_size });
+    visible_count = get_visible_count(filtered_entries.length);
+    render_filters();
     render_entries();
-  }
+  };
 
-  render_filter_controls(filter_controls, {
-    active_levels,
-    level_counts,
-    on_change: handle_filters_changed,
-  });
+  const handle_toggle_mute = (entry) => {
+    const event_key = entry?.event_key;
+    if (!event_key || typeof env?.event_logs?.toggle_event_key_muted !== 'function') return;
+    if (!is_canonical_notification_entry(entry)) return;
+    env.event_logs.toggle_event_key_muted(event_key);
+    render_entries();
+  };
 
+  const reset_filters = () => {
+    set_active_levels(create_all_levels_set());
+    handle_filters_changed();
+  };
+
+  render_filters();
   render_entries();
 
   if (copy_btn) {
-    copy_btn.addEventListener('click', () => {
+    copy_btn.addEventListener('click', async () => {
       if (copy_btn.disabled) return;
 
       const filtered_entries = get_filtered_entries(entries, { active_levels });
       const newest_first = get_visible_entries(filtered_entries, { limit: filtered_entries.length });
       const all_text = entries_to_clipboard_text(newest_first);
+      const copied = await write_text_to_clipboard(all_text);
 
-      navigator.clipboard.writeText(all_text).then(() => {
-        set_btn_copied_state(copy_btn, { idle_text: 'Copy All', copied_text: 'Copied' });
+      set_btn_copied_state(copy_btn, {
+        idle_text: 'Copy All',
+        copied_text: copied ? 'Copied' : 'Copy failed',
       });
     });
   }
@@ -210,7 +181,6 @@ async function post_process(env, container, params = {}) {
       const filtered_entries = get_filtered_entries(entries, { active_levels });
       visible_count = get_next_visible_count(filtered_entries.length, {
         current_count: visible_count,
-        step_size: load_more_step,
       });
       render_entries();
     });
@@ -219,65 +189,110 @@ async function post_process(env, container, params = {}) {
 
 /**
  * @param {HTMLElement|null} container
- * @param {object} params
- * @param {Set<string>} params.active_levels
- * @param {Record<string, number>} params.level_counts
- * @param {Function} params.on_change
+ * @param {object} [params={}]
+ * @param {Set<string>} [params.active_levels]
+ * @param {Record<string, number>} [params.level_counts]
+ * @param {Function} [params.on_change]
+ * @param {Function} [params.on_select_all]
+ * @param {Function} [params.on_select_level]
  */
 function render_filter_controls(container, params = {}) {
   if (!container) return;
 
-  const { active_levels = new Set(), level_counts = {}, on_change = () => {} } = params;
+  const {
+    active_levels = new Set(),
+    level_counts = {},
+    on_change = () => {},
+    on_select_all = () => {},
+    on_select_level = () => {},
+  } = params;
   container.replaceChildren();
 
-  notification_levels.forEach((level) => {
-    const label = container.ownerDocument.createElement('label');
-    label.className = 'smart-env-notifications-filter';
-    label.dataset.level = level;
+  const all_is_active = are_all_levels_active(active_levels);
+  const total_count = Object.values(level_counts).reduce((acc, count) => acc + (count || 0), 0);
 
-    const input = container.ownerDocument.createElement('input');
-    input.type = 'checkbox';
-    input.checked = active_levels.has(level);
-    input.setAttribute('aria-label', `Toggle ${level} notifications`);
-    input.addEventListener('change', () => {
-      if (input.checked) {
-        active_levels.add(level);
-      } else {
-        active_levels.delete(level);
-      }
+  append_filter_button(container, {
+    level: all_levels_filter_key,
+    label_text: 'All',
+    count_total: total_count,
+    is_active: all_is_active,
+    modifier_class: 'smart-env-notifications-filter--all',
+    on_click: () => {
+      if (all_is_active) return;
+      on_select_all();
       on_change();
+    },
+  });
+
+  notification_levels.forEach((level) => {
+    append_filter_button(container, {
+      level,
+      label_text: format_level_label(level),
+      count_total: typeof level_counts[level] === 'number' ? level_counts[level] : 0,
+      is_active: !all_is_active && active_levels.has(level),
+      on_click: () => {
+        on_select_level(level);
+        on_change();
+      },
     });
-
-    const content = container.ownerDocument.createElement('span');
-    content.className = 'smart-env-notifications-filter__content';
-
-    const dot = container.ownerDocument.createElement('span');
-    dot.className = 'smart-env-notifications-filter__dot';
-    dot.setAttribute('aria-hidden', 'true');
-
-    const text = container.ownerDocument.createElement('span');
-    text.className = 'smart-env-notifications-filter__label';
-    text.textContent = format_level_label(level);
-
-    const count = container.ownerDocument.createElement('span');
-    count.className = 'smart-env-notifications-filter__count';
-    const n = typeof level_counts[level] === 'number' ? level_counts[level] : 0;
-    count.textContent = n > 0 ? String(n) : '';
-    if (n <= 0) count.classList.add('is-zero');
-
-    content.appendChild(dot);
-    content.appendChild(text);
-    content.appendChild(count);
-
-    label.appendChild(input);
-    label.appendChild(content);
-    container.appendChild(label);
   });
 }
 
 /**
- * @param {HTMLButtonElement|null} button
+ * @param {HTMLElement} container
  * @param {object} params
+ * @param {string} params.level
+ * @param {string} params.label_text
+ * @param {number} params.count_total
+ * @param {boolean} params.is_active
+ * @param {Function} params.on_click
+ * @param {string} [params.modifier_class='']
+ */
+function append_filter_button(container, params) {
+  const {
+    level,
+    label_text,
+    count_total,
+    is_active,
+    on_click,
+    modifier_class = '',
+  } = params;
+
+  const button = container.ownerDocument.createElement('button');
+  button.type = 'button';
+  button.className = `smart-env-notifications-filter${modifier_class ? ` ${modifier_class}` : ''}`;
+  button.dataset.level = level;
+  button.setAttribute('aria-pressed', String(Boolean(is_active)));
+  if (is_active) button.classList.add('is-active');
+  button.addEventListener('click', on_click);
+
+  const content = container.ownerDocument.createElement('span');
+  content.className = 'smart-env-notifications-filter__content';
+
+  const dot = container.ownerDocument.createElement('span');
+  dot.className = 'smart-env-notifications-filter__dot';
+  dot.setAttribute('aria-hidden', 'true');
+
+  const text = container.ownerDocument.createElement('span');
+  text.className = 'smart-env-notifications-filter__label';
+  text.textContent = label_text;
+
+  const count = container.ownerDocument.createElement('span');
+  count.className = 'smart-env-notifications-filter__count';
+  count.textContent = count_total > 0 ? String(count_total) : '';
+  if (count_total <= 0) count.classList.add('is-zero');
+
+  content.appendChild(dot);
+  content.appendChild(text);
+  content.appendChild(count);
+
+  button.appendChild(content);
+  container.appendChild(button);
+}
+
+/**
+ * @param {HTMLButtonElement|null} button
+ * @param {object} [params={}]
  * @param {number} [params.entries_length]
  * @param {number} [params.visible_count]
  */
@@ -291,31 +306,39 @@ function update_load_more_button(button, params = {}) {
 
   if (is_visible) {
     const remaining_count = entries_length - visible_count;
-    const next_step = Math.min(load_more_step, remaining_count);
+    const next_step = Math.min(100, remaining_count);
     button.textContent = `Load ${next_step} more`;
   }
 }
 
-function append_entry(feed_container, entry) {
+function append_entry(feed_container, entry, params = {}) {
+  const { env = null, on_toggle_mute = () => {} } = params;
   const level = get_entry_level(entry);
+  if (!level) return;
+
+  const title = get_entry_title(entry);
   const timestamp = get_entry_timestamp(entry);
-  const collection_key = get_entry_collection_key(entry);
+  const collection_key = entry?.event?.collection_key ?? '';
   const event_key = get_entry_event_key(entry) || 'event';
   const payload_text = get_entry_payload_text(entry);
+  const is_canonical = is_canonical_notification_entry(entry);
+  const is_muted = is_canonical && Boolean(env?.event_logs?.is_event_key_muted?.(event_key));
 
   const has_payload = payload_text.trim().length > 0;
   const row = has_payload
     ? feed_container.ownerDocument.createElement('details')
-    : feed_container.ownerDocument.createElement('div');
+    : feed_container.ownerDocument.createElement('div')
+  ;
 
   row.className = 'smart-env-notification';
   row.dataset.level = level;
   row.setAttribute('role', 'listitem');
+  if (is_muted) row.dataset.muted = 'true';
 
   const summary = has_payload
     ? feed_container.ownerDocument.createElement('summary')
-    : feed_container.ownerDocument.createElement('div');
-
+    : feed_container.ownerDocument.createElement('div')
+  ;
   summary.className = 'smart-env-notification__summary';
 
   const accent = feed_container.ownerDocument.createElement('span');
@@ -330,15 +353,15 @@ function append_entry(feed_container, entry) {
 
   const event_el = feed_container.ownerDocument.createElement('div');
   event_el.className = 'smart-env-notification__event-key';
-  event_el.textContent = event_key;
+  event_el.textContent = title;
 
   const time_el = feed_container.ownerDocument.createElement('div');
   time_el.className = 'smart-env-notification__time';
   time_el.textContent = to_time_ago(timestamp);
   try {
     time_el.title = new Date(timestamp).toLocaleString();
-  } catch (e) {
-    // ignore
+  } catch (_err) {
+    /* no-op */
   }
 
   top.appendChild(event_el);
@@ -354,10 +377,46 @@ function append_entry(feed_container, entry) {
     bottom.appendChild(collection);
   }
 
+  if (title !== event_key) {
+    const event_key_tag = feed_container.ownerDocument.createElement('span');
+    event_key_tag.className = 'smart-env-notification__collection';
+    event_key_tag.textContent = event_key;
+    bottom.appendChild(event_key_tag);
+  }
+
   const level_tag = feed_container.ownerDocument.createElement('span');
   level_tag.className = 'smart-env-notification__level';
   level_tag.textContent = format_level_label(level);
   bottom.appendChild(level_tag);
+
+  if (is_muted) {
+    const muted_tag = feed_container.ownerDocument.createElement('span');
+    muted_tag.className = 'smart-env-notification__muted';
+    muted_tag.textContent = 'Muted';
+    bottom.appendChild(muted_tag);
+  }
+
+  if (is_canonical) {
+    const mute_btn = feed_container.ownerDocument.createElement('button');
+    mute_btn.className = 'smart-env-btn smart-env-btn--ghost smart-env-notification__mute';
+    mute_btn.type = 'button';
+    mute_btn.textContent = is_muted ? 'Unmute' : 'Mute';
+    mute_btn.setAttribute(
+      'aria-label',
+      is_muted ? 'Allow native notices for this event key' : 'Mute native notices for this event key',
+    );
+    mute_btn.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      on_toggle_mute(entry);
+    });
+    bottom.appendChild(mute_btn);
+  } else {
+    const feed_only_tag = feed_container.ownerDocument.createElement('span');
+    feed_only_tag.className = 'smart-env-notification__feed-only';
+    feed_only_tag.textContent = 'Feed only';
+    bottom.appendChild(feed_only_tag);
+  }
 
   body.appendChild(top);
   body.appendChild(bottom);
@@ -387,7 +446,11 @@ function append_entry(feed_container, entry) {
 function update_summary(summary_el, params = {}) {
   if (!summary_el) return;
 
-  const { total_count = 0, filtered_count = 0, visible_count = 0 } = params;
+  const {
+    total_count = 0,
+    filtered_count = 0,
+    visible_count = 0,
+  } = params;
 
   if (total_count <= 0) {
     summary_el.textContent = '';
@@ -404,14 +467,19 @@ function update_summary(summary_el, params = {}) {
 
 /**
  * @param {HTMLElement} feed_container
- * @param {object} params
- * @param {string} params.title
+ * @param {object} [params={}]
+ * @param {string} [params.title]
  * @param {string} [params.detail]
  * @param {string} [params.action_text]
- * @param {Function} [params.on_action]
+ * @param {Function|null} [params.on_action]
  */
 function render_empty_state(feed_container, params = {}) {
-  const { title = 'Nothing here yet.', detail = '', action_text = '', on_action = null } = params;
+  const {
+    title = 'Nothing here yet.',
+    detail = '',
+    action_text = '',
+    on_action = null,
+  } = params;
 
   const wrap = feed_container.ownerDocument.createElement('div');
   wrap.className = 'smart-env-notifications-empty-state';
@@ -422,19 +490,19 @@ function render_empty_state(feed_container, params = {}) {
   wrap.appendChild(heading);
 
   if (detail) {
-    const p = feed_container.ownerDocument.createElement('div');
-    p.className = 'smart-env-notifications-empty-state__detail';
-    p.textContent = detail;
-    wrap.appendChild(p);
+    const detail_el = feed_container.ownerDocument.createElement('div');
+    detail_el.className = 'smart-env-notifications-empty-state__detail';
+    detail_el.textContent = detail;
+    wrap.appendChild(detail_el);
   }
 
   if (action_text && typeof on_action === 'function') {
-    const btn = feed_container.ownerDocument.createElement('button');
-    btn.className = 'smart-env-btn smart-env-btn--ghost';
-    btn.type = 'button';
-    btn.textContent = action_text;
-    btn.addEventListener('click', () => on_action());
-    wrap.appendChild(btn);
+    const button = feed_container.ownerDocument.createElement('button');
+    button.className = 'smart-env-btn smart-env-btn--ghost';
+    button.type = 'button';
+    button.textContent = action_text;
+    button.addEventListener('click', () => on_action());
+    wrap.appendChild(button);
   }
 
   feed_container.appendChild(wrap);
@@ -448,7 +516,10 @@ function set_btn_disabled(btn, is_disabled) {
 function set_btn_copied_state(btn, params = {}) {
   if (!btn) return;
 
-  const { idle_text = 'Copy', copied_text = 'Copied' } = params;
+  const {
+    idle_text = 'Copy',
+    copied_text = 'Copied',
+  } = params;
 
   btn.textContent = copied_text;
   btn.classList.add('is-copied');
@@ -459,84 +530,44 @@ function set_btn_copied_state(btn, params = {}) {
   }, 1400);
 }
 
-function format_level_label(level) {
-  const s = typeof level === 'string' ? level : '';
-  if (!s.length) return '';
-  return s.slice(0, 1).toUpperCase() + s.slice(1);
-}
+async function write_text_to_clipboard(text = '') {
+  if (!text) return false;
 
-function get_level_counts(entries) {
-  const counts = notification_levels.reduce((acc, level) => {
-    acc[level] = 0;
-    return acc;
-  }, {});
-
-  entries.forEach((entry) => {
-    const level = get_entry_level(entry);
-    if (counts[level] !== undefined) {
-      counts[level] += 1;
+  try {
+    if (navigator?.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
     }
-  });
-
-  return counts;
-}
-
-function get_entry_timestamp(entry) {
-  return typeof entry?.event?.at === 'number' ? entry.event.at : Date.now();
-}
-
-function get_entry_collection_key(entry) {
-  return typeof entry?.event?.collection_key === 'string' ? entry.event.collection_key : '';
-}
-
-function get_entry_event_key(entry) {
-  return typeof entry?.event_key === 'string' ? entry.event_key : '';
-}
-
-function get_entry_payload_text(entry) {
-  const event_obj = entry?.event && typeof entry.event === 'object' ? entry.event : {};
-
-  return Object.entries(event_obj)
-    .filter(([k]) => !['at', 'collection_key'].includes(k))
-    .map(([k, v]) => `  ${k}: ${typeof v === 'string' ? v : JSON.stringify(v)}`) // IMPORTANT NOTE: two prefix spaces for indentation
-    .join('\n');
-}
-
-function get_entry_meta_text(entry) {
-  const collection_key = get_entry_collection_key(entry);
-  const event_key = get_entry_event_key(entry) || 'event';
-  const timestamp = get_entry_timestamp(entry);
-
-  return `${collection_key ? collection_key + ' - ' : ''}${event_key} - ${to_time_ago(timestamp)}`;
-}
-
-function entry_to_clipboard_text(entry) {
-  const meta = get_entry_meta_text(entry);
-  const payload = get_entry_payload_text(entry);
-
-  if (!payload.trim().length) {
-    return `${meta}\n\n`;
+  } catch (_err) {
+    /* fall through */
   }
 
-  return `${meta}\n${payload}\n\n`;
-}
+  try {
+    if (typeof window !== 'undefined' && typeof window.require === 'function') {
+      const { clipboard } = window.require('electron');
+      if (clipboard?.writeText) {
+        clipboard.writeText(text);
+        return true;
+      }
+    }
+  } catch (_err) {
+    /* fall through */
+  }
 
-function entries_to_clipboard_text(entries = []) {
-  return entries.map((entry) => entry_to_clipboard_text(entry)).join('');
-}
-
-function to_time_ago(ms) {
-  const now_ms = Date.now();
-  const seconds = Math.floor((now_ms - ms) / 1000);
-
-  if (seconds < 60) return `${Math.max(0, seconds)}s ago`;
-
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+  try {
+    if (typeof document === 'undefined') return false;
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.left = '-9999px';
+    textarea.style.top = '0';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    const copied = document.execCommand('copy');
+    document.body.removeChild(textarea);
+    return Boolean(copied);
+  } catch (_err) {
+    return false;
+  }
 }

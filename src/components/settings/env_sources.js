@@ -2,12 +2,14 @@ import { render_settings_config } from '../../utils/render_settings_config.js';
 import { create_reset_confirm_ui } from './reset_confirm.js';
 import { ExcludedFoldersFuzzy } from '../../modals/exclude_folders_fuzzy.js';
 import { ExcludedSourcesModal } from '../../modals/excluded_sources.js';
+
 export async function build_html(env, opts = {}) {
   return `
     <div class="sources-settings">
     </div>
   `;
 }
+
 export async function render(env, opts = {}) {
   const html = await build_html.call(this, env, opts);
   const frag = this.create_doc_fragment(html);
@@ -15,6 +17,7 @@ export async function render(env, opts = {}) {
   post_process.call(this, env, container, opts);
   return container;
 }
+
 export async function post_process(env, container, opts = {}) {
   const settings_config = {
     folder_exclusions,
@@ -26,7 +29,7 @@ export async function post_process(env, container, opts = {}) {
     default_group_name: 'Sources',
     heading_btn: {
       btn_icon: 'help-circle',
-      callback: (event, setting) => {
+      callback: () => {
         window.open('https://smartconnections.app/smart-environment/settings/?utm_source=source-settings', '_external');
       },
     },
@@ -36,7 +39,6 @@ export async function post_process(env, container, opts = {}) {
   this.attach_disposer(container, disposers);
   return container;
 }
-
 
 export function highlight_reset_data(env, container) {
   return async (payload) => {
@@ -62,8 +64,8 @@ export const folder_exclusions = {
   name: 'Manage excluded folders',
   description: 'Manage the list of folders excluded from processing.',
   btn_text: 'Manage folders',
-  callback: async function (value, setting) {
-    const env = this; // scope passed as 'this'
+  callback: async function () {
+    const env = this;
     const fuzzy = new ExcludedFoldersFuzzy(env.main.app, env);
     const selection_callback = () => {
       env.update_exclusions();
@@ -77,8 +79,8 @@ export const view_exclusions = {
   name: 'View all exclusions',
   description: 'View all excluded sources.',
   btn_text: 'Show',
-  callback: async function (value, setting) {
-    const env = this; // scope passed as 'this'
+  callback: async function () {
+    const env = this;
     const modal = new ExcludedSourcesModal(env.main.app, env);
     modal.open();
   }
@@ -90,20 +92,19 @@ export const re_import_sources = {
   description: 'Clear sources data and re-import.',
   btn_text: 'Re-import sources',
   callback: async function (value, setting) {
-    const env = this; // scope passed as 'this'
+    const env = this;
     const container = setting.controlEl;
-    // confirmation row
     const confirm_row = container.createEl('div', { cls: 'sc-inline-confirm-row' });
     const reimport_btn = container.querySelector('button');
     reimport_btn.style.display = 'none';
     confirm_row.setText('Are you sure you want to clear all sources data? This cannot be undone.');
     let confirm_cancel = confirm_row.createEl('button', { text: 'Cancel' });
     let confirm_yes = confirm_row.createEl('button', { text: 'Re-import', cls: 'mod-warning' });
-    confirm_yes.addEventListener('click', async (e) => {
+    confirm_yes.addEventListener('click', async (event) => {
       confirm_cancel.style.display = 'none';
       confirm_yes.textContent = 'Re-importing...';
       confirm_yes.disabled = true;
-      const confirm_row = e.target.closest('.sc-inline-confirm-row');
+      const row = event.target.closest('.sc-inline-confirm-row');
       await env.smart_sources.run_clear_all();
       const start = Date.now();
       env.smart_sources.unload();
@@ -112,14 +113,17 @@ export const re_import_sources = {
       await env.load_collections();
       await env.smart_sources.process_embed_queue();
       const end = Date.now();
-      env.events?.emit('sources:reimported', { time_ms: end - start });
-      env.main.notices?.show('reload_sources', { time_ms: end - start });
-      confirm_row.style.display = 'none';
+      env.events?.emit('sources:reimported', {
+        time_ms: end - start,
+        message: format_reimport_message(end - start),
+        event_source: 'settings_env_sources.re_import_sources',
+      });
+      row.style.display = 'none';
       reimport_btn.style.display = 'inline-block';
       confirm_yes.textContent = 'Yes';
       confirm_yes.disabled = false;
     });
-    confirm_cancel.addEventListener('click', (e) => {
+    confirm_cancel.addEventListener('click', () => {
       confirm_row.style.display = 'none';
       reimport_btn.style.display = 'inline-block';
     }, { once: true });
@@ -132,8 +136,17 @@ export const reset_env_settings_btn = {
   description: 'Restore Smart Environment settings to defaults.',
   btn_text: 'Reset settings',
   callback: async function (value, setting) {
-    const env = this; // scope passed as 'this'
+    const env = this;
     const container = setting.controlEl;
     create_reset_confirm_ui(env, { container });
   }
 };
+
+/**
+ * @param {number} time_ms
+ * @returns {string}
+ */
+function format_reimport_message(time_ms) {
+  const seconds = Math.max(0, Math.round((time_ms / 100)) / 10);
+  return `Sources re-imported in ${seconds}s.`;
+}

@@ -16,6 +16,7 @@ export class NotificationsFeedModal extends Modal {
     this.contentEl.empty();
     const event_log = await this.env.smart_components.render_component('notifications_feed', this.env);
     this.contentEl.appendChild(event_log);
+    this.env?.event_logs?.mark_all_notification_entries_seen?.();
   }
 
   onClose() {

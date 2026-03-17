@@ -85,10 +85,10 @@ export function register_status_bar_context_menu(env, status_container, deps = {
     menu.addSeparator();
     menu.addItem((item) =>
       item
-        .setTitle('Learn about Community Supporters')
+        .setTitle('Start 14-day Pro trial')
         .setIcon('hand-heart')
         .onClick(() => {
-          const url = 'https://smartconnections.app/community-supporters/?utm_source=status-bar';
+          const url = 'https://smartconnections.app/pro-plugins/?utm_source=status-bar';
           window.open(url, '_external');
         }),
     );

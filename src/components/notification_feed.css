@@ -112,19 +112,15 @@
 }
 
 .smart-env-notifications-filter {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
   position: relative;
   display: inline-flex;
   align-items: center;
   cursor: pointer;
   user-select: none;
-}
-
-.smart-env-notifications-filter input {
-  position: absolute;
-  opacity: 0;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
 }
 
 .smart-env-notifications-filter__content {
@@ -145,14 +141,18 @@
   color: var(--text-normal);
 }
 
-.smart-env-notifications-filter input:checked + .smart-env-notifications-filter__content {
+.smart-env-notifications-filter.is-active .smart-env-notifications-filter__content {
   background: var(--background-primary);
   border-color: var(--background-modifier-border);
   color: var(--text-normal);
   box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
 }
 
-.smart-env-notifications-filter input:focus-visible + .smart-env-notifications-filter__content {
+.smart-env-notifications-filter:focus-visible {
+  outline: none;
+}
+
+.smart-env-notifications-filter:focus-visible .smart-env-notifications-filter__content {
   outline: 2px solid var(--interactive-accent);
   outline-offset: 2px;
 }
@@ -178,6 +178,10 @@
 
 .smart-env-notifications-filter__count.is-zero {
   display: none;
+}
+
+.smart-env-notifications-filter[data-level='all'] .smart-env-notifications-filter__dot {
+  background: var(--text-muted);
 }
 
 .smart-env-notifications-filter[data-level='attention'] .smart-env-notifications-filter__dot {
@@ -322,7 +326,9 @@ details.smart-env-notification > .smart-env-notification__summary:focus-visible 
   line-height: 1.1;
 }
 
-.smart-env-notification__level {
+.smart-env-notification__level,
+.smart-env-notification__feed-only,
+.smart-env-notification__muted {
   display: inline-flex;
   align-items: center;
   padding: 0.12rem 0.42rem;
@@ -332,6 +338,11 @@ details.smart-env-notification > .smart-env-notification__summary:focus-visible 
   color: var(--text-muted);
   font-size: var(--font-ui-small);
   line-height: 1.1;
+}
+
+.smart-env-notification__feed-only {
+  color: var(--text-faint);
+  border-style: dashed;
 }
 
 .smart-env-notification[data-level='attention'] .smart-env-notification__level {

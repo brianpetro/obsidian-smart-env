@@ -1,34 +1,31 @@
 import test from 'ava';
 
-import {
-  dequeue_event_key,
-  enqueue_event_key,
-  get_idle_delay_ms,
-  is_valid_milestone_event,
-  update_visibility_idle_state,
-} from './onboarding_events_utils.js';
+import { register_first_of_event_notifications } from './onboarding_events.js';
+import { is_valid_milestone_event } from './onboarding_events_utils.js';
 
-test('get_idle_delay_ms returns remaining idle delay', (t) => {
-  t.is(get_idle_delay_ms({ last_input_at: 1000, now: 2500, idle_delay_ms: 3000 }), 1500);
-  t.is(get_idle_delay_ms({ last_input_at: 1000, now: 4500, idle_delay_ms: 3000 }), 0);
-});
-
-test('enqueue_event_key appends to the queue without mutating', (t) => {
-  const queue = ['a'];
-  const next_queue = enqueue_event_key(queue, { event_key: 'b' });
-
-  t.deepEqual(queue, ['a']);
-  t.deepEqual(next_queue, ['a', 'b']);
-});
-
-test('dequeue_event_key returns head and rest', (t) => {
-  const queue = ['a', 'b'];
-  const result = dequeue_event_key(queue);
-
-  t.is(result.event_key, 'a');
-  t.deepEqual(result.queue, ['b']);
-  t.is(dequeue_event_key([]).event_key, null);
-});
+function create_env() {
+  const handlers = new Map();
+  const env = {
+    emitted: [],
+    events: {
+      on(event_key, handler) {
+        const list = handlers.get(event_key) || [];
+        list.push(handler);
+        handlers.set(event_key, list);
+        return () => {
+          const current = handlers.get(event_key) || [];
+          handlers.set(event_key, current.filter((cb) => cb !== handler));
+        };
+      },
+      emit(event_key, payload = {}) {
+        env.emitted.push({ event_key, payload });
+        const list = handlers.get(event_key) || [];
+        list.forEach((handler) => handler(payload, event_key));
+      },
+    },
+  };
+  return env;
+}
 
 test('is_valid_milestone_event checks map membership', (t) => {
   const items = { 'events:ok': { milestone: 'OK' } };
@@ -38,22 +35,45 @@ test('is_valid_milestone_event checks map membership', (t) => {
   t.false(is_valid_milestone_event(null, { items_by_event_key: items }));
 });
 
-test('update_visibility_idle_state resets idle when returning visible', (t) => {
-  t.deepEqual(update_visibility_idle_state({ is_visible: false, should_restart_idle: false }), {
-    should_restart_idle: true,
-    reset_last_input_at: false,
-    clear_idle_timeout: true,
+test('register_first_of_event_notifications emits milestone event immediately for valid first events', (t) => {
+  const env = create_env();
+  register_first_of_event_notifications(env);
+
+  env.events.emit('event_log:first', {
+    first_of_event_key: 'sources:import_completed',
   });
 
-  t.deepEqual(update_visibility_idle_state({ is_visible: true, should_restart_idle: true }), {
-    should_restart_idle: false,
-    reset_last_input_at: true,
-    clear_idle_timeout: false,
+  const milestone_events = env.emitted.filter((event) => event.event_key === 'milestones:first_achieved');
+
+  t.is(milestone_events.length, 1);
+  t.like(milestone_events[0].payload, {
+    level: 'milestone',
+    first_of_event_key: 'sources:import_completed',
+    btn_callback: 'milestones_modal:open',
+  });
+});
+
+test('register_first_of_event_notifications ignores non-checklist events', (t) => {
+  const env = create_env();
+  register_first_of_event_notifications(env);
+
+  env.events.emit('event_log:first', {
+    first_of_event_key: 'milestones:first_achieved',
   });
 
-  t.deepEqual(update_visibility_idle_state({ is_visible: true, should_restart_idle: false }), {
-    should_restart_idle: false,
-    reset_last_input_at: false,
-    clear_idle_timeout: false,
+  const milestone_events = env.emitted.filter((event) => event.event_key === 'milestones:first_achieved');
+  t.is(milestone_events.length, 0);
+});
+
+test('register_first_of_event_notifications returns a disposer', (t) => {
+  const env = create_env();
+  const dispose = register_first_of_event_notifications(env);
+
+  dispose();
+  env.events.emit('event_log:first', {
+    first_of_event_key: 'sources:import_completed',
   });
+
+  const milestone_events = env.emitted.filter((event) => event.event_key === 'milestones:first_achieved');
+  t.is(milestone_events.length, 0);
 });

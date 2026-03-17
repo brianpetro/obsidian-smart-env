@@ -1,50 +1,67 @@
 import test from 'ava';
 
 import {
-  get_native_notice_message,
+  EventLogs,
   get_notification_setting_key,
-  get_notification_type,
+  is_event_log_muted,
   should_show_native_notice,
 } from './event_logs.js';
 
-test('get_notification_type parses notification keys', (t) => {
-  t.is(get_notification_type('notification:warning'), 'warning');
-  t.is(get_notification_type('notification:milestone'), 'milestone');
-  t.is(get_notification_type('sync:warning'), null);
-  t.is(get_notification_type('notification:'), null);
+test('EventLogs default native notice settings stay level-specific and fail-closed', (t) => {
+  t.is(EventLogs.default_settings.native_notice_info, false);
+  t.is(EventLogs.default_settings.native_notice_warning, true);
+  t.is(EventLogs.default_settings.native_notice_error, true);
+  t.is(EventLogs.default_settings.native_notice_attention, false);
+  t.is(EventLogs.default_settings.native_notice_milestone, true);
 });
 
-test('get_notification_setting_key maps notification type to setting', (t) => {
+test('get_notification_setting_key maps supported levels and rejects unknown values', (t) => {
   t.is(get_notification_setting_key('warning'), 'native_notice_warning');
   t.is(get_notification_setting_key('milestone'), 'native_notice_milestone');
+  t.is(get_notification_setting_key(' unknown '), null);
   t.is(get_notification_setting_key(null), null);
 });
 
-test('should_show_native_notice applies setting and mute gates', (t) => {
-  const active_instance = {
-    settings: { native_notice_warning: true },
-    get: () => ({ data: { muted: false } }),
-  };
-
-  const disabled_instance = {
-    settings: { native_notice_warning: false },
-    get: () => ({ data: { muted: false } }),
-  };
-
-  const muted_instance = {
-    settings: { native_notice_warning: true },
-    get: () => ({ data: { muted: true } }),
-  };
-
-  t.true(should_show_native_notice(active_instance, { event_key: 'notification:warning' }));
-  t.false(should_show_native_notice(disabled_instance, { event_key: 'notification:warning' }));
-  t.false(should_show_native_notice(muted_instance, { event_key: 'notification:warning' }));
-  t.false(should_show_native_notice(active_instance, { event_key: 'sync:error' }));
+test('is_event_log_muted reads muted from item data', (t) => {
+  t.true(is_event_log_muted({ data: { muted: true } }));
+  t.false(is_event_log_muted({ data: { muted: false } }));
+  t.false(is_event_log_muted({}));
 });
 
-test('get_native_notice_message uses event message and milestone fallback', (t) => {
-  t.is(get_native_notice_message('notification:info', { message: 'hello' }), 'hello');
-  t.is(get_native_notice_message('notification:info', { details: 'detail text' }), 'detail text');
-  t.is(get_native_notice_message('notification:milestone', {}), 'Milestone reached.');
-  t.is(get_native_notice_message('notification:error', {}), 'notification:error');
+test('should_show_native_notice applies payload-first level, setting, and mute gates', (t) => {
+  const instance = {
+    settings: {
+      native_notice_error: true,
+      native_notice_warning: false,
+    },
+    constructor: {
+      default_settings: EventLogs.default_settings,
+    },
+    get(event_key) {
+      if (event_key === 'sync:error') return { data: { muted: false } };
+      if (event_key === 'sync:warning') return { data: { muted: false } };
+      if (event_key === 'sync:muted') return { data: { muted: true } };
+      return null;
+    },
+  };
+
+  t.true(should_show_native_notice(instance, {
+    event_key: 'notification:warning',
+    event: { level: 'error' },
+  }));
+
+  t.false(should_show_native_notice(instance, {
+    event_key: 'sync:warning',
+    event: { level: 'warning' },
+  }));
+
+  t.false(should_show_native_notice(instance, {
+    event_key: 'sync:muted',
+    event: { level: 'error' },
+  }));
+
+  t.false(should_show_native_notice(instance, {
+    event_key: 'sync:error',
+    event: { level: 'unknown' },
+  }));
 });

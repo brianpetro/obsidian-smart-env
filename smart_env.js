@@ -12,7 +12,7 @@ import {
   add_smart_connections_icon,
   add_smart_lookup_icon,
 } from './utils/add_icons.js';
-import { SmartNotices } from "smart-notices/smart_notices.js"; // TODO: move to jsbrains
+import { SmartNotices } from "smart-notices/smart_notices.js";
 import { exchange_code_for_tokens, install_smart_plugins_plugin, get_smart_server_url, enable_plugin } from './utils/sc_oauth.js';
 import { register_completion_variable_adapter_replacements } from './utils/register_completion_variable_adapter_replacements.js';
 import { remove_smart_plugins_plugin } from './migrations/remove_smart_plugins_plugin.js';
@@ -26,15 +26,15 @@ export class SmartEnv extends BaseSmartEnv {
    * @returns {Promise<SmartEnv>} The initialized SmartEnv instance.
    */
   static async create(plugin, env_config) {
-    if(!plugin) throw new Error("SmartEnv.create: 'plugin' parameter is required.");
-    if(!env_config) throw new Error("SmartEnv.create: 'env_config' parameter is required.");
+    if (!plugin) throw new Error("SmartEnv.create: 'plugin' parameter is required.");
+    if (!env_config) throw new Error("SmartEnv.create: 'env_config' parameter is required.");
     env_config.version = this.version;
     add_smart_chat_icon();
     add_smart_connections_icon();
     add_smart_lookup_icon();
     add_smart_icons();
     // TODO: can this be safely removed? Does downstream version detection handle this case (no version)? 2026-02-07
-    if(window.smart_env && !window.smart_env.constructor.version) {
+    if (window.smart_env && !window.smart_env.constructor.version) {
       const update_notice = "Detected ancient SmartEnv. Removing it to prevent issues with new plugins. Make sure your Smart Plugins are up-to-date!";
       console.warn(update_notice);
       new Notice(update_notice, 0);
@@ -48,20 +48,30 @@ export class SmartEnv extends BaseSmartEnv {
 
   async load(force_load = false) {
     this.run_migrations();
-    if(!this.plugin.app.workspace.protocolHandlers.has('smart-plugins/callback')) {
+    this.register_notification_dispatchers();
+
+    if (typeof this._onboarding_events_teardown !== 'function') {
+      this._onboarding_events_teardown = register_first_of_event_notifications(this);
+    }
+
+    if (!this.plugin.app.workspace.protocolHandlers.has('smart-plugins/callback')) {
       // Register protocol handler for obsidian://smart-plugins/callback
       this.plugin.registerObsidianProtocolHandler("smart-plugins/callback", async (params) => {
         await this.handle_smart_plugins_oauth_callback(params);
       });
     }
-    if(Platform.isMobile && !force_load){
+
+    if (Platform.isMobile && !force_load) {
       // create doc frag with a button to run load_env
       const frag = this.smart_view.create_doc_fragment(`<div><p>Smart Environment loading deferred on mobile.</p><button>Load Environment</button></div>`);
       frag.querySelector('button').addEventListener('click', this.load.bind(this, true));
       new Notice(frag, 0);
       return;
     }
+
+    this.register_status_bar();
     await super.load();
+
     this.smart_sources?.register_source_watchers?.(this.smart_sources);
     const plugin = this.main;
     plugin.registerEvent(
@@ -79,22 +89,42 @@ export class SmartEnv extends BaseSmartEnv {
       })
     );
 
-    if(this._config.collections.smart_completions?.completion_adapters?.SmartCompletionVariableAdapter) {
+    if (this._config.collections.smart_completions?.completion_adapters?.SmartCompletionVariableAdapter) {
       register_completion_variable_adapter_replacements(this._config.collections.smart_completions.completion_adapters.SmartCompletionVariableAdapter);
     }
 
     this.register_configured_modals();
-
-    // register status bar
     this.register_status_bar();
-    register_first_of_event_notifications(this);
+  }
+
+  unload() {
+    if (typeof this._onboarding_events_teardown === 'function') {
+      this._onboarding_events_teardown();
+      this._onboarding_events_teardown = null;
+    }
+    return super.unload?.();
+  }
+
+  /**
+   * Register event dispatchers used by native notice buttons and event-first flows.
+   *
+   * @returns {void}
+   */
+  register_notification_dispatchers() {
+    if (this._notification_dispatchers_registered) return;
+    this._notification_dispatchers_registered = true;
+
+    this.events.on('milestones_modal:open', () => {
+      this.open_milestones_modal?.();
+    });
+
+    this.events.on('notifications_feed_modal:open', () => {
+      this.open_notifications_feed_modal?.();
+    });
   }
 
   /**
    * Register every modal declared in config that exposes a static register_modal helper.
-   * This keeps plugin-specific modals working without each plugin host having to
-   * manually register them after the environment loads.
-   *
    * @returns {void}
    */
   register_configured_modals() {
@@ -117,21 +147,19 @@ export class SmartEnv extends BaseSmartEnv {
     }
   }
 
-  emit_source_opened(current_path, event_source=null) {
+  emit_source_opened(current_path, event_source = null) {
     if (this._current_opened_source === current_path) return; // prevent duplicate events
     const current_source = this.smart_sources.get(current_path);
-    if(current_source) {
+    if (current_source) {
       this._current_opened_source = current_path;
       current_source.emit_event('sources:opened', { event_source });
     }
   }
 
-  // queue re-import the file
   queue_source_re_import(source) {
     this.smart_sources?.queue_source_re_import?.(source);
   }
 
-  // prevent importing when user is acting within the workspace
   debounce_re_import_queue() {
     this.smart_sources?.debounce_re_import_queue?.();
   }
@@ -158,7 +186,7 @@ export class SmartEnv extends BaseSmartEnv {
    * @deprecated see events
    */
   get notices() {
-    if(!this._notices) {
+    if (!this._notices) {
       this._notices = new SmartNotices(this, {
         adapter: Notice,
       });
@@ -188,16 +216,24 @@ export class SmartEnv extends BaseSmartEnv {
   async handle_smart_plugins_oauth_callback(params) {
     const code = params.code;
     if (!code) {
-      new Notice("No OAuth code provided in URL. Login failed.");
+      this.events.emit('smart_plugins_oauth_failed', {
+        level: 'error',
+        message: 'No OAuth code provided in URL. Login failed.',
+        event_source: 'handle_smart_plugins_oauth_callback',
+      });
       return;
     }
     try {
-      // your existing OAuth + plugin install logic
       await exchange_code_for_tokens(code, this.plugin);
       this.events.emit('smart_plugins_oauth_completed');
     } catch (err) {
       console.error("OAuth callback error", err);
-      new Notice(`OAuth callback error: ${err.message}`);
+      this.events.emit('smart_plugins_oauth_failed', {
+        level: 'error',
+        message: `OAuth callback error: ${err.message}`,
+        details: err.stack || '',
+        event_source: 'handle_smart_plugins_oauth_callback',
+      });
     }
   }
 
@@ -224,7 +260,7 @@ export class SmartEnv extends BaseSmartEnv {
     while (this.obsidian_is_syncing) {
       console.log("Smart Connections: Waiting for Obsidian Sync to finish");
       await new Promise(r => setTimeout(r, 1000));
-      if(!this.plugin) throw new Error("Plugin disabled while waiting for obsidian sync, reload required."); // if plugin is disabled, stop waiting for sync
+      if (!this.plugin) throw new Error("Plugin disabled while waiting for obsidian sync, reload required."); // if plugin is disabled, stop waiting for sync
     }
   }
 
@@ -236,27 +272,23 @@ export class SmartEnv extends BaseSmartEnv {
     return obsidian_sync_instance?.syncing;
   }
 
-  // get obsidian app instance
   get obsidian_app() {
     return this.plugin?.app ?? window.app;
   }
 
-  // open notifications feed modal
   open_notifications_feed_modal() {
     const NotificationsModalClass = this.config.modals.notifications_feed_modal.class;
     const modal = new NotificationsModalClass(this.obsidian_app, this);
     modal.open();
   }
 
-  // open milestones modal
   open_milestones_modal() {
     const MilestonesModalClass = this.config.modals.milestones_modal.class;
     const modal = new MilestonesModalClass(this.obsidian_app, this);
     modal.open();
   }
 
-  run_migrations () {
-    // remove old smart-plugins plugin if present
+  run_migrations() {
     remove_smart_plugins_plugin({ app: this.plugin.app, plugin_ids: ['smart-plugins'] });
     remove_smart_plugins_plugin({ app: this.plugin.app, plugin_ids: ['smart-editor'] });
     remove_smart_plugins_plugin({ app: this.plugin.app, plugin_ids: ['smart-sources'] });

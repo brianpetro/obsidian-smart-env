@@ -3,14 +3,14 @@ import { Keymap } from 'obsidian';
  * Opens the source (or block) represented by the given item.
  */
 export async function open_source(item, event = null) {
-  try{
+  try {
     const env = item.env;
     const obsidian_app = env.obsidian_app;
     let target_path = item.key;
-  
+
     // handle top-level blocks (should return file path)
     if (target_path.endsWith('#')) target_path = target_path.slice(0, -1);
-  
+
     let target_file;
     if (target_path.includes('#')) {
       const [file_path] = target_path.split('#');
@@ -18,17 +18,24 @@ export async function open_source(item, event = null) {
     } else {
       target_file = obsidian_app.metadataCache.getFirstLinkpathDest(target_path, '');
     }
-  
+
     if (!target_file) {
-      console.warn(`[open_note] Unable to resolve file for ${target_path}`);
+      const message = `Unable to resolve file for ${target_path}`;
+      console.warn(`[open_source] ${message}`);
+      item.emit_event('sources:open_failed', {
+        level: 'warning',
+        message,
+        event_source: 'open_source',
+      });
       return;
     }
+
     let leaf;
-  
+
     if (event) {
       const is_mod = Keymap.isModEvent(event);
       const is_alt = Keymap.isModifier(event, 'Alt');
-  
+
       if (is_mod && is_alt) {
         // Split to the right of the active leaf.
         leaf = obsidian_app.workspace.splitActiveLeaf('vertical');
@@ -43,10 +50,10 @@ export async function open_source(item, event = null) {
       // Fallback when no event supplied.
       leaf = obsidian_app.workspace.getMostRecentLeaf();
     }
-  
+
     // Open file & position cursor if a block was specified
     await leaf.openFile(target_file);
-  
+
     if (typeof item?.line_start === 'number') {
       const { editor } = leaf.view;
       const pos = { line: item.line_start, ch: 0 };
@@ -54,9 +61,14 @@ export async function open_source(item, event = null) {
       editor.scrollIntoView({ to: pos, from: pos }, true);
     }
     // TODO: should this be replaced with env.emit_source_opened?
-    item.emit_event('sources:opened', { event_source: 'open_source method' });
-  }catch(e){
-    console.error("Error in open_source:", e);
-    item.emit_event('notification:error', { message: e.message, event_source: 'open_source method' });
+    item.emit_event('sources:opened', { event_source: 'open_source' });
+  } catch (error) {
+    console.error('Error in open_source:', error);
+    item.emit_event('sources:open_failed', {
+      level: 'error',
+      message: error?.message || 'Failed to open source.',
+      details: error?.stack || '',
+      event_source: 'open_source',
+    });
   }
 }
