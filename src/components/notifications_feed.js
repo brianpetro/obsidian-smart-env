@@ -50,45 +50,78 @@ export async function render(env, params = {}) {
 }
 
 async function post_process(env, container, params = {}) {
+  const {
+    live_updates = false,
+    auto_mark_seen = false,
+    state = {},
+  } = params;
   const feed_container = container.querySelector('.smart-env-notifications-feed');
   const copy_btn = container.querySelector('.copy-all-notifications-btn');
   const load_more_btn = container.querySelector('.load-more-notifications-btn');
   const filter_controls = container.querySelector('.smart-env-notifications-filter-controls');
   const summary_el = container.querySelector('.smart-env-notifications__summary');
   const smart_env = this;
+  const expanded_entry_keys = state.expanded_entry_keys instanceof Set
+    ? state.expanded_entry_keys
+    : new Set()
+  ;
 
   this.empty(feed_container);
 
-  const session_entries = Array.isArray(env?.event_logs?.session_events)
-    ? [...env.event_logs.session_events]
-    : []
+  const active_levels = state.active_levels instanceof Set
+    ? state.active_levels
+    : create_all_levels_set()
   ;
-  const entries = session_entries.filter((entry) => Boolean(get_entry_level(entry)));
+  let visible_count = typeof state.visible_count === 'number'
+    ? state.visible_count
+    : null
+  ;
+  let filtered_count = typeof state.filtered_count === 'number'
+    ? state.filtered_count
+    : null
+  ;
 
-  if (!entries.length) {
-    render_empty_state(feed_container, {
-      title: 'No Smart Env notifications yet.',
-      detail: 'When Smart Env emits levelled events, they will appear here.',
+  state.active_levels = active_levels;
+  state.expanded_entry_keys = expanded_entry_keys;
+
+  const get_entries = () => {
+    const session_entries = Array.isArray(env?.event_logs?.session_events)
+      ? [...env.event_logs.session_events]
+      : []
+    ;
+    return session_entries.filter((entry) => Boolean(get_entry_level(entry)));
+  };
+
+  const should_refresh_for_event = (event_key, event = {}) => {
+    if (event_key === 'event_logs:mute_changed') return true;
+    if (event_key === 'notifications:seen') return false;
+    if (event_key === 'notifications:seen_all') return false;
+    return Boolean(get_entry_level({ event_key, event }));
+  };
+
+  const capture_expanded_entry_keys = () => {
+    expanded_entry_keys.clear();
+    feed_container.querySelectorAll('details.smart-env-notification[open]').forEach((details_el) => {
+      const entry_key = details_el.dataset.entryKey;
+      if (!entry_key) return;
+      expanded_entry_keys.add(entry_key);
     });
-    set_btn_disabled(copy_btn, true);
-    if (load_more_btn) load_more_btn.style.display = 'none';
-    update_summary(summary_el, { total_count: 0, filtered_count: 0, visible_count: 0 });
-    return;
-  }
-
-  const active_levels = create_all_levels_set();
-  const level_counts = get_level_counts(entries);
-  let visible_count = get_visible_count(entries.length);
+  };
 
   const set_active_levels = (next_active_levels) => {
     active_levels.clear();
     next_active_levels.forEach((level) => active_levels.add(level));
   };
 
-  const render_filters = () => {
+  const maybe_mark_entries_seen = () => {
+    if (!auto_mark_seen) return;
+    env?.event_logs?.mark_all_notification_entries_seen?.();
+  };
+
+  const render_filters = (entries) => {
     render_filter_controls(filter_controls, {
       active_levels,
-      level_counts,
+      level_counts: get_level_counts(entries),
       on_change: handle_filters_changed,
       on_select_all: () => {
         set_active_levels(create_all_levels_set());
@@ -99,10 +132,27 @@ async function post_process(env, container, params = {}) {
     });
   };
 
-  const render_entries = () => {
+  const render_entries = (entries) => {
     smart_env.empty(feed_container);
 
     const filtered_entries = get_filtered_entries(entries, { active_levels });
+    const previous_filtered_count = typeof filtered_count === 'number'
+      ? filtered_count
+      : filtered_entries.length
+    ;
+
+    if (typeof visible_count !== 'number') {
+      visible_count = get_visible_count(filtered_entries.length);
+    } else if (visible_count >= previous_filtered_count) {
+      visible_count = filtered_entries.length;
+    } else {
+      visible_count = Math.min(visible_count, filtered_entries.length);
+    }
+
+    filtered_count = filtered_entries.length;
+    state.visible_count = visible_count;
+    state.filtered_count = filtered_count;
+
     const shown_count = Math.min(visible_count, filtered_entries.length);
 
     update_summary(summary_el, {
@@ -127,6 +177,8 @@ async function post_process(env, container, params = {}) {
     get_visible_entries(filtered_entries, { limit: visible_count }).forEach((entry) => {
       append_entry(feed_container, entry, {
         env,
+        expanded_entry_keys,
+        on_entry_toggle: handle_entry_toggle,
         on_toggle_mute: handle_toggle_mute,
       });
     });
@@ -137,11 +189,41 @@ async function post_process(env, container, params = {}) {
     });
   };
 
+  const render_feed = (opts = {}) => {
+    const {
+      preserve_expanded = false,
+      reset_visible_count = false,
+    } = opts;
+    if (preserve_expanded) capture_expanded_entry_keys();
+
+    const entries = get_entries();
+    if (reset_visible_count) {
+      const filtered_entries = get_filtered_entries(entries, { active_levels });
+      visible_count = get_visible_count(filtered_entries.length);
+      state.visible_count = visible_count;
+      state.filtered_count = filtered_entries.length;
+    }
+
+    if (!entries.length) {
+      smart_env.empty(feed_container);
+      render_empty_state(feed_container, {
+        title: 'No Smart Env notifications yet.',
+        detail: 'When Smart Env emits levelled events, they will appear here.',
+      });
+      set_btn_disabled(copy_btn, true);
+      if (load_more_btn) load_more_btn.style.display = 'none';
+      update_summary(summary_el, { total_count: 0, filtered_count: 0, visible_count: 0 });
+      maybe_mark_entries_seen();
+      return;
+    }
+
+    render_filters(entries);
+    render_entries(entries);
+    maybe_mark_entries_seen();
+  };
+
   const handle_filters_changed = () => {
-    const filtered_entries = get_filtered_entries(entries, { active_levels });
-    visible_count = get_visible_count(filtered_entries.length);
-    render_filters();
-    render_entries();
+    render_feed({ preserve_expanded: true, reset_visible_count: true });
   };
 
   const handle_toggle_mute = (entry) => {
@@ -149,22 +231,29 @@ async function post_process(env, container, params = {}) {
     if (!event_key || typeof env?.event_logs?.toggle_event_key_muted !== 'function') return;
     if (!is_canonical_notification_entry(entry)) return;
     env.event_logs.toggle_event_key_muted(event_key);
-    render_entries();
+    render_feed({ preserve_expanded: true });
+  };
+
+  const handle_entry_toggle = (entry_key, is_open) => {
+    if (is_open) {
+      expanded_entry_keys.add(entry_key);
+      return;
+    }
+    expanded_entry_keys.delete(entry_key);
   };
 
   const reset_filters = () => {
     set_active_levels(create_all_levels_set());
-    handle_filters_changed();
+    render_feed({ preserve_expanded: true, reset_visible_count: true });
   };
 
-  render_filters();
-  render_entries();
+  render_feed({ reset_visible_count: true });
 
   if (copy_btn) {
     copy_btn.addEventListener('click', async () => {
       if (copy_btn.disabled) return;
 
-      const filtered_entries = get_filtered_entries(entries, { active_levels });
+      const filtered_entries = get_filtered_entries(get_entries(), { active_levels });
       const newest_first = get_visible_entries(filtered_entries, { limit: filtered_entries.length });
       const all_text = entries_to_clipboard_text(newest_first);
       const copied = await write_text_to_clipboard(all_text);
@@ -178,12 +267,34 @@ async function post_process(env, container, params = {}) {
 
   if (load_more_btn) {
     load_more_btn.addEventListener('click', () => {
-      const filtered_entries = get_filtered_entries(entries, { active_levels });
+      const filtered_entries = get_filtered_entries(get_entries(), { active_levels });
       visible_count = get_next_visible_count(filtered_entries.length, {
         current_count: visible_count,
       });
-      render_entries();
+      state.visible_count = visible_count;
+      render_feed({ preserve_expanded: true });
     });
+  }
+
+  if (live_updates && typeof env?.events?.on === 'function') {
+    let debounce_timeout = null;
+    const live_update_off = env.events.on('*', (event, event_key) => {
+      if (!should_refresh_for_event(event_key, event)) return;
+      if (debounce_timeout) clearTimeout(debounce_timeout);
+      debounce_timeout = setTimeout(() => {
+        debounce_timeout = null;
+        render_feed({ preserve_expanded: true });
+      }, 100);
+    });
+
+    this.attach_disposer(container, [
+      live_update_off,
+      () => {
+        if (!debounce_timeout) return;
+        clearTimeout(debounce_timeout);
+        debounce_timeout = null;
+      },
+    ]);
   }
 }
 
@@ -312,7 +423,12 @@ function update_load_more_button(button, params = {}) {
 }
 
 function append_entry(feed_container, entry, params = {}) {
-  const { env = null, on_toggle_mute = () => {} } = params;
+  const {
+    env = null,
+    expanded_entry_keys = new Set(),
+    on_entry_toggle = () => {},
+    on_toggle_mute = () => {},
+  } = params;
   const level = get_entry_level(entry);
   if (!level) return;
 
@@ -323,6 +439,7 @@ function append_entry(feed_container, entry, params = {}) {
   const payload_text = get_entry_payload_text(entry);
   const is_canonical = is_canonical_notification_entry(entry);
   const is_muted = is_canonical && Boolean(env?.event_logs?.is_event_key_muted?.(event_key));
+  const entry_row_key = get_entry_row_key(entry);
 
   const has_payload = payload_text.trim().length > 0;
   const row = has_payload
@@ -331,9 +448,11 @@ function append_entry(feed_container, entry, params = {}) {
   ;
 
   row.className = 'smart-env-notification';
+  row.dataset.entryKey = entry_row_key;
   row.dataset.level = level;
   row.setAttribute('role', 'listitem');
   if (is_muted) row.dataset.muted = 'true';
+  if (has_payload && expanded_entry_keys.has(entry_row_key)) row.open = true;
 
   const summary = has_payload
     ? feed_container.ownerDocument.createElement('summary')
@@ -438,6 +557,9 @@ function append_entry(feed_container, entry, params = {}) {
     message.className = 'smart-env-notification__message';
     message.textContent = payload_text;
     row.appendChild(message);
+    row.addEventListener('toggle', () => {
+      on_entry_toggle(entry_row_key, row.open === true);
+    });
   }
 
   feed_container.appendChild(row);
@@ -570,4 +692,12 @@ async function write_text_to_clipboard(text = '') {
   } catch (_err) {
     return false;
   }
+}
+
+/**
+ * @param {object} entry
+ * @returns {string}
+ */
+function get_entry_row_key(entry) {
+  return `${get_entry_event_key(entry)}:${get_entry_timestamp(entry)}`;
 }

@@ -9,6 +9,7 @@ import {
   is_event_log_muted,
   should_show_native_notice,
 } from '../utils/event_logs_utils.js';
+import { dispatch_notice_action } from '../utils/notice_action_dispatch.js';
 
 export const settings_config = {
   native_notice_info: {
@@ -160,21 +161,11 @@ export class EventLogs extends BaseEventLogs {
    * @returns {boolean}
    */
   run_notice_callback(callback_key, params = {}) {
-    const next_callback_key = String(callback_key || '').trim();
-    if (!next_callback_key) return false;
-
-    const app_commands = this.env?.main?.app?.commands;
-    if (app_commands?.commands?.[next_callback_key] && typeof app_commands.executeCommandById === 'function') {
-      app_commands.executeCommandById(next_callback_key);
-      return true;
-    }
-
-    this.env?.events?.emit?.(next_callback_key, {
+    return dispatch_notice_action(this.env, callback_key, {
       event_source: 'native_notice_button',
       source_event_key: params.event_key,
       source_event: params.event,
     });
-    return true;
   }
 
   /**

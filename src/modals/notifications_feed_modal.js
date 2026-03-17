@@ -11,12 +11,14 @@ export class NotificationsFeedModal extends Modal {
       this.modalEl.classList.add('smart-env-notifications-modal');
     }
 
-    this.titleEl.setText('Smart Env notifications');
+    this.titleEl.setText('Events & notifications');
 
     this.contentEl.empty();
-    const event_log = await this.env.smart_components.render_component('notifications_feed', this.env);
+    const event_log = await this.env.smart_components.render_component('notifications_feed', this.env, {
+      live_updates: true,
+      auto_mark_seen: true,
+    });
     this.contentEl.appendChild(event_log);
-    this.env?.event_logs?.mark_all_notification_entries_seen?.();
   }
 
   onClose() {

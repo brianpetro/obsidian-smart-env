@@ -1,4 +1,5 @@
 import { setIcon } from 'obsidian';
+import { dispatch_notice_action } from '../utils/notice_action_dispatch.js';
 
 /**
  * @param {Record<string, unknown>} [event={}]
@@ -47,21 +48,11 @@ function to_trimmed_string(value) {
  * @returns {boolean}
  */
 export function dispatch_milestone_notice_action(env, callback_key, params = {}) {
-  const next_callback_key = to_trimmed_string(callback_key);
-  if (!next_callback_key) return false;
-
-  const app_commands = env?.main?.app?.commands;
-  if (app_commands?.commands?.[next_callback_key] && typeof app_commands.executeCommandById === 'function') {
-    app_commands.executeCommandById(next_callback_key);
-    return true;
-  }
-
-  env?.events?.emit?.(next_callback_key, {
+  return dispatch_notice_action(env, callback_key, {
     event_source: 'milestone_notification',
     source_event_key: params.event_key,
     source_event: params.event,
   });
-  return true;
 }
 
 /**
