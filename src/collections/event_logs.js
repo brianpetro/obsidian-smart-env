@@ -103,7 +103,7 @@ export class EventLogs extends BaseEventLogs {
 
     try {
       const notice_content = await this.build_native_notice_content(event_key, event);
-      const notice_timeout = event.timeout ?? event.timeout_ms ?? null;
+      const notice_timeout = event.timeout ?? event.timeout_ms ?? 5000;
       new Notice(notice_content, notice_timeout);
     } catch (error) {
       console.error('EventLogs: failed to show native notice', {
