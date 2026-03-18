@@ -17,10 +17,18 @@
   width: 0.6em;
   height: 0.6em;
   border-radius: 999px;
-  background-color: var(--status-bar-text-color);
+  color: var(--status-bar-text-color);
+  background-color: currentColor;
   opacity: 1;
   transform: scale(1);
-  transition: background-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, currentColor 18%, transparent),
+    0 0 8px color-mix(in srgb, currentColor 24%, transparent);
+  transition:
+    background-color 150ms ease,
+    box-shadow 150ms ease,
+    transform 150ms ease,
+    color 150ms ease;
   cursor: pointer;
 }
 
@@ -30,31 +38,35 @@
 }
 
 .smart-env-status-indicator[data-level='default'] {
-  background-color: var(--status-bar-text-color);
+  color: var(--status-bar-text-color);
 }
 
 .smart-env-status-indicator[data-level='info'] {
-  background-color: var(--status-bar-text-color);
+  color: var(--status-bar-text-color);
 }
 
 .smart-env-status-indicator[data-level='milestone'] {
-  background-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
 .smart-env-status-indicator[data-level='attention'] {
-  background-color: var(--color-yellow);
+  color: var(--color-yellow);
 }
 
 .smart-env-status-indicator[data-level='warning'] {
-  background-color: var(--color-orange);
+  color: var(--color-orange);
 }
 
 .smart-env-status-indicator[data-level='error'] {
-  background-color: var(--color-red);
+  color: var(--color-red);
 }
 
 .smart-env-status-indicator[data-count] {
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 25%, transparent);
+  transform: scale(1.06);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, currentColor 22%, transparent),
+    0 0 10px color-mix(in srgb, currentColor 30%, transparent),
+    0 0 16px color-mix(in srgb, currentColor 18%, transparent);
 }
 
 .status-bar-mobile {

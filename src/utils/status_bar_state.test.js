@@ -1,10 +1,12 @@
 import test from 'ava';
 
 import {
+  get_env_activity_state,
   get_next_indicator_level,
   get_notification_event_count,
   get_notification_indicator_level,
   get_status_bar_state,
+  should_poll_env_activity,
 } from './status_bar_state.js';
 
 test('notification helpers count unseen entries and retain milestone and info display states', (t) => {
@@ -20,6 +22,78 @@ test('notification helpers count unseen entries and retain milestone and info di
   t.is(get_notification_indicator_level(event_logs), 'milestone');
   t.is(get_next_indicator_level('milestone', 'domain:event', { level: 'attention' }), 'attention');
   t.is(get_next_indicator_level('warning', 'domain:event', { level: 'info' }), 'warning');
+});
+
+test('shared activity state reports import progress for both surfaces', (t) => {
+  const env = {
+    state: 'loading',
+    smart_sources: {
+      get_import_progress_state() {
+        return {
+          active: true,
+          stage: 'importing',
+          progress: 25,
+          total: 100,
+        };
+      },
+      entities_vector_adapter: {
+        get_progress_state() {
+          return null;
+        },
+      },
+      sources_re_import_queue: {
+        a: {},
+        b: {},
+      },
+    },
+    constructor: { version: '2.2.12' },
+  };
+
+  t.like(get_env_activity_state(env), {
+    kind: 'importing',
+    message: 'Importing 25/100',
+    title: 'Smart Environment is importing sources.',
+    click_action: 'noop',
+    view_title: 'Importing sources',
+    view_status: '25/100',
+    progress_pct: 25,
+  });
+  t.true(should_poll_env_activity(env));
+});
+
+test('shared activity state reports embedding pause and resume states', (t) => {
+  const env = {
+    state: 'loaded',
+    smart_sources: {
+      get_import_progress_state() {
+        return null;
+      },
+      entities_vector_adapter: {
+        get_progress_state() {
+          return {
+            active: true,
+            paused: true,
+            progress: 10,
+            total: 40,
+            tokens_per_second: 80,
+            model_name: 'TaylorAI/bge-micro-v2',
+          };
+        },
+      },
+      sources_re_import_queue: {},
+    },
+  };
+
+  t.like(get_env_activity_state(env), {
+    kind: 'embed_paused',
+    message: 'Embedding paused 10/40',
+    title: 'Click to resume embedding.',
+    click_action: 'resume_embed',
+    indicator_level: 'attention',
+    view_title: 'Embedding paused',
+    view_status: '10/40',
+  });
+  t.true(should_poll_env_activity(env));
 });
 
 test('status bar shows loading message before progress state exists', (t) => {
@@ -179,4 +253,36 @@ test('status bar shows embedding pause and resume states', (t) => {
 
   t.is(get_status_bar_state(active_env).indicator_level, 'milestone');
   t.is(get_status_bar_state(active_env).click_action, 'pause_embed');
+});
+
+test('ready state still surfaces unseen notification severity when idle', (t) => {
+  const env = {
+    state: 'loaded',
+    event_logs: {
+      session_events: [
+        { unseen: true, event_key: 'domain:event', event: { level: 'warning' } },
+      ],
+    },
+    smart_sources: {
+      get_import_progress_state() {
+        return null;
+      },
+      entities_vector_adapter: {
+        get_progress_state() {
+          return null;
+        },
+      },
+      sources_re_import_queue: {},
+    },
+    constructor: { version: '2.2.12' },
+  };
+
+  t.like(get_status_bar_state(env), {
+    message: 'Smart Env 2.2.12',
+    title: '1 unseen notification',
+    indicator_count: 1,
+    indicator_level: 'warning',
+    click_action: 'context_menu',
+  });
+  t.false(should_poll_env_activity(env));
 });

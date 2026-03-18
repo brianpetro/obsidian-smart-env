@@ -1,8 +1,7 @@
 import styles from './embedding_progress.css';
 import {
-  get_embed_progress_state,
-  get_import_progress_state,
-  get_reimport_queue_count,
+  get_env_activity_state,
+  should_poll_env_activity,
 } from '../utils/status_bar_state.js';
 
 export function build_html() {
@@ -45,35 +44,28 @@ function post_process(env, container, params = {}) {
   const actions_el = container.querySelector('.smart-env-embedding-progress__actions');
 
   const render_state = () => {
-    const view_state = get_mobile_progress_view_state(env);
+    const view_state = get_env_activity_state(env);
 
-    title_el.textContent = view_state.title;
-    status_el.textContent = view_state.status;
-    summary_el.textContent = view_state.summary;
+    title_el.textContent = view_state.view_title;
+    status_el.textContent = view_state.view_status;
+    summary_el.textContent = view_state.view_summary;
 
     render_progress(progress_el, progress_fill_el, view_state);
-    render_details(details_el, view_state.details);
-    render_actions(actions_el, env, view_state);
-  };
-
-  const sync_polling = () => {
-    if (should_poll(env)) {
-      start_polling();
-      return;
-    }
-    stop_polling();
+    render_details(details_el, view_state.view_details);
+    render_actions(actions_el, env, view_state.view_actions);
   };
 
   let polling_interval = null;
-  const start_polling = () => {
-    if (polling_interval) return;
-    polling_interval = setInterval(() => {
-      render_state();
-      sync_polling();
-    }, 1000);
-  };
+  const set_polling = (active) => {
+    if (active) {
+      if (polling_interval) return;
+      polling_interval = setInterval(() => {
+        render_state();
+        set_polling(should_poll_env_activity(env));
+      }, 1000);
+      return;
+    }
 
-  const stop_polling = () => {
     if (!polling_interval) return;
     clearInterval(polling_interval);
     polling_interval = null;
@@ -85,152 +77,22 @@ function post_process(env, container, params = {}) {
     debounce_timeout = setTimeout(() => {
       debounce_timeout = null;
       render_state();
-      sync_polling();
+      set_polling(should_poll_env_activity(env));
     }, 100);
   };
 
   render_state();
-  sync_polling();
+  set_polling(should_poll_env_activity(env));
 
   const disposers = [];
   if (typeof env?.events?.on === 'function') {
     disposers.push(env.events.on('*', refresh));
   }
   disposers.push(() => {
-    stop_polling();
+    set_polling(false);
     if (debounce_timeout) clearTimeout(debounce_timeout);
   });
   this.attach_disposer(container, disposers);
-}
-
-/**
- * @param {any} env
- * @returns {boolean}
- */
-function should_poll(env) {
-  if (env?.state === 'loading') return true;
-  if (get_import_progress_state(env)?.active) return true;
-  if (get_embed_progress_state(env)?.active) return true;
-  return false;
-}
-
-/**
- * @param {any} env
- * @returns {object}
- */
-function get_mobile_progress_view_state(env) {
-  const import_progress = get_import_progress_state(env);
-  const embed_progress = get_embed_progress_state(env);
-  const reimport_queue_count = get_reimport_queue_count(env);
-
-  if (embed_progress?.active) {
-    const progress = normalize_number(embed_progress.progress);
-    const total = normalize_number(embed_progress.total);
-    const paused = Boolean(embed_progress.paused);
-    const tokens_per_second = normalize_number(embed_progress.tokens_per_second);
-    const model_name = to_non_empty_string(embed_progress.model_name);
-    const reason = to_non_empty_string(embed_progress.reason);
-
-    return {
-      title: paused ? 'Embedding paused' : 'Embedding in progress',
-      status: `${progress}/${total}`,
-      summary: model_name
-        ? `Using ${model_name} for embeddings.`
-        : 'Generating embeddings for imported content.',
-      progress_value: progress,
-      progress_total: total,
-      progress_pct: get_progress_pct(progress, total),
-      details: [
-        tokens_per_second > 0 ? `${tokens_per_second} tokens/sec` : '',
-        reason,
-        reimport_queue_count > 0 ? `${reimport_queue_count} source${reimport_queue_count === 1 ? '' : 's'} still queued for re-import.` : '',
-      ].filter(Boolean),
-      actions: [paused ? 'resume_embed' : 'pause_embed'],
-    };
-  }
-
-  if (import_progress?.active) {
-    const progress = normalize_number(import_progress.progress);
-    const total = normalize_number(import_progress.total);
-    const stage = to_non_empty_string(import_progress.stage) || 'importing';
-    const title = stage === 'reimporting'
-      ? 'Re-importing sources'
-      : 'Importing sources'
-    ;
-    const summary = stage === 'reimporting'
-      ? 'Refreshing queued source changes before embeddings continue.'
-      : 'Discovering and importing sources into Smart Environment.'
-    ;
-
-    return {
-      title,
-      status: `${progress}/${total}`,
-      summary,
-      progress_value: progress,
-      progress_total: total,
-      progress_pct: get_progress_pct(progress, total),
-      details: [
-        reimport_queue_count > 0 ? `${reimport_queue_count} additional source${reimport_queue_count === 1 ? '' : 's'} queued.` : '',
-        env?.state === 'loading' ? 'Smart Environment is still loading in the background.' : '',
-      ].filter(Boolean),
-      actions: [],
-    };
-  }
-
-  if (env?.state === 'loading') {
-    return {
-      title: 'Loading Smart Environment',
-      status: 'In progress',
-      summary: 'Preparing collections, sources, and shared plugin state.',
-      progress_value: null,
-      progress_total: null,
-      progress_pct: null,
-      details: [
-        reimport_queue_count > 0 ? `${reimport_queue_count} source${reimport_queue_count === 1 ? '' : 's'} queued for re-import after load.` : '',
-        'This sidebar stays available on mobile while loading continues.',
-      ].filter(Boolean),
-      actions: [],
-    };
-  }
-
-  if (reimport_queue_count > 0) {
-    return {
-      title: 'Queued re-import work',
-      status: `${reimport_queue_count} queued`,
-      summary: 'Run re-import to refresh changed sources and resume downstream embedding work.',
-      progress_value: null,
-      progress_total: null,
-      progress_pct: null,
-      details: [],
-      actions: ['run_reimport'],
-    };
-  }
-
-  if (env?.state === 'loaded') {
-    return {
-      title: 'Smart Environment ready',
-      status: 'Ready',
-      summary: 'No active import or embedding work is running right now.',
-      progress_value: null,
-      progress_total: null,
-      progress_pct: null,
-      details: [],
-      actions: ['open_notifications'],
-    };
-  }
-
-  return {
-    title: 'Smart Environment not loaded',
-    status: 'Idle',
-    summary: 'Load Smart Environment to import sources and begin embedding work.',
-    progress_value: null,
-    progress_total: null,
-    progress_pct: null,
-    details: [
-      'On mobile, this item view remains accessible from the sidebar while loading and embedding continue.',
-    ],
-    actions: ['load_env'],
-  };
 }
 
 /**
@@ -288,13 +150,13 @@ function render_details(details_el, details = []) {
 /**
  * @param {HTMLElement} actions_el
  * @param {any} env
- * @param {object} view_state
+ * @param {string[]} action_keys
  * @returns {void}
  */
-function render_actions(actions_el, env, view_state) {
+function render_actions(actions_el, env, action_keys = []) {
   actions_el.replaceChildren();
 
-  view_state.actions.forEach((action_key) => {
+  action_keys.forEach((action_key) => {
     const btn = actions_el.ownerDocument.createElement('button');
     btn.type = 'button';
     btn.className = 'smart-env-embedding-progress__btn';
@@ -350,34 +212,4 @@ function bind_action_button(btn, env, action_key) {
     default:
       btn.textContent = action_key;
   }
-}
-
-/**
- * @param {number|null} progress
- * @param {number|null} total
- * @returns {number|null}
- */
-function get_progress_pct(progress, total) {
-  if (typeof progress !== 'number' || typeof total !== 'number') return null;
-  if (total <= 0) return null;
-  return Math.round((progress / total) * 1000) / 10;
-}
-
-/**
- * @param {unknown} value
- * @returns {number}
- */
-function normalize_number(value) {
-  return typeof value === 'number' && Number.isFinite(value)
-    ? value
-    : 0
-  ;
-}
-
-/**
- * @param {unknown} value
- * @returns {string}
- */
-function to_non_empty_string(value) {
-  return typeof value === 'string' ? value.trim() : '';
 }

@@ -92,6 +92,233 @@ export function get_reimport_queue_count(env) {
 }
 
 /**
+ * @param {number|null} progress
+ * @param {number|null} total
+ * @returns {number|null}
+ */
+export function get_progress_pct(progress, total) {
+  if (typeof progress !== 'number' || typeof total !== 'number') return null;
+  if (total <= 0) return null;
+  return Math.round((progress / total) * 1000) / 10;
+}
+
+/**
+ * @param {unknown} value
+ * @returns {number}
+ */
+function normalize_number(value) {
+  return typeof value === 'number' && Number.isFinite(value)
+    ? value
+    : 0
+  ;
+}
+
+/**
+ * @param {unknown} value
+ * @returns {string}
+ */
+function to_non_empty_string(value) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+/**
+ * Build the primary environment activity state shared by the status bar and
+ * the embedding progress item view.
+ *
+ * This keeps import, embedding, queued re-import, loading, and ready states
+ * aligned across both surfaces so initial import progress renders the same way
+ * everywhere.
+ *
+ * @param {import('../../smart_env.js').SmartEnv} env
+ * @returns {{
+ *   kind: 'embed_active'|'embed_paused'|'importing'|'reimporting'|'loading'|'reimport_queued'|'ready'|'not_loaded',
+ *   message: string,
+ *   title: string,
+ *   click_action: string,
+ *   indicator_level: ('milestone'|'attention'|'error'|'warning'|'info'|null),
+ *   progress_value: number|null,
+ *   progress_total: number|null,
+ *   progress_pct: number|null,
+ *   view_title: string,
+ *   view_status: string,
+ *   view_summary: string,
+ *   view_details: string[],
+ *   view_actions: string[],
+ * }}
+ */
+export function get_env_activity_state(env) {
+  const import_progress = get_import_progress_state(env);
+  const embed_progress = get_embed_progress_state(env);
+  const reimport_queue_count = get_reimport_queue_count(env);
+  const version = env?.is_pro ? 'Pro' : env?.constructor?.version;
+  const default_message = `Smart Env${version ? ` ${version}` : ''}`;
+
+  if (import_progress?.active) {
+    const progress = normalize_number(import_progress.progress);
+    const total = normalize_number(import_progress.total);
+    const stage = to_non_empty_string(import_progress.stage) || 'importing';
+    const is_reimporting = stage === 'reimporting';
+
+    return {
+      kind: is_reimporting ? 'reimporting' : 'importing',
+      message: `${is_reimporting ? 'Re-importing' : 'Importing'} ${progress}/${total}`,
+      title: is_reimporting
+        ? 'Smart Environment is re-importing queued sources.'
+        : 'Smart Environment is importing sources.',
+      click_action: 'noop',
+      indicator_level: null,
+      progress_value: progress,
+      progress_total: total,
+      progress_pct: get_progress_pct(progress, total),
+      view_title: is_reimporting ? 'Re-importing sources' : 'Importing sources',
+      view_status: `${progress}/${total}`,
+      view_summary: is_reimporting
+        ? 'Refreshing queued source changes before embeddings continue.'
+        : 'Discovering and importing sources into Smart Environment.',
+      view_details: [
+        reimport_queue_count > 0
+          ? `${reimport_queue_count} additional source${reimport_queue_count === 1 ? '' : 's'} queued.`
+          : '',
+        env?.state === 'loading'
+          ? 'Smart Environment is still loading in the background.'
+          : '',
+      ].filter(Boolean),
+      view_actions: [],
+    };
+  }
+
+  if (embed_progress?.active) {
+    const progress = normalize_number(embed_progress.progress);
+    const total = normalize_number(embed_progress.total);
+    const paused = Boolean(embed_progress.paused);
+    const tokens_per_second = normalize_number(embed_progress.tokens_per_second);
+    const model_name = to_non_empty_string(embed_progress.model_name);
+    const reason = to_non_empty_string(embed_progress.reason);
+
+    return {
+      kind: paused ? 'embed_paused' : 'embed_active',
+      message: `${paused ? 'Embedding paused' : 'Embedding'} ${progress}/${total}`,
+      title: paused
+        ? 'Click to resume embedding.'
+        : 'Click to pause embedding.',
+      click_action: paused ? 'resume_embed' : 'pause_embed',
+      indicator_level: paused ? 'attention' : 'milestone',
+      progress_value: progress,
+      progress_total: total,
+      progress_pct: get_progress_pct(progress, total),
+      view_title: paused ? 'Embedding paused' : 'Embedding in progress',
+      view_status: `${progress}/${total}`,
+      view_summary: model_name
+        ? `Using ${model_name} for embeddings.`
+        : 'Generating embeddings for imported content.',
+      view_details: [
+        tokens_per_second > 0 ? `${tokens_per_second} tokens/sec` : '',
+        reason,
+        reimport_queue_count > 0
+          ? `${reimport_queue_count} source${reimport_queue_count === 1 ? '' : 's'} still queued for re-import.`
+          : '',
+      ].filter(Boolean),
+      view_actions: [paused ? 'resume_embed' : 'pause_embed'],
+    };
+  }
+
+  if (env?.state === 'loading') {
+    return {
+      kind: 'loading',
+      message: 'Loading Smart Env…',
+      title: 'Smart Environment is loading.',
+      click_action: 'noop',
+      indicator_level: null,
+      progress_value: null,
+      progress_total: null,
+      progress_pct: null,
+      view_title: 'Loading Smart Environment',
+      view_status: 'In progress',
+      view_summary: 'Preparing collections, sources, and shared plugin state.',
+      view_details: [
+        reimport_queue_count > 0
+          ? `${reimport_queue_count} source${reimport_queue_count === 1 ? '' : 's'} queued for re-import after load.`
+          : '',
+        'This sidebar stays available on mobile while loading continues.',
+      ].filter(Boolean),
+      view_actions: [],
+    };
+  }
+
+  if (reimport_queue_count > 0) {
+    return {
+      kind: 'reimport_queued',
+      message: `Re-import (${reimport_queue_count})`,
+      title: 'Click to re-import queued sources.',
+      click_action: 'run_reimport',
+      indicator_level: 'attention',
+      progress_value: null,
+      progress_total: null,
+      progress_pct: null,
+      view_title: 'Queued re-import work',
+      view_status: `${reimport_queue_count} queued`,
+      view_summary: 'Run re-import to refresh changed sources and resume downstream embedding work.',
+      view_details: [],
+      view_actions: ['run_reimport'],
+    };
+  }
+
+  if (env?.state === 'loaded') {
+    return {
+      kind: 'ready',
+      message: default_message,
+      title: 'Smart Environment status',
+      click_action: 'context_menu',
+      indicator_level: null,
+      progress_value: null,
+      progress_total: null,
+      progress_pct: null,
+      view_title: 'Smart Environment ready',
+      view_status: 'Ready',
+      view_summary: 'No active import or embedding work is running right now.',
+      view_details: [],
+      view_actions: ['open_notifications'],
+    };
+  }
+
+  return {
+    kind: 'not_loaded',
+    message: default_message,
+    title: 'Smart Environment status',
+    click_action: 'context_menu',
+    indicator_level: null,
+    progress_value: null,
+    progress_total: null,
+    progress_pct: null,
+    view_title: 'Smart Environment not loaded',
+    view_status: 'Idle',
+    view_summary: 'Load Smart Environment to import sources and begin embedding work.',
+    view_details: [
+      'On mobile, this item view remains accessible from the sidebar while loading and embedding continue.',
+    ],
+    view_actions: ['load_env'],
+  };
+}
+
+/**
+ * Determine whether status surfaces should keep polling the shared activity
+ * state. Polling is limited to active load/import/embed phases.
+ *
+ * @param {import('../../smart_env.js').SmartEnv} env
+ * @returns {boolean}
+ */
+export function should_poll_env_activity(env) {
+  const activity_state = get_env_activity_state(env);
+  return [
+    'embed_active',
+    'embed_paused',
+    'importing',
+    'reimporting',
+    'loading',
+  ].includes(activity_state.kind);
+}
+
+/**
  * Build status bar state based on the environment.
  *
  * @param {import('../../smart_env.js').SmartEnv} env
@@ -100,68 +327,26 @@ export function get_reimport_queue_count(env) {
 export function get_status_bar_state(env) {
   const notification_count = get_notification_event_count(env?.event_logs);
   const notification_indicator_level = get_notification_indicator_level(env?.event_logs);
-  const import_progress = get_import_progress_state(env);
-  const embed_progress = get_embed_progress_state(env);
+  const activity_state = get_env_activity_state(env);
   const embed_queue_count = get_reimport_queue_count(env);
-  const version = env?.is_pro ? 'Pro' : env?.constructor?.version;
 
-  let message = `Smart Env${version ? ` ${version}` : ''}`;
-  let title = 'Smart Environment status';
-  let click_action = 'context_menu';
-  let indicator_level = notification_count > 0 ? notification_indicator_level : null;
+  let title = activity_state.title;
+  let indicator_level = activity_state.indicator_level;
 
-  if (import_progress?.active) {
-    const progress = typeof import_progress.progress === 'number' ? import_progress.progress : 0;
-    const total = typeof import_progress.total === 'number' ? import_progress.total : 0;
-    const stage = typeof import_progress.stage === 'string' ? import_progress.stage : 'importing';
+  if (!indicator_level && notification_count > 0) {
+    indicator_level = notification_indicator_level;
+  }
 
-    if (stage === 'reimporting') {
-      message = `Re-importing ${progress}/${total}`;
-      title = 'Smart Environment is re-importing queued sources.';
-    } else {
-      message = `Importing ${progress}/${total}`;
-      title = 'Smart Environment is importing sources.';
-    }
-
-    click_action = 'noop';
-    indicator_level = null;
-  } else if (embed_progress?.active) {
-    const progress = typeof embed_progress.progress === 'number' ? embed_progress.progress : 0;
-    const total = typeof embed_progress.total === 'number' ? embed_progress.total : 0;
-
-    if (embed_progress.paused) {
-      message = `Embedding paused ${progress}/${total}`;
-      title = 'Click to resume embedding.';
-      click_action = 'resume_embed';
-      indicator_level = 'attention';
-    } else {
-      message = `Embedding ${progress}/${total}`;
-      title = 'Click to pause embedding.';
-      click_action = 'pause_embed';
-      indicator_level = 'milestone';
-    }
-  } else if (env?.state !== 'loaded') {
-    if (env?.state === 'loading') {
-      message = 'Loading Smart Env…';
-      title = 'Smart Environment is loading.';
-      click_action = 'noop';
-      indicator_level = null;
-    }
-  } else if (embed_queue_count > 0) {
-    message = `Re-import (${embed_queue_count})`;
-    title = 'Click to re-import queued sources.';
-    click_action = 'run_reimport';
-    indicator_level = 'attention';
-  } else if (notification_count > 0) {
+  if (activity_state.kind === 'ready' && notification_count > 0) {
     title = `${notification_count} unseen notification${notification_count === 1 ? '' : 's'}`;
   }
 
   return {
-    message,
+    message: activity_state.message,
     title,
     indicator_count: notification_count,
     indicator_level,
     embed_queue_count,
-    click_action,
+    click_action: activity_state.click_action,
   };
 }
