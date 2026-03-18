@@ -17,6 +17,7 @@ import {
   get_visible_count,
   get_visible_entries,
   is_canonical_notification_entry,
+  load_more_step,
   notification_levels,
   should_show_load_more,
   to_time_ago,
@@ -32,14 +33,17 @@ const feed_excluded_event_keys = new Set([
 
 function build_html() {
   return `<div class="smart-env-notifications">
-    <div class="smart-env-notifications__toolbar">
-      <div class="smart-env-notifications__summary" aria-live="polite"></div>
-      <div class="smart-env-notifications__actions">
-        <button class="smart-env-btn smart-env-btn--ghost copy-all-notifications-btn" type="button" title="Copy all filtered events to clipboard">Copy All</button>
+    <div class="smart-env-notifications__sticky">
+      <div class="smart-env-notifications__toolbar">
+        <div class="smart-env-notifications-filter-controls" aria-label="Event level filters"></div>
+        <div class="smart-env-notifications__meta">
+          <div class="smart-env-notifications__summary" aria-live="polite"></div>
+          <div class="smart-env-notifications__actions">
+            <button class="smart-env-btn smart-env-btn--ghost copy-all-notifications-btn" type="button" title="Copy all filtered events to clipboard">Copy All</button>
+          </div>
+        </div>
       </div>
     </div>
-
-    <div class="smart-env-notifications-filter-controls" aria-label="Event level filters"></div>
 
     <div class="smart-env-notifications-feed" role="list"></div>
 
@@ -214,6 +218,7 @@ async function post_process(env, container, params = {}) {
 
     if (!entries.length) {
       smart_env.empty(feed_container);
+      filter_controls?.replaceChildren?.();
       render_empty_state(feed_container, {
         title: 'No Smart Env events yet.',
         detail: 'When Smart Env emits events, they will appear here.',
@@ -399,7 +404,7 @@ function append_filter_button(container, params) {
 
   const count = container.ownerDocument.createElement('span');
   count.className = 'smart-env-notifications-filter__count';
-  count.textContent = count_total > 0 ? String(count_total) : '';
+  count.textContent = count_total > 0 ? count_total.toLocaleString() : '';
   if (count_total <= 0) count.classList.add('is-zero');
 
   content.appendChild(dot);
@@ -426,8 +431,8 @@ function update_load_more_button(button, params = {}) {
 
   if (is_visible) {
     const remaining_count = entries_length - visible_count;
-    const next_step = Math.min(100, remaining_count);
-    button.textContent = `Load ${next_step} more`;
+    const next_step = Math.min(load_more_step, remaining_count);
+    button.textContent = `Load ${next_step.toLocaleString()} more`;
   }
 }
 
@@ -537,7 +542,7 @@ function append_entry(feed_container, entry, params = {}) {
   actions.appendChild(create_tag(
     feed_container,
     'smart-env-notification__event-count',
-    `${Math.max(1, total_count)} total`,
+    `${Math.max(1, total_count).toLocaleString()} total`,
   ));
 
   if (is_canonical) {
@@ -591,11 +596,20 @@ function update_summary(summary_el, params = {}) {
     return;
   }
 
-  const shown = Math.min(visible_count, filtered_count);
-  let text = `${shown} of ${filtered_count} shown`;
+  const shown_count = Math.min(visible_count, filtered_count);
+  const shown_label = shown_count.toLocaleString();
+  const filtered_label = filtered_count.toLocaleString();
+  const total_label = total_count.toLocaleString();
+
+  let text = shown_count === filtered_count
+    ? `${shown_label} shown`
+    : `${shown_label} of ${filtered_label} shown`
+  ;
+
   if (filtered_count !== total_count) {
-    text += ` (${total_count} total)`;
+    text += ` (${total_label} total)`;
   }
+
   summary_el.textContent = text;
 }
 

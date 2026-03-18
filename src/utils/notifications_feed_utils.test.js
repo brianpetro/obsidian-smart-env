@@ -66,8 +66,11 @@ test('all-level filter helpers support the all token semantics', (t) => {
   const error_only = get_next_active_levels(warning_and_error, { level: 'warning' });
   t.deepEqual([...error_only], ['error']);
 
-  const reset_to_all = get_next_active_levels(error_only, { select_all: true });
+  const reset_to_all = get_next_active_levels(error_only, { level: 'error' });
   t.true(are_all_levels_active(reset_to_all));
+
+  const explicit_all = get_next_active_levels(error_only, { select_all: true });
+  t.true(are_all_levels_active(explicit_all));
 });
 
 test('get_filtered_entries keeps all events visible when All is active', (t) => {

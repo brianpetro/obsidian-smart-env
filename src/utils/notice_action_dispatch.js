@@ -5,7 +5,9 @@
  * 1. Execute a matching Obsidian command id when available.
  * 2. Otherwise emit the callback key as an env event.
  *
- * This keeps native notice buttons and component notice buttons aligned.
+ * Callback dispatch is control flow, not a notification emission. The fallback
+ * event must preserve the original payload shape so callback events never show
+ * up as synthetic warning notifications in EventLogs.
  *
  * @param {any} env
  * @param {string} callback_key
@@ -34,9 +36,9 @@ export function dispatch_notice_action(env, callback_key, params = {}) {
     return true;
   }
 
-  env?.events?.emit?.(next_callback_key, {
-    level: 'warning',
-    message: `No command found for callback key: ${next_callback_key}`,
+  if (typeof env?.events?.emit !== 'function') return false;
+
+  env.events.emit(next_callback_key, {
     event_source,
     source_event_key,
     source_event,

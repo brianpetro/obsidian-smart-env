@@ -101,10 +101,18 @@ export class EventLogs extends BaseEventLogs {
     const { event_key = '', event = {} } = params;
     if (!should_show_native_notice(this, { event_key, event })) return false;
 
-    const level = get_event_level(event_key, event);
-    const notice_content = await this.build_native_notice_content(event_key, event);
-    const notice_timeout = get_notice_timeout_ms(level);
-    new Notice(notice_content, notice_timeout);
+    try {
+      const level = get_event_level(event_key, event);
+      const notice_content = await this.build_native_notice_content(event_key, event);
+      const notice_timeout = get_notice_timeout_ms(level);
+      new Notice(notice_content, notice_timeout);
+    } catch (error) {
+      console.error('EventLogs: failed to show native notice', {
+        event_key,
+        error,
+      });
+      return false;
+    }
 
     if (session_entry) {
       this.mark_session_entry_seen(session_entry, { native_notice_shown: true });
@@ -144,6 +152,7 @@ export class EventLogs extends BaseEventLogs {
 
     const button_el = document.createElement('button');
     button_el.type = 'button';
+    button_el.className = 'mod-cta';
     button_el.textContent = btn_text;
     button_el.addEventListener('click', () => {
       this.run_notice_callback(btn_callback, { event_key, event });

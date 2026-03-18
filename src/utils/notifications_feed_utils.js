@@ -34,6 +34,8 @@ export function are_all_levels_active(active_levels = new Set()) {
  * - selecting "all" restores every level
  * - clicking a level while "all" is active narrows to that one level
  * - otherwise level clicks toggle membership
+ * - a zero-selection state is invalid; toggling off the final active level
+ *   restores "all"
  *
  * @param {Set<string>} [active_levels]
  * @param {object} [params={}]
@@ -59,10 +61,13 @@ export function get_next_active_levels(active_levels = new Set(), params = {}) {
 
   if (next_active_levels.has(normalized_level)) {
     next_active_levels.delete(normalized_level);
-  } else {
-    next_active_levels.add(normalized_level);
+    if (next_active_levels.size === 0) {
+      return create_all_levels_set();
+    }
+    return next_active_levels;
   }
 
+  next_active_levels.add(normalized_level);
   return next_active_levels;
 }
 

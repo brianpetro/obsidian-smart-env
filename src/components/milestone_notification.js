@@ -1,4 +1,5 @@
 import { setIcon } from 'obsidian';
+import styles from './milestone_notification.css';
 import { dispatch_notice_action } from '../utils/notice_action_dispatch.js';
 
 /**
@@ -40,22 +41,6 @@ function to_trimmed_string(value) {
 }
 
 /**
- * @param {any} env
- * @param {string} callback_key
- * @param {object} [params={}]
- * @param {string} [params.event_key='']
- * @param {Record<string, unknown>} [params.event={}]
- * @returns {boolean}
- */
-export function dispatch_milestone_notice_action(env, callback_key, params = {}) {
-  return dispatch_notice_action(env, callback_key, {
-    event_source: 'milestone_notification',
-    source_event_key: params.event_key,
-    source_event: params.event,
-  });
-}
-
-/**
  * @param {HTMLElement} icon_el
  * @returns {void}
  */
@@ -69,18 +54,6 @@ function render_icon(icon_el) {
   if (!icon_el.querySelector('svg')) {
     icon_el.textContent = '★';
   }
-}
-
-/**
- * @param {HTMLElement} el
- * @param {Record<string, string>} style_map
- * @returns {void}
- */
-function assign_styles(el, style_map) {
-  if (!el || !style_map) return;
-  Object.entries(style_map).forEach(([key, value]) => {
-    el.style[key] = value;
-  });
 }
 
 /**
@@ -113,55 +86,38 @@ export function render(env, params = {}) {
     return get_milestone_notice_summary(event);
   }
 
+  this.apply_style_sheet?.(styles);
+
+  const run_action = typeof on_action === 'function'
+    ? on_action
+    : (callback_key) => dispatch_notice_action(env, callback_key, {
+      event_source: 'milestone_notification',
+      source_event_key: event_key,
+      source_event: event,
+    })
+  ;
+
   const frag = document.createDocumentFragment();
   const wrapper = document.createElement('div');
   wrapper.className = 'smart-env-milestone-notice';
-  assign_styles(wrapper, {
-    display: 'grid',
-    gridTemplateColumns: 'auto 1fr',
-    columnGap: '12px',
-    alignItems: 'start',
-    minWidth: '0',
-  });
+
+  const surface_el = document.createElement('div');
+  surface_el.className = 'smart-env-milestone-notice__surface';
 
   const icon_el = document.createElement('div');
   icon_el.className = 'smart-env-milestone-notice__icon';
-  assign_styles(icon_el, {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '24px',
-    height: '24px',
-    color: 'var(--color-purple, var(--interactive-accent))',
-    flex: '0 0 auto',
-  });
   render_icon(icon_el);
 
   const body_el = document.createElement('div');
   body_el.className = 'smart-env-milestone-notice__body';
-  assign_styles(body_el, {
-    minWidth: '0',
-  });
 
   const eyebrow_el = document.createElement('div');
   eyebrow_el.className = 'smart-env-milestone-notice__eyebrow';
   eyebrow_el.textContent = 'Smart Milestone';
-  assign_styles(eyebrow_el, {
-    fontSize: '0.75em',
-    letterSpacing: '0.08em',
-    textTransform: 'uppercase',
-    color: 'var(--text-muted)',
-    marginBottom: '2px',
-  });
 
   const title_el = document.createElement('div');
   title_el.className = 'smart-env-milestone-notice__title';
   title_el.textContent = title;
-  assign_styles(title_el, {
-    fontWeight: '600',
-    lineHeight: '1.3',
-    color: 'var(--text-normal)',
-  });
 
   body_el.appendChild(eyebrow_el);
   body_el.appendChild(title_el);
@@ -170,58 +126,42 @@ export function render(env, params = {}) {
     const details_el = document.createElement('div');
     details_el.className = 'smart-env-milestone-notice__details';
     details_el.textContent = details;
-    assign_styles(details_el, {
-      marginTop: '4px',
-      lineHeight: '1.35',
-      color: 'var(--text-muted)',
-      whiteSpace: 'pre-wrap',
-    });
     body_el.appendChild(details_el);
   }
 
   if (btn_text || help_link) {
     const actions_el = document.createElement('div');
     actions_el.className = 'smart-env-milestone-notice__actions';
-    assign_styles(actions_el, {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px',
-      flexWrap: 'wrap',
-      marginTop: '8px',
-    });
 
     if (btn_text && btn_callback) {
       const button_el = document.createElement('button');
       button_el.type = 'button';
+      button_el.className = 'smart-env-milestone-notice__button';
       button_el.textContent = btn_text;
+      button_el.setAttribute('aria-label', btn_text);
       button_el.addEventListener('click', () => {
-        if (typeof on_action === 'function') {
-          on_action(btn_callback);
-          return;
-        }
-        dispatch_milestone_notice_action(env, btn_callback, { event_key, event });
+        run_action(btn_callback);
       });
       actions_el.appendChild(button_el);
     }
 
     if (help_link) {
       const help_el = document.createElement('a');
+      help_el.className = 'smart-env-milestone-notice__link';
       help_el.href = help_link;
       help_el.textContent = 'Learn more';
       help_el.target = '_external';
       help_el.rel = 'noopener noreferrer';
-      assign_styles(help_el, {
-        fontSize: '0.9em',
-        color: 'var(--text-accent)',
-      });
+      help_el.setAttribute('aria-label', 'Learn more about this milestone');
       actions_el.appendChild(help_el);
     }
 
     body_el.appendChild(actions_el);
   }
 
-  wrapper.appendChild(icon_el);
-  wrapper.appendChild(body_el);
+  surface_el.appendChild(icon_el);
+  surface_el.appendChild(body_el);
+  wrapper.appendChild(surface_el);
   frag.appendChild(wrapper);
   return frag;
 }
