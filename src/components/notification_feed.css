@@ -127,7 +127,7 @@
 }
 
 .smart-env-btn:focus-visible {
-  outline: 2px solid var(--interactive-accent);
+  outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }
 
@@ -138,7 +138,7 @@
 }
 
 .smart-env-btn--primary {
-  background: var(--interactive-accent);
+  background: var(--color-accent);
   border-color: transparent;
   color: var(--text-on-accent, var(--text-normal));
 }
@@ -156,7 +156,7 @@
 }
 
 .smart-env-btn.is-copied {
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent) 35%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 35%, transparent);
 }
 
 /* Filter pills */
@@ -198,7 +198,6 @@
   border-radius: var(--smart-env-notifications-filter-radius);
   border: 1px solid transparent;
   background: transparent;
-  color: var(--text-muted);
   font-size: var(--font-ui-small);
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
@@ -234,7 +233,7 @@
 }
 
 .smart-env-notifications-filter:focus-visible .smart-env-notifications-filter__content {
-  outline: 2px solid var(--interactive-accent);
+  outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }
 
@@ -296,7 +295,7 @@
 }
 
 .smart-env-notifications-filter[data-level='milestone'] {
-  --smart-env-filter-accent: var(--interactive-accent);
+  --smart-env-filter-accent: var(--color-accent);
 }
 
 .smart-env-notifications-filter[data-level='warning'] {
@@ -348,7 +347,7 @@
 }
 
 .smart-env-notification[data-level='milestone'] {
-  --smart-env-notification-accent: var(--interactive-accent);
+  --smart-env-notification-accent: var(--color-accent);
 }
 
 .smart-env-notification[data-level='warning'] {
@@ -387,7 +386,7 @@ details.smart-env-notification > .smart-env-notification__summary {
 }
 
 details.smart-env-notification > .smart-env-notification__summary:focus-visible {
-  outline: 2px solid var(--interactive-accent);
+  outline: 2px solid var(--color-accent);
   outline-offset: 2px;
   border-radius: var(--smart-env-notifications-card-radius);
 }

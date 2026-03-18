@@ -29,10 +29,10 @@
   line-height: 1;
 
   /* color system: only Obsidian variables */
-  background-color: var(--interactive-accent);
+  background-color: var(--color-accent);
   background-image: linear-gradient(
     135deg,
-    var(--interactive-accent),
+    var(--color-accent),
     var(--interactive-accent-hover)
   );
   color: var(--text-on-accent, var(--background-primary));
@@ -54,7 +54,7 @@
 }
 
 .pro-plugins-container {
-  border: 1px solid var(--interactive-accent);
+  border: 1px solid var(--color-accent);
   border-radius: var(--radius-m);
   padding: 1rem;
   margin-top: 1rem;

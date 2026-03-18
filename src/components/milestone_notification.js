@@ -136,7 +136,7 @@ export function render(env, params = {}) {
     if (btn_text && btn_callback) {
       const button_el = document.createElement('button');
       button_el.type = 'button';
-      button_el.className = 'smart-env-milestone-notice__button';
+      button_el.className = 'smart-env-milestone-notice__button mod-cta';
       button_el.textContent = btn_text;
       button_el.setAttribute('aria-label', btn_text);
       button_el.addEventListener('click', () => {

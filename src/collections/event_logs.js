@@ -1,9 +1,9 @@
 import { Notice } from 'obsidian';
-import base from 'smart-events/event_logs.js';
-import { EventLogs as BaseEventLogs } from 'smart-events/event_logs.js';
+import base, { EventLogs as BaseEventLogs } from 'smart-events/event_logs.js';
 import { get_event_level } from 'smart-events/event_level_utils.js';
 import {
   get_native_notice_message,
+  get_native_notice_timeout,
   get_notification_setting_key,
   is_event_log_muted,
   should_show_native_notice,
@@ -103,7 +103,7 @@ export class EventLogs extends BaseEventLogs {
 
     try {
       const notice_content = await this.build_native_notice_content(event_key, event);
-      const notice_timeout = event.timeout ?? event.timeout_ms ?? 5000;
+      const notice_timeout = get_native_notice_timeout(event_key, event);
       new Notice(notice_content, notice_timeout);
     } catch (error) {
       console.error('EventLogs: failed to show native notice', {

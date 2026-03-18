@@ -2,8 +2,11 @@ import test from 'ava';
 
 import {
   get_native_notice_message,
+  get_native_notice_timeout,
   get_notification_setting_key,
   is_event_log_muted,
+  milestone_notice_timeout_ms,
+  notice_timeout_ms,
   should_show_native_notice,
 } from './event_logs_utils.js';
 
@@ -58,6 +61,14 @@ test('should_show_native_notice respects level, settings, and mute state', (t) =
     event_key: 'sync:unknown',
     event: { level: 'unknown' },
   }));
+});
+
+test('get_native_notice_timeout respects overrides and level defaults', (t) => {
+  t.is(get_native_notice_timeout('domain:event', { level: 'info' }), notice_timeout_ms);
+  t.is(get_native_notice_timeout('milestones:first_achieved', { level: 'milestone' }), milestone_notice_timeout_ms);
+  t.is(get_native_notice_timeout('domain:event', { level: 'warning', timeout_ms: 1500 }), 1500);
+  t.is(get_native_notice_timeout('domain:event', { level: 'info', timeout: 0 }), 0);
+  t.is(get_native_notice_timeout('domain:event', { level: 'warning', timeout: -1 }), notice_timeout_ms);
 });
 
 test('get_native_notice_message prefers message, then details, then milestone, then event key', (t) => {

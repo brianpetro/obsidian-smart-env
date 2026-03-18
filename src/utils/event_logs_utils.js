@@ -66,6 +66,36 @@ export function should_show_native_notice(instance, params = {}) {
 }
 
 /**
+ * @param {Record<string, unknown>} [event={}]
+ * @returns {number|null}
+ */
+function get_timeout_override(event = {}) {
+  const timeout_value = event.timeout_ms ?? event.timeout;
+  if (typeof timeout_value !== 'number' || !Number.isFinite(timeout_value)) return null;
+  if (timeout_value < 0) return null;
+  return timeout_value;
+}
+
+/**
+ * Resolve the native notice timeout.
+ *
+ * Supports explicit per-event override via `timeout_ms` or `timeout`.
+ * Falls back to level-specific defaults.
+ *
+ * @param {string} event_key
+ * @param {Record<string, unknown>} [event={}]
+ * @returns {number}
+ */
+export function get_native_notice_timeout(event_key, event = {}) {
+  const timeout_override = get_timeout_override(event);
+  if (timeout_override !== null) return timeout_override;
+
+  const level = get_event_level(event_key, event);
+  if (level === 'milestone') return milestone_notice_timeout_ms;
+  return notice_timeout_ms;
+}
+
+/**
  * @param {string} event_key
  * @param {Record<string, unknown>} [event={}]
  * @returns {string}

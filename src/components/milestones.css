@@ -45,7 +45,7 @@
   .sc-events-checklist__progress-fill {
     height: 100%;
     width: var(--sc-events-checklist-progress, 0%);
-    background-color: var(--color-green, var(--interactive-accent));
+    background-color: var(--color-green, var(--color-accent));
   }
 
   .sc-events-checklist__group {
@@ -150,10 +150,10 @@
     }
 
     &:focus-visible {
-      outline: 2px solid var(--interactive-accent);
+      outline: 2px solid var(--color-accent);
       outline-offset: 2px;
       background: var(--background-modifier-hover);
-      border-color: var(--interactive-accent);
+      border-color: var(--color-accent);
     }
   }
 
@@ -224,10 +224,10 @@
   line-height: 1;
 
   /* color system: only Obsidian variables */
-  background-color: var(--interactive-accent);
+  background-color: var(--color-accent);
   background-image: linear-gradient(
     135deg,
-    var(--interactive-accent),
+    var(--color-accent),
     var(--interactive-accent-hover)
   );
   color: var(--text-on-accent, var(--background-primary));
@@ -295,8 +295,8 @@
 }
 
 .sc-milestones-modal__help-btn:focus-visible {
-  outline: 2px solid var(--interactive-accent);
+  outline: 2px solid var(--color-accent);
   outline-offset: 2px;
   background: var(--background-modifier-hover);
-  border-color: var(--interactive-accent);
+  border-color: var(--color-accent);
 }

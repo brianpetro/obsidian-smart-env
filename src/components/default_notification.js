@@ -96,7 +96,26 @@ function get_default_notice_summary(event_key, event = {}) {
   const title = get_default_notice_title(event_key, event);
   const details = get_default_notice_details(event, title);
   if (!details) return title;
-  return `${title}\n${details}`;
+  return `${title}
+${details}`;
+}
+
+/**
+ * @param {any} env
+ * @param {object} [params={}]
+ * @param {Function|null} [params.on_open_feed=null]
+ * @returns {boolean}
+ */
+function open_notifications_feed(env, params = {}) {
+  const { on_open_feed = null } = params;
+  if (typeof on_open_feed === 'function') {
+    return on_open_feed() !== false;
+  }
+  if (typeof env?.open_notifications_feed_modal === 'function') {
+    env.open_notifications_feed_modal();
+    return true;
+  }
+  return false;
 }
 
 /**
@@ -108,6 +127,7 @@ function get_default_notice_summary(event_key, event = {}) {
  * @param {Record<string, unknown>} [params.event={}]
  * @param {(callback_key: string) => boolean} [params.on_action]
  * @param {() => boolean} [params.on_mute]
+ * @param {Function|null} [params.on_open_feed=null]
  * @returns {DocumentFragment|string}
  */
 export function render(env, params = {}) {
@@ -116,6 +136,7 @@ export function render(env, params = {}) {
     event = {},
     on_action = null,
     on_mute = null,
+    on_open_feed = null,
   } = params;
 
   const level = get_event_level(event_key, event) || 'info';
@@ -145,6 +166,10 @@ export function render(env, params = {}) {
     : () => false
   ;
 
+  const can_open_feed = typeof on_open_feed === 'function'
+    || typeof env?.open_notifications_feed_modal === 'function'
+  ;
+
   const frag = document.createDocumentFragment();
   const wrapper = document.createElement('div');
   wrapper.className = 'smart-env-default-notice';
@@ -153,16 +178,27 @@ export function render(env, params = {}) {
   const surface_el = document.createElement('div');
   surface_el.className = 'smart-env-default-notice__surface';
 
-  const icon_el = document.createElement('div');
-  icon_el.className = 'smart-env-default-notice__icon';
+  const icon_el = document.createElement('button');
+  icon_el.type = 'button';
+  icon_el.className = 'smart-env-default-notice__icon clickable-icon';
+  icon_el.setAttribute('aria-label', 'Open events and notifications');
+  icon_el.setAttribute('title', 'Open events and notifications');
+  icon_el.disabled = !can_open_feed;
   render_icon(icon_el, level);
+  if (can_open_feed) {
+    icon_el.addEventListener('click', (event_obj) => {
+      event_obj.preventDefault();
+      event_obj.stopPropagation();
+      open_notifications_feed(env, { on_open_feed });
+    });
+  }
 
   const body_el = document.createElement('div');
   body_el.className = 'smart-env-default-notice__body';
 
   const eyebrow_el = document.createElement('div');
   eyebrow_el.className = 'smart-env-default-notice__eyebrow';
-  eyebrow_el.textContent = `${format_level_label(level)} notice`;
+  eyebrow_el.textContent = `${format_level_label(level)}`;
 
   const title_el = document.createElement('div');
   title_el.className = 'smart-env-default-notice__title';
@@ -190,7 +226,7 @@ export function render(env, params = {}) {
     if (btn_text && btn_callback) {
       const button_el = document.createElement('button');
       button_el.type = 'button';
-      button_el.className = 'smart-env-default-notice__button';
+      button_el.className = 'smart-env-default-notice__button mod-cta';
       button_el.textContent = btn_text;
       button_el.setAttribute('aria-label', btn_text);
       button_el.addEventListener('click', () => {
@@ -214,7 +250,8 @@ export function render(env, params = {}) {
       const mute_btn_el = document.createElement('button');
       mute_btn_el.type = 'button';
       mute_btn_el.className = 'smart-env-default-notice__mute';
-      mute_btn_el.textContent = 'Mute native notices';
+      mute_btn_el.textContent = 'Mute';
+      setIcon(mute_btn_el, 'bell-off');
       mute_btn_el.setAttribute('aria-label', 'Mute future native notices for this event key');
       mute_btn_el.addEventListener('click', () => {
         const muted = run_mute();
