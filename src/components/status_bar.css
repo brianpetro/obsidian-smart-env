@@ -14,16 +14,26 @@
 }
 
 .smart-env-status-indicator {
-  width: 0.6em;
-  height: 0.6em;
+  --smart-env-status-indicator-color: var(--status-bar-text-color);
+  --smart-env-status-indicator-glow-size: 0.28em;
+  --smart-env-status-indicator-glow-opacity: 0.38;
+
+  position: relative;
+  isolation: isolate;
+
+  width: 0.62em;
+  height: 0.62em;
+  min-width: 0.62em;
+  min-height: 0.62em;
   border-radius: 999px;
-  color: var(--status-bar-text-color);
+
+  color: var(--smart-env-status-indicator-color);
   background-color: currentColor;
   opacity: 1;
   transform: scale(1);
   box-shadow:
-    0 0 0 1px color-mix(in srgb, currentColor 18%, transparent),
-    0 0 8px color-mix(in srgb, currentColor 24%, transparent);
+    0 0 0 1px color-mix(in srgb, currentColor 24%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--background-primary) 78%, transparent);
   transition:
     background-color 150ms ease,
     box-shadow 150ms ease,
@@ -32,41 +42,99 @@
   cursor: pointer;
 }
 
+.smart-env-status-indicator::before {
+  content: '';
+  position: absolute;
+  inset: calc(var(--smart-env-status-indicator-glow-size) * -1);
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: -1;
+  opacity: var(--smart-env-status-indicator-glow-opacity);
+  transform: scale(1);
+  filter: blur(7px);
+  background:
+    radial-gradient(
+      circle at center,
+      color-mix(in srgb, currentColor 74%, transparent) 0%,
+      color-mix(in srgb, currentColor 46%, transparent) 34%,
+      color-mix(in srgb, currentColor 18%, transparent) 58%,
+      transparent 80%
+    );
+  transition:
+    opacity 150ms ease,
+    transform 150ms ease,
+    filter 150ms ease;
+}
+
+.smart-env-status-indicator::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: 0 0 0 1px color-mix(in srgb, currentColor 28%, transparent);
+  opacity: 0.82;
+}
+
+.smart-env-status-indicator:hover::before,
+.smart-env-status-indicator:focus-visible::before {
+  opacity: max(var(--smart-env-status-indicator-glow-opacity), 0.56);
+  transform: scale(1.08);
+}
+
 .smart-env-status-indicator:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }
 
 .smart-env-status-indicator[data-level='default'] {
-  color: var(--status-bar-text-color);
+  --smart-env-status-indicator-color: var(--status-bar-text-color);
+  --smart-env-status-indicator-glow-size: 0.24em;
+  --smart-env-status-indicator-glow-opacity: 0.32;
 }
 
 .smart-env-status-indicator[data-level='info'] {
-  color: var(--status-bar-text-color);
+  --smart-env-status-indicator-color: var(--status-bar-text-color);
+  --smart-env-status-indicator-glow-size: 0.28em;
+  --smart-env-status-indicator-glow-opacity: 0.4;
 }
 
 .smart-env-status-indicator[data-level='milestone'] {
-  color: var(--color-accent);
+  --smart-env-status-indicator-color: var(--color-accent);
+  --smart-env-status-indicator-glow-size: 0.52em;
+  --smart-env-status-indicator-glow-opacity: 0.86;
 }
 
 .smart-env-status-indicator[data-level='attention'] {
-  color: var(--color-yellow);
+  --smart-env-status-indicator-color: var(--color-yellow);
+  --smart-env-status-indicator-glow-size: 0.5em;
+  --smart-env-status-indicator-glow-opacity: 0.84;
 }
 
 .smart-env-status-indicator[data-level='warning'] {
-  color: var(--color-orange);
+  --smart-env-status-indicator-color: var(--color-orange);
+  --smart-env-status-indicator-glow-size: 0.54em;
+  --smart-env-status-indicator-glow-opacity: 0.9;
 }
 
 .smart-env-status-indicator[data-level='error'] {
-  color: var(--color-red);
+  --smart-env-status-indicator-color: var(--color-red);
+  --smart-env-status-indicator-glow-size: 0.58em;
+  --smart-env-status-indicator-glow-opacity: 0.96;
 }
 
 .smart-env-status-indicator[data-count] {
-  transform: scale(1.06);
+  transform: scale(1.08);
   box-shadow:
-    0 0 0 1px color-mix(in srgb, currentColor 22%, transparent),
-    0 0 10px color-mix(in srgb, currentColor 30%, transparent),
-    0 0 16px color-mix(in srgb, currentColor 18%, transparent);
+    0 0 0 1px color-mix(in srgb, currentColor 30%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--background-primary) 84%, transparent);
+}
+
+.smart-env-status-indicator[data-count]::before {
+  opacity: 1;
+  transform: scale(1.12);
+  filter: blur(7px);
+  animation: smart-env-status-indicator-glow 2200ms ease-in-out infinite;
 }
 
 .status-bar-mobile {
@@ -93,4 +161,17 @@
 .embedded-backlinks > .status-bar-mobile {
   position: relative;
   border-style: none;
+}
+
+@keyframes smart-env-status-indicator-glow {
+  0%,
+  100% {
+    transform: scale(0.88);
+    opacity: 0.92;
+  }
+
+  50% {
+    transform: scale(1.23);
+    opacity: 1;
+  }
 }

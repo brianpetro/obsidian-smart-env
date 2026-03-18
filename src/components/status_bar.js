@@ -97,7 +97,7 @@ function post_process(env, container, opts = {}) {
       : 'Open notifications feed'
     ;
     status_indicator.setAttribute('aria-label', indicator_title);
-    status_indicator.setAttribute('title', indicator_title);
+    // status_indicator.setAttribute('title', indicator_title); // no title attribute to avoid redundant tooltip with aria-label
   };
 
   const action_handlers = {
