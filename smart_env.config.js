@@ -7,6 +7,7 @@ import { LookupList } from './src/items/lookup_list.js';
 
 import { render as collection_settings_component } from './src/components/collection_settings.js';
 import { render as context_item_leaf_component } from './src/components/context-item/leaf.js';
+import { render as default_notification_component } from './src/components/default_notification.js';
 import { render as env_stats_component } from './src/components/env_stats.js';
 import { render as form_dropdown_component } from './src/components/form/dropdown.js';
 import { render as lean_coffee_callout_component } from './src/components/lean_coffee_callout.js';
@@ -60,6 +61,7 @@ export const smart_env_config = {
   components: {
     collection_settings: { render: collection_settings_component },
     context_item_leaf: { render: context_item_leaf_component },
+    default_notification: { render: default_notification_component },
     env_stats: { render: env_stats_component },
     form_dropdown: { render: form_dropdown_component },
     lean_coffee_callout: { render: lean_coffee_callout_component },

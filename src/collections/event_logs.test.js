@@ -67,12 +67,13 @@ test('should_show_native_notice applies payload-first level, setting, and mute g
   }));
 });
 
-test('get_native_notice_component_key stays closed and level-specific', (t) => {
-  t.truthy(get_native_notice_component_key('milestones:first_achieved', {
+test('get_native_notice_component_key uses type-specific and default component renderers only for canonical levels', (t) => {
+  t.is(get_native_notice_component_key('milestones:first_achieved', {
     level: 'milestone',
-  }));
+  }), 'milestone_notification');
 
-  t.truthy(get_native_notice_component_key('notification:milestone', {}));
-  t.is(get_native_notice_component_key('domain:event', { level: 'warning' }), null);
+  t.is(get_native_notice_component_key('notification:milestone', {}), 'milestone_notification');
+  t.is(get_native_notice_component_key('domain:event', { level: 'warning' }), 'default_notification');
+  t.is(get_native_notice_component_key('domain:event', { level: 'info' }), 'default_notification');
   t.is(get_native_notice_component_key('domain:event', { level: 'unknown' }), null);
 });

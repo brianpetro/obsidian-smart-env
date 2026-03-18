@@ -4,7 +4,6 @@ import { EventLogs as BaseEventLogs } from 'smart-events/event_logs.js';
 import { get_event_level } from 'smart-events/event_level_utils.js';
 import {
   get_native_notice_message,
-  get_notice_timeout_ms,
   get_notification_setting_key,
   is_event_log_muted,
   should_show_native_notice,
@@ -48,8 +47,9 @@ export { get_notification_setting_key, is_event_log_muted, should_show_native_no
 /**
  * Resolve an optional native-notice component renderer.
  *
- * For now this stays intentionally closed and level-based so only known
- * notification types can render richer content.
+ * Known notice types can opt into a type-specific component. Everything else
+ * falls back to the default notice component while still remaining fail-closed
+ * for unknown levels.
  *
  * @param {string} event_key
  * @param {Record<string, unknown>} [event={}]
@@ -58,11 +58,11 @@ export { get_notification_setting_key, is_event_log_muted, should_show_native_no
 export function get_native_notice_component_key(event_key, event = {}) {
   const level = get_event_level(event_key, event);
   if (!level) return null;
-  return native_notice_component_key_map[level] || null;
+  return native_notice_component_key_map[level] || 'default_notification';
 }
 
 export class EventLogs extends BaseEventLogs {
-  static version = 0.003;
+  static version = 0.004;
 
   static get default_settings() {
     return {
@@ -102,9 +102,8 @@ export class EventLogs extends BaseEventLogs {
     if (!should_show_native_notice(this, { event_key, event })) return false;
 
     try {
-      const level = get_event_level(event_key, event);
       const notice_content = await this.build_native_notice_content(event_key, event);
-      const notice_timeout = get_notice_timeout_ms(level);
+      const notice_timeout = event.timeout ?? event.timeout_ms ?? null;
       new Notice(notice_content, notice_timeout);
     } catch (error) {
       console.error('EventLogs: failed to show native notice', {
@@ -127,11 +126,12 @@ export class EventLogs extends BaseEventLogs {
    */
   async build_native_notice_content(event_key, event = {}) {
     const component_key = get_native_notice_component_key(event_key, event);
-    if (this.env?.config?.components?.[component_key]) {
+    if (component_key && this.env?.config?.components?.[component_key]) {
       const component_content = await this.env.smart_components.render_component(component_key, this.env, {
         event_key,
         event,
         on_action: (callback_key) => this.run_notice_callback(callback_key, { event_key, event }),
+        on_mute: () => this.set_event_key_muted(event_key, true),
       });
       if (component_content) return component_content;
     }

@@ -15,7 +15,7 @@ test('get_notice_event_env resolves env from scope or env directly', (t) => {
   t.is(get_notice_event_env({}), null);
 });
 
-test('build_notice_event_payload keeps level and optional notice fields', (t) => {
+test('build_notice_event_payload keeps level, optional notice fields, and timeout override', (t) => {
   t.deepEqual(build_notice_event_payload({
     level: 'warning',
     message: 'Copied link.',
@@ -24,6 +24,7 @@ test('build_notice_event_payload keeps level and optional notice fields', (t) =>
     btn_callback: 'clipboard:retry_copy',
     link: 'https://example.com/help',
     event_source: 'unit_test',
+    timeout_ms: 1500,
   }), {
     level: 'warning',
     message: 'Copied link.',
@@ -32,6 +33,14 @@ test('build_notice_event_payload keeps level and optional notice fields', (t) =>
     btn_callback: 'clipboard:retry_copy',
     link: 'https://example.com/help',
     event_source: 'unit_test',
+    timeout_ms: 1500,
+  });
+
+  t.deepEqual(build_notice_event_payload({
+    timeout: 900,
+  }), {
+    level: 'info',
+    timeout_ms: 900,
   });
 });
 
@@ -50,6 +59,7 @@ test('emit_notice_event emits payload through env events', (t) => {
     level: 'info',
     message: 'Copied 123 characters to clipboard.',
     event_source: 'unit_test',
+    timeout_ms: 2500,
   });
 
   t.true(result);
@@ -59,6 +69,7 @@ test('emit_notice_event emits payload through env events', (t) => {
       level: 'info',
       message: 'Copied 123 characters to clipboard.',
       event_source: 'unit_test',
+      timeout_ms: 2500,
     },
   }]);
 });

@@ -3,6 +3,7 @@ import {
   all_levels_filter_key,
   are_all_levels_active,
   create_all_levels_set,
+  debug_levels_filter_key,
   entries_to_clipboard_text,
   format_level_label,
   get_entry_event_key,
@@ -17,6 +18,7 @@ import {
   get_visible_count,
   get_visible_entries,
   is_canonical_notification_entry,
+  is_debug_entry,
   load_more_step,
   notification_levels,
   should_show_load_more,
@@ -361,6 +363,19 @@ function render_filter_controls(container, params = {}) {
       },
     });
   });
+
+  append_filter_button(container, {
+    level: debug_levels_filter_key,
+    label_text: 'Debug',
+    count_total: typeof level_counts[debug_levels_filter_key] === 'number'
+      ? level_counts[debug_levels_filter_key]
+      : 0,
+    is_active: !all_is_active && active_levels.has(debug_levels_filter_key),
+    on_click: () => {
+      on_select_level(debug_levels_filter_key);
+      on_change();
+    },
+  });
 }
 
 /**
@@ -444,6 +459,7 @@ function append_entry(feed_container, entry, params = {}) {
     on_toggle_mute = () => {},
   } = params;
   const level = get_entry_level(entry);
+  const is_debug = is_debug_entry(entry);
   const title = get_entry_title(entry);
   const timestamp = get_entry_timestamp(entry);
   const collection_key = entry?.event?.collection_key ?? '';
@@ -454,11 +470,12 @@ function append_entry(feed_container, entry, params = {}) {
   const is_feed_only = Boolean(level) && !is_canonical;
   const entry_row_key = get_entry_row_key(entry);
   const total_count = get_event_key_total_count(env, event_key);
+  const row_level = level || (is_debug ? debug_levels_filter_key : 'event');
 
   const row = feed_container.ownerDocument.createElement('details');
   row.className = 'smart-env-notification';
   row.dataset.entryKey = entry_row_key;
-  row.dataset.level = level || 'event';
+  row.dataset.level = row_level;
   row.setAttribute('role', 'listitem');
   if (is_muted) row.dataset.muted = 'true';
   if (expanded_entry_keys.has(entry_row_key)) row.open = true;
@@ -502,7 +519,7 @@ function append_entry(feed_container, entry, params = {}) {
   bottom.appendChild(create_tag(
     feed_container,
     'smart-env-notification__level',
-    level ? format_level_label(level) : 'Event',
+    level ? format_level_label(level) : (is_debug ? 'Debug' : 'Event'),
   ));
 
   if (is_feed_only) {

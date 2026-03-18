@@ -76,13 +76,3 @@ export function get_native_notice_message(event_key, event = {}) {
   if (typeof event?.milestone === 'string' && event.milestone.trim()) return event.milestone.trim();
   return event_key || 'notification';
 }
-
-/**
- * @param {string|null} level
- * @returns {number}
- */
-export function get_notice_timeout_ms(level) {
-  const normalized_level = normalize_event_level(level);
-  if (normalized_level === 'milestone') return milestone_notice_timeout_ms;
-  return notice_timeout_ms;
-}

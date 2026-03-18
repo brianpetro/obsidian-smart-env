@@ -7,14 +7,36 @@ import {
 export const default_page_size = 100;
 export const load_more_step = 100;
 export const all_levels_filter_key = 'all';
+export const debug_levels_filter_key = 'debug';
+export const notification_filter_keys = Object.freeze([
+  ...notification_levels,
+  debug_levels_filter_key,
+]);
 
 export { notification_levels };
+
+/**
+ * @param {unknown} level
+ * @returns {'milestone'|'attention'|'error'|'warning'|'info'|'debug'|null}
+ */
+function normalize_filter_level(level) {
+  const normalized_level = normalize_event_level(level);
+  if (normalized_level) return normalized_level;
+
+  const raw_level = typeof level === 'string'
+    ? level.trim().toLowerCase()
+    : ''
+  ;
+  if (raw_level === debug_levels_filter_key) return debug_levels_filter_key;
+
+  return null;
+}
 
 /**
  * @returns {Set<string>}
  */
 export function create_all_levels_set() {
-  return new Set(notification_levels);
+  return new Set(notification_filter_keys);
 }
 
 /**
@@ -23,18 +45,18 @@ export function create_all_levels_set() {
  */
 export function are_all_levels_active(active_levels = new Set()) {
   if (!(active_levels instanceof Set)) return false;
-  if (active_levels.size !== notification_levels.length) return false;
-  return notification_levels.every((level) => active_levels.has(level));
+  if (active_levels.size !== notification_filter_keys.length) return false;
+  return notification_filter_keys.every((level) => active_levels.has(level));
 }
 
 /**
  * Resolve the next active level set for the feed filter controls.
  *
  * Semantics:
- * - selecting "all" restores every level
- * - clicking a level while "all" is active narrows to that one level
- * - otherwise level clicks toggle membership
- * - a zero-selection state is invalid; toggling off the final active level
+ * - selecting "all" restores every level plus debug entries
+ * - clicking a level while "all" is active narrows to that one token
+ * - otherwise token clicks toggle membership
+ * - a zero-selection state is invalid; toggling off the final active token
  *   restores "all"
  *
  * @param {Set<string>} [active_levels]
@@ -51,7 +73,7 @@ export function get_next_active_levels(active_levels = new Set(), params = {}) {
 
   if (select_all) return create_all_levels_set();
 
-  const normalized_level = normalize_event_level(level);
+  const normalized_level = normalize_filter_level(level);
   const next_active_levels = new Set(active_levels instanceof Set ? active_levels : []);
 
   if (!normalized_level) return next_active_levels;
@@ -101,11 +123,23 @@ export function is_canonical_notification_entry(entry) {
 }
 
 /**
+ * Debug rows are session events without any canonical or display fallback level.
+ *
+ * @param {object} entry
+ * @returns {boolean}
+ */
+export function is_debug_entry(entry) {
+  if (!entry || typeof entry !== 'object') return false;
+  return !get_entry_level(entry);
+}
+
+/**
  * @param {object} entry
  * @returns {boolean}
  */
 export function is_feed_entry(entry) {
-  return Boolean(get_entry_level(entry));
+  if (!entry || typeof entry !== 'object') return false;
+  return Boolean(get_entry_level(entry)) || is_debug_entry(entry);
 }
 
 /**
@@ -118,14 +152,15 @@ export function get_filtered_entries(entries, params = {}) {
   const { active_levels = create_all_levels_set() } = params;
   if (!(active_levels instanceof Set) || active_levels.size === 0) return [];
 
+  const next_entries = Array.isArray(entries) ? [...entries] : [];
   if (are_all_levels_active(active_levels)) {
-    return Array.isArray(entries) ? [...entries] : [];
+    return next_entries;
   }
 
-  return entries.filter((entry) => {
+  return next_entries.filter((entry) => {
     const level = get_entry_level(entry);
-    if (!level) return false;
-    return active_levels.has(level);
+    if (level) return active_levels.has(level);
+    return active_levels.has(debug_levels_filter_key);
   });
 }
 
@@ -177,9 +212,9 @@ export function should_show_load_more(entries_length, visible_count) {
  * @returns {string}
  */
 export function format_level_label(level) {
-  const value = typeof level === 'string' ? level : '';
-  if (!value) return '';
-  return value.slice(0, 1).toUpperCase() + value.slice(1);
+  const normalized_level = normalize_filter_level(level);
+  if (!normalized_level) return '';
+  return normalized_level.slice(0, 1).toUpperCase() + normalized_level.slice(1);
 }
 
 /**
@@ -187,15 +222,19 @@ export function format_level_label(level) {
  * @returns {Record<string, number>}
  */
 export function get_level_counts(entries) {
-  const counts = notification_levels.reduce((acc, level) => {
+  const counts = notification_filter_keys.reduce((acc, level) => {
     acc[level] = 0;
     return acc;
   }, {});
 
   entries.forEach((entry) => {
+    if (!entry || typeof entry !== 'object') return;
     const level = get_entry_level(entry);
-    if (!level) return;
-    counts[level] += 1;
+    if (level) {
+      counts[level] += 1;
+      return;
+    }
+    counts[debug_levels_filter_key] += 1;
   });
 
   return counts;
@@ -239,7 +278,7 @@ export function get_entry_payload_text(entry) {
   const event_obj = entry?.event && typeof entry.event === 'object' ? entry.event : {};
 
   return Object.entries(event_obj)
-    .filter(([key]) => !['at', 'collection_key', 'message', 'level', 'btn_text', 'btn_callback'].includes(key))
+    .filter(([key]) => !['at', 'collection_key', 'message', 'level', 'btn_text', 'btn_callback', 'timeout', 'timeout_ms'].includes(key))
     .map(([key, value]) => `  ${key}: ${typeof value === 'string' ? value : JSON.stringify(value)}`)
     .join('\n');
 }

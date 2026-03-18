@@ -1,4 +1,4 @@
-/* Smart Env notifications feed modal - refined, theme-friendly UI */
+/* Smart Env notifications feed modal */
 
 .smart-env-notifications-modal {
   width: min(900px, 92vw);
@@ -6,22 +6,36 @@
 }
 
 .smart-env-notifications-modal .modal-header {
-  padding: 0.9rem 0.95rem 0.6rem;
+  padding: var(--size-4-4) var(--size-4-4) var(--size-4-2);
 }
 
 .smart-env-notifications-modal .modal-title {
-  font-weight: 650;
+  font-weight: var(--font-semibold);
   letter-spacing: -0.01em;
 }
 
 .smart-env-notifications-modal .modal-content {
-  padding: 0.72rem 0.85rem 0.95rem;
+  padding: var(--size-4-3) var(--size-4-4) var(--size-4-4);
 }
 
 .smart-env-notifications {
+  --smart-env-notifications-toolbar-radius: calc(var(--radius-l) + var(--size-2-2));
+  --smart-env-notifications-filter-radius: 999px;
+  --smart-env-notifications-card-radius: calc(var(--radius-m) + var(--size-2-3));
+  --smart-env-notifications-code-radius: var(--radius-m);
+  --smart-env-notifications-empty-radius: var(--radius-l);
+  --smart-env-notifications-shadow: var(--shadow-s);
+  --smart-env-notifications-shadow-hover: var(--shadow-l);
+  --smart-env-notifications-surface: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--background-primary) 96%, var(--background-secondary)),
+    color-mix(in srgb, var(--background-primary) 89%, var(--background-secondary))
+  );
+  --smart-env-notifications-muted-accent: var(--status-bar-text-color, var(--text-muted));
+
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
+  gap: var(--size-4-3);
   min-width: 0;
   font-family: var(--font-interface);
 }
@@ -30,9 +44,9 @@
   position: sticky;
   top: 0;
   z-index: 5;
-  padding-top: 0.05rem;
-  padding-bottom: 0.2rem;
-  margin-top: -0.05rem;
+  padding-top: var(--size-2-1);
+  padding-bottom: var(--size-2-2);
+  margin-top: calc(var(--size-2-1) * -1);
   background: linear-gradient(
     to bottom,
     var(--modal-background, var(--background-primary)) 76%,
@@ -41,32 +55,26 @@
 }
 
 .smart-env-notifications__toolbar {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.55rem 0.75rem;
+  gap: var(--size-4-2) var(--size-4-3);
 
-  padding: 0.45rem;
-  border-radius: 18px;
+  padding: var(--size-4-2);
+  border-radius: var(--smart-env-notifications-toolbar-radius);
   border: 1px solid var(--background-modifier-border);
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--background-primary) 96%, var(--background-secondary)),
-      color-mix(in srgb, var(--background-primary) 89%, var(--background-secondary))
-    );
-  box-shadow:
-    0 1px 0 rgba(0, 0, 0, 0.04),
-    0 10px 26px rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(16px);
+  background: var(--smart-env-notifications-surface);
+  box-shadow: var(--smart-env-notifications-shadow);
+  backdrop-filter: var(--blur-l);
 }
 
 .smart-env-notifications__meta {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 0.6rem;
+  gap: var(--size-4-2);
   min-width: 0;
+  margin-inline-start: auto;
 }
 
 .smart-env-notifications__summary {
@@ -80,9 +88,9 @@
 }
 
 .smart-env-notifications__actions {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--size-4-2);
 }
 
 .copy-all-notifications-btn {
@@ -96,18 +104,18 @@
   border: 1px solid var(--background-modifier-border);
   background: var(--background-modifier-form-field);
   color: var(--text-normal);
-  border-radius: 12px;
-  padding: 0.45rem 0.78rem;
+  border-radius: var(--button-radius);
+  padding: var(--size-4-2) calc(var(--size-4-3) + var(--size-2-1));
   font: inherit;
   font-size: var(--font-ui-small);
   line-height: 1.1;
   cursor: pointer;
   transition:
-    background 120ms ease,
-    border-color 120ms ease,
-    transform 120ms ease,
-    box-shadow 120ms ease,
-    opacity 120ms ease;
+    background var(--anim-duration-fast) var(--anim-motion-smooth),
+    border-color var(--anim-duration-fast) var(--anim-motion-smooth),
+    transform var(--anim-duration-fast) var(--anim-motion-smooth),
+    box-shadow var(--anim-duration-fast) var(--anim-motion-smooth),
+    opacity var(--anim-duration-fast) var(--anim-motion-smooth);
 }
 
 .smart-env-btn:hover {
@@ -154,19 +162,16 @@
 /* Filter pills */
 .smart-env-notifications-filter-controls {
   display: flex;
-  flex-wrap: nowrap;
+  flex: 1 1 420px;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.38rem;
-  width: 100%;
+  gap: var(--size-2-2);
   min-width: 0;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  padding: 0.26rem;
-  border-radius: 999px;
-  border: 1px solid var(--background-modifier-border);
-  background: color-mix(in srgb, var(--background-secondary) 88%, var(--background-primary));
+  padding: var(--size-2-2);
 }
 
 .smart-env-notifications-filter-controls::-webkit-scrollbar {
@@ -188,9 +193,9 @@
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
-  gap: 0.38rem;
-  padding: 0.4rem 0.68rem;
-  border-radius: 999px;
+  gap: var(--size-2-2);
+  padding: calc(var(--size-4-1) + 1px) var(--size-4-3);
+  border-radius: var(--smart-env-notifications-filter-radius);
   border: 1px solid transparent;
   background: transparent;
   color: var(--text-muted);
@@ -199,11 +204,11 @@
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   transition:
-    background 120ms ease,
-    border-color 120ms ease,
-    color 120ms ease,
-    box-shadow 120ms ease,
-    transform 120ms ease;
+    background var(--anim-duration-fast) var(--anim-motion-smooth),
+    border-color var(--anim-duration-fast) var(--anim-motion-smooth),
+    color var(--anim-duration-fast) var(--anim-motion-smooth),
+    box-shadow var(--anim-duration-fast) var(--anim-motion-smooth),
+    transform var(--anim-duration-fast) var(--anim-motion-smooth);
 }
 
 .smart-env-notifications-filter:hover .smart-env-notifications-filter__content {
@@ -212,11 +217,9 @@
 }
 
 .smart-env-notifications-filter.is-active:not(.smart-env-notifications-filter--all) .smart-env-notifications-filter__content {
-  background: color-mix(in srgb, var(--smart-env-filter-accent) 16%, var(--background-primary));
-  border-color: color-mix(in srgb, var(--smart-env-filter-accent) 38%, var(--background-modifier-border));
-  box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--smart-env-filter-accent) 10%, transparent),
-    0 1px 2px rgba(0, 0, 0, 0.05);
+  background: color-mix(in srgb, var(--smart-env-filter-accent) 14%, var(--background-primary));
+  border-color: color-mix(in srgb, var(--smart-env-filter-accent) 36%, var(--background-modifier-border));
+  box-shadow: var(--shadow-xs);
   color: var(--text-normal);
 }
 
@@ -236,8 +239,8 @@
 }
 
 .smart-env-notifications-filter__dot {
-  width: 8px;
-  height: 8px;
+  width: var(--size-4-2);
+  height: var(--size-4-2);
   border-radius: 999px;
   background: var(--smart-env-filter-accent);
   opacity: 0.95;
@@ -245,8 +248,8 @@
 }
 
 .smart-env-notifications-filter--all .smart-env-notifications-filter__dot {
-  width: 7px;
-  height: 7px;
+  width: calc(var(--size-4-2) - 1px);
+  height: calc(var(--size-4-2) - 1px);
   background: transparent;
   box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--text-normal) 24%, var(--background-modifier-border));
 }
@@ -256,14 +259,14 @@
 }
 
 .smart-env-notifications-filter__count {
-  margin-left: 0.08rem;
-  padding: 0.05rem 0.35rem;
+  margin-left: 1px;
+  padding: 0 var(--size-2-2);
   border-radius: 999px;
   border: 1px solid var(--background-modifier-border);
   background: var(--background-primary);
   color: var(--text-muted);
   font-size: 0.78em;
-  line-height: 1.25;
+  line-height: 1.4;
   font-variant-numeric: tabular-nums;
 }
 
@@ -272,17 +275,15 @@
 }
 
 .smart-env-notifications-filter--all.is-active .smart-env-notifications-filter__content {
-  background: color-mix(in srgb, var(--background-modifier-hover) 82%, var(--background-primary));
-  border-color: color-mix(in srgb, var(--text-normal) 12%, var(--background-modifier-border));
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--background-primary) 74%, transparent),
-    0 1px 2px rgba(0, 0, 0, 0.06);
+  background: var(--background-primary);
+  border-color: var(--background-modifier-border-hover, var(--background-modifier-border));
+  box-shadow: var(--shadow-xs);
   color: var(--text-normal);
 }
 
 .smart-env-notifications-filter--all.is-active .smart-env-notifications-filter__count {
-  background: color-mix(in srgb, var(--background-primary) 78%, transparent);
-  border-color: color-mix(in srgb, var(--text-normal) 10%, var(--background-modifier-border));
+  background: color-mix(in srgb, var(--background-primary) 84%, transparent);
+  border-color: color-mix(in srgb, var(--text-normal) 12%, var(--background-modifier-border));
   color: inherit;
 }
 
@@ -310,64 +311,74 @@
   --smart-env-filter-accent: var(--status-bar-text-color, var(--text-muted));
 }
 
+.smart-env-notifications-filter[data-level='debug'] {
+  --smart-env-filter-accent: color-mix(in srgb, var(--text-faint) 60%, var(--background-modifier-border-hover));
+}
+
 /* Feed */
 .smart-env-notifications-feed {
   display: flex;
   flex-direction: column;
-  padding: 0.1rem 0 0.25rem;
-  gap: 0.55rem;
+  padding: 1px 0 var(--size-2-3);
+  gap: var(--size-4-2);
 }
 
 .smart-env-notification {
   background: var(--background-primary);
   border: 1px solid var(--background-modifier-border);
-  border-radius: 14px;
+  border-radius: var(--smart-env-notifications-card-radius);
   overflow: hidden;
   transition:
-    border-color 140ms ease,
-    box-shadow 140ms ease,
-    transform 140ms ease;
+    border-color var(--anim-duration-fast) var(--anim-motion-smooth),
+    box-shadow var(--anim-duration-fast) var(--anim-motion-smooth),
+    transform var(--anim-duration-fast) var(--anim-motion-smooth);
 }
 
 .smart-env-notification:hover {
   border-color: var(--background-modifier-border-hover, var(--background-modifier-border));
-  box-shadow:
-    0 1px 0 rgba(0, 0, 0, 0.04),
-    0 10px 26px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--smart-env-notifications-shadow);
+}
+
+.smart-env-notification[data-muted='true'] {
+  background: color-mix(in srgb, var(--background-primary) 88%, var(--background-secondary));
+}
+
+.smart-env-notification[data-level='attention'] {
+  --smart-env-notification-accent: var(--color-yellow);
+}
+
+.smart-env-notification[data-level='milestone'] {
+  --smart-env-notification-accent: var(--interactive-accent);
+}
+
+.smart-env-notification[data-level='warning'] {
+  --smart-env-notification-accent: var(--color-orange);
+}
+
+.smart-env-notification[data-level='error'] {
+  --smart-env-notification-accent: var(--color-red);
+}
+
+.smart-env-notification[data-level='info'] {
+  --smart-env-notification-accent: var(--status-bar-text-color, var(--text-muted));
+}
+
+.smart-env-notification[data-level='debug'],
+.smart-env-notification[data-level='event'] {
+  --smart-env-notification-accent: color-mix(in srgb, var(--text-faint) 80%, var(--background-modifier-border-hover));
 }
 
 details.smart-env-notification[open] {
   transform: translateY(-1px);
-  box-shadow:
-    0 1px 0 rgba(0, 0, 0, 0.04),
-    0 14px 32px rgba(0, 0, 0, 0.14);
-}
-
-details.smart-env-notification[open][data-level='attention'] {
-  border-color: color-mix(in srgb, var(--color-yellow) 80%, var(--background-modifier-border));
-}
-
-details.smart-env-notification[open][data-level='milestone'] {
-  border-color: color-mix(in srgb, var(--interactive-accent) 80%, var(--background-modifier-border));
-}
-
-details.smart-env-notification[open][data-level='warning'] {
-  border-color: color-mix(in srgb, var(--color-orange) 80%, var(--background-modifier-border));
-}
-
-details.smart-env-notification[open][data-level='error'] {
-  border-color: color-mix(in srgb, var(--color-red) 82%, var(--background-modifier-border));
-}
-
-details.smart-env-notification[open][data-level='info'] {
-  border-color: color-mix(in srgb, var(--status-bar-text-color, var(--text-muted)) 76%, var(--background-modifier-border));
+  border-color: color-mix(in srgb, var(--smart-env-notification-accent) 76%, var(--background-modifier-border));
+  box-shadow: var(--smart-env-notifications-shadow-hover);
 }
 
 .smart-env-notification__summary {
   display: flex;
   align-items: flex-start;
-  gap: 0.6rem;
-  padding: 0.7rem 0.8rem;
+  gap: var(--size-4-2);
+  padding: calc(var(--size-4-2) + 1px) var(--size-4-3);
   list-style: none;
 }
 
@@ -378,7 +389,7 @@ details.smart-env-notification > .smart-env-notification__summary {
 details.smart-env-notification > .smart-env-notification__summary:focus-visible {
   outline: 2px solid var(--interactive-accent);
   outline-offset: 2px;
-  border-radius: 14px;
+  border-radius: var(--smart-env-notifications-card-radius);
 }
 
 .smart-env-notification__summary::-webkit-details-marker {
@@ -386,38 +397,14 @@ details.smart-env-notification > .smart-env-notification__summary:focus-visible 
 }
 
 .smart-env-notification__accent {
-  width: 10px;
-  height: 10px;
+  width: calc(var(--size-4-2) + 2px);
+  height: calc(var(--size-4-2) + 2px);
   border-radius: 999px;
-  margin-top: 0.25rem;
+  margin-top: var(--size-2-2);
   flex: 0 0 auto;
-  background: var(--text-muted);
+  background: var(--smart-env-notification-accent, var(--smart-env-notifications-muted-accent));
+  color: var(--smart-env-notification-accent, var(--smart-env-notifications-muted-accent));
   box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 12%, transparent);
-}
-
-.smart-env-notification[data-level='attention'] .smart-env-notification__accent {
-  background: var(--color-yellow);
-  color: var(--color-yellow);
-}
-
-.smart-env-notification[data-level='milestone'] .smart-env-notification__accent {
-  background: var(--interactive-accent);
-  color: var(--interactive-accent);
-}
-
-.smart-env-notification[data-level='warning'] .smart-env-notification__accent {
-  background: var(--color-orange);
-  color: var(--color-orange);
-}
-
-.smart-env-notification[data-level='error'] .smart-env-notification__accent {
-  background: var(--color-red);
-  color: var(--color-red);
-}
-
-.smart-env-notification[data-level='info'] .smart-env-notification__accent {
-  background: var(--status-bar-text-color, var(--text-muted));
-  color: var(--status-bar-text-color, var(--text-muted));
 }
 
 .smart-env-notification__summary-body {
@@ -425,19 +412,19 @@ details.smart-env-notification > .smart-env-notification__summary:focus-visible 
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: var(--size-2-2);
 }
 
 .smart-env-notification__summary-top {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: var(--size-4-3);
 }
 
 .smart-env-notification__event-key {
   color: var(--text-normal);
-  font-weight: 600;
+  font-weight: var(--font-semibold);
   letter-spacing: -0.01em;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -455,36 +442,30 @@ details.smart-env-notification > .smart-env-notification__summary:focus-visible 
 .smart-env-notification__summary-bottom {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  row-gap: 0.3rem;
+  gap: var(--size-2-2);
+  row-gap: var(--size-2-1);
   flex-wrap: wrap;
 }
 
-.smart-env-notification__collection {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.12rem 0.42rem;
-  border-radius: 999px;
-  border: 1px solid var(--background-modifier-border);
-  background: var(--background-secondary);
-  color: var(--text-muted);
-  font-size: var(--font-ui-small);
-  line-height: 1.1;
-}
-
+.smart-env-notification__collection,
 .smart-env-notification__level,
 .smart-env-notification__feed-only,
 .smart-env-notification__muted,
 .smart-env-notification__event-count {
   display: inline-flex;
   align-items: center;
-  padding: 0.12rem 0.42rem;
+  padding: 0 var(--size-2-3);
+  min-height: var(--touch-size-xxs);
   border-radius: 999px;
   border: 1px solid var(--background-modifier-border);
   background: transparent;
   color: var(--text-muted);
   font-size: var(--font-ui-small);
   line-height: 1.1;
+}
+
+.smart-env-notification__collection {
+  background: var(--background-secondary);
 }
 
 .smart-env-notification__event-count {
@@ -496,46 +477,33 @@ details.smart-env-notification > .smart-env-notification__summary:focus-visible 
   border-style: dashed;
 }
 
-.smart-env-notification[data-level='attention'] .smart-env-notification__level {
-  border-color: var(--color-yellow);
-  color: var(--color-yellow);
+.smart-env-notification__level {
+  border-color: color-mix(in srgb, var(--smart-env-notification-accent) 88%, var(--background-modifier-border));
+  color: var(--smart-env-notification-accent, var(--text-muted));
 }
 
-.smart-env-notification[data-level='milestone'] .smart-env-notification__level {
-  border-color: var(--interactive-accent);
-  color: var(--interactive-accent);
-}
-
-.smart-env-notification[data-level='warning'] .smart-env-notification__level {
-  border-color: var(--color-orange);
-  color: var(--color-orange);
-}
-
-.smart-env-notification[data-level='error'] .smart-env-notification__level {
-  border-color: var(--color-red);
-  color: var(--color-red);
-}
-
-.smart-env-notification[data-level='info'] .smart-env-notification__level {
-  border-color: var(--status-bar-text-color, var(--text-muted));
-  color: var(--status-bar-text-color, var(--text-muted));
+.smart-env-notification[data-level='debug'] .smart-env-notification__level,
+.smart-env-notification[data-level='event'] .smart-env-notification__level {
+  border-style: dashed;
 }
 
 .smart-env-notification__chevron {
-  width: 18px;
-  height: 18px;
-  margin-top: 0.1rem;
+  width: var(--icon-m);
+  height: var(--icon-m);
+  margin-top: 1px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   color: var(--text-faint);
   flex: 0 0 auto;
-  transition: transform 140ms ease, color 140ms ease;
+  transition:
+    transform var(--anim-duration-fast) var(--anim-motion-smooth),
+    color var(--anim-duration-fast) var(--anim-motion-smooth);
 }
 
 .smart-env-notification__chevron::before {
   content: ">";
-  font-size: 0.9rem;
+  font-size: var(--font-ui-medium);
   line-height: 1;
 }
 
@@ -547,22 +515,22 @@ details.smart-env-notification[open] .smart-env-notification__chevron {
 .smart-env-notification__expanded {
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
-  padding: 0.78rem 0.9rem 0.9rem;
+  gap: var(--size-4-2);
+  padding: var(--size-4-3);
   border-top: 1px solid var(--background-modifier-border);
   background: color-mix(in srgb, var(--background-secondary) 88%, var(--background-primary));
 }
 
 .smart-env-notification__expanded-meta {
   display: grid;
-  gap: 0.45rem;
+  gap: var(--size-2-2);
 }
 
 .smart-env-notification__expanded-row {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: var(--size-4-3);
 }
 
 .smart-env-notification__expanded-label {
@@ -581,15 +549,15 @@ details.smart-env-notification[open] .smart-env-notification__chevron {
 .smart-env-notification__expanded-actions {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: var(--size-2-2);
   flex-wrap: wrap;
 }
 
 .smart-env-notification__message {
   margin: 0;
-  padding: 0.75rem;
+  padding: var(--size-4-3);
   border: 1px solid var(--background-modifier-border);
-  border-radius: 10px;
+  border-radius: var(--smart-env-notifications-code-radius);
   background: var(--background-primary);
   font-family: var(--font-monospace);
   font-size: var(--font-smaller);
@@ -600,8 +568,8 @@ details.smart-env-notification[open] .smart-env-notification__chevron {
 
 /* Empty states */
 .smart-env-notifications-empty-state {
-  padding: 1.65rem 1rem;
-  border-radius: 12px;
+  padding: var(--size-4-6) var(--size-4-4);
+  border-radius: var(--smart-env-notifications-empty-radius);
   border: 1px dashed var(--background-modifier-border);
   background: color-mix(in srgb, var(--background-secondary) 65%, transparent);
   text-align: center;
@@ -609,22 +577,22 @@ details.smart-env-notification[open] .smart-env-notification__chevron {
 
 .smart-env-notifications-empty-state__title {
   color: var(--text-normal);
-  font-weight: 650;
+  font-weight: var(--font-semibold);
   letter-spacing: -0.01em;
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--size-2-2);
 }
 
 .smart-env-notifications-empty-state__detail {
   color: var(--text-muted);
   font-size: var(--font-ui-small);
-  margin-bottom: 0.75rem;
+  margin-bottom: var(--size-4-3);
 }
 
 /* Footer */
 .smart-env-notifications__footer {
   display: flex;
   justify-content: center;
-  padding-top: 0.25rem;
+  padding-top: var(--size-2-2);
 }
 
 .smart-env-notifications__footer .smart-env-btn {
@@ -633,27 +601,33 @@ details.smart-env-notification[open] .smart-env-notification__chevron {
 }
 
 @media (max-width: 720px) {
-  .smart-env-notifications__toolbar {
-    grid-template-columns: 1fr;
-  }
-
   .smart-env-notifications__meta {
     width: 100%;
-    justify-content: space-between;
+    margin-inline-start: 0;
+    justify-content: flex-end;
   }
 }
 
 @media (max-width: 540px) {
   .smart-env-notifications-modal .modal-content {
-    padding: 0.65rem 0.65rem 0.9rem;
+    padding: var(--size-4-2) var(--size-4-2) var(--size-4-4);
   }
 
   .smart-env-notifications__toolbar {
-    border-radius: 16px;
+    border-radius: var(--radius-l);
   }
 
   .smart-env-notifications-filter-controls {
-    border-radius: 16px;
+    flex-basis: 100%;
+  }
+
+  .smart-env-notifications__meta {
+    justify-content: space-between;
+  }
+
+  .smart-env-notifications__summary {
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   .smart-env-notifications__footer .smart-env-btn {
@@ -662,7 +636,7 @@ details.smart-env-notification[open] .smart-env-notification__chevron {
 
   .smart-env-notification__expanded-row {
     flex-direction: column;
-    gap: 0.2rem;
+    gap: var(--size-2-1);
   }
 
   .smart-env-notification__expanded-value {
