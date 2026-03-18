@@ -19,6 +19,7 @@ import { remove_smart_plugins_plugin } from './migrations/remove_smart_plugins_p
 import { register_first_of_event_notifications } from './src/utils/onboarding_events.js';
 import { render as render_status_bar_component } from './src/components/status_bar.js';
 import { EmbeddingProgressView } from './src/views/embedding_progress_view.js';
+import { emit_notice_event } from './src/utils/emit_notice_event.js';
 
 export class SmartEnv extends BaseSmartEnv {
   /**
@@ -113,6 +114,10 @@ export class SmartEnv extends BaseSmartEnv {
 
     this.events.on('notifications_feed_modal:open', () => {
       this.open_notifications_feed_modal?.();
+    });
+
+    this.events.on('smart_env:load_mobile_requested', () => {
+      this.start_mobile_env_load({ source: 'native_notice_button' });
     });
   }
 

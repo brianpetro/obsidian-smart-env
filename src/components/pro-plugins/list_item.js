@@ -1,4 +1,4 @@
-import { Setting, Notice, Modal, MarkdownRenderer, Component } from 'obsidian';
+import { Setting, Modal, MarkdownRenderer, Component } from 'obsidian';
 import {
   parse_zip_into_files,
   write_files_with_adapter,
@@ -8,6 +8,7 @@ import {
   enable_plugin,
   fetch_zip_from_url,
 } from '../../utils/smart_plugins.js';
+import { emit_notice_event } from '../../utils/emit_notice_event.js';
 
 const PRO_PLUGINS_URL = 'https://smartconnections.app/pro-plugins/';
 
@@ -114,7 +115,7 @@ async function post_process(item, container, params = {}) {
   row.addButton((btn) => {
     btn.setButtonText(state.button_label);
     btn.setDisabled(state.is_disabled);
-    btn.onClick(() => install_plugin(item, { app, token, on_installed }));
+    btn.onClick(() => install_plugin(item, { app, token, env, on_installed }));
   });
 
   row.addButton((btn) => {
@@ -122,7 +123,7 @@ async function post_process(item, container, params = {}) {
     if (item.docs_url) {
       btn.onClick(() => window.open(item.docs_url, '_external'));
     } else {
-      btn.onClick(() => show_plugin_readme(item, { app, token, display_name: state.display_name }));
+      btn.onClick(() => show_plugin_readme(item, { app, token, env, display_name: state.display_name }));
     }
   });
 
@@ -146,9 +147,14 @@ const download_plugin_zip = async (item, token) => {
 };
 
 const install_plugin = async (item, params = {}) => {
-  const { app, token, on_installed } = params;
+  const { app, token, on_installed, env = null } = params;
   try {
-    new Notice(`Installing "${item.repo}" ...`);
+    emit_notice_event(env, {
+      event_key: 'pro_plugins:install_started',
+      level: 'info',
+      message: `Installing "${item.repo}" ...`,
+      event_source: 'pro_plugins_list_item.install_plugin',
+    });
 
     const zip_data = await download_plugin_zip(item, token);
     const { files, pluginManifest } = await parse_zip_into_files(zip_data);
@@ -165,18 +171,29 @@ const install_plugin = async (item, params = {}) => {
     }
     await enable_plugin(app, plugin_id);
 
-    new Notice(`${item.repo} installed successfully.`);
+    emit_notice_event(env, {
+      event_key: 'pro_plugins:install_completed',
+      level: 'attention',
+      message: `${item.repo} installed successfully.`,
+      event_source: 'pro_plugins_list_item.install_plugin',
+    });
     if (typeof on_installed === 'function') {
       await on_installed();
     }
   } catch (err) {
     console.error('[pro-plugins:list_item] Install error:', err);
-    new Notice(`Install failed: ${err.message}`);
+    emit_notice_event(env, {
+      event_key: 'pro_plugins:install_failed',
+      level: 'error',
+      message: `Install failed: ${err.message}`,
+      details: err?.stack || '',
+      event_source: 'pro_plugins_list_item.install_plugin',
+    });
   }
 };
 
 const show_plugin_readme = async (item, params = {}) => {
-  const { app, token, display_name } = params;
+  const { app, token, display_name, env = null } = params;
   try {
     const readme = await fetch_plugin_readme(item.repo, token);
     const modal = new Modal(app);
@@ -185,6 +202,12 @@ const show_plugin_readme = async (item, params = {}) => {
     modal.open();
   } catch (err) {
     console.error('[pro-plugins:list_item] Failed to load README:', err);
-    new Notice('Failed to load README');
+    emit_notice_event(env, {
+      event_key: 'pro_plugins:readme_load_failed',
+      level: 'error',
+      message: 'Failed to load README',
+      details: err?.message || '',
+      event_source: 'pro_plugins_list_item.show_plugin_readme',
+    });
   }
 };

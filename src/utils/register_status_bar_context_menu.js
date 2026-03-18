@@ -16,9 +16,10 @@
  * @returns {Function} – the bound `contextmenu` handler (for unit tests)
  */
 
-import { Menu, Notice } from "obsidian";
+import { Menu } from "obsidian";
 import { SmartNoteInspectModal } from "../../views/source_inspector.js";
 import { EnvStatsModal } from "../modals/env_stats.js";
+import { emit_notice_event } from "./emit_notice_event.js";
 
 export function register_status_bar_context_menu(env, status_container, deps = {}) {
   const { Menu: MenuClass = Menu } = deps;
@@ -37,12 +38,22 @@ export function register_status_bar_context_menu(env, status_container, deps = {
         .onClick(async () => {
           const active_file = plugin.app.workspace.getActiveFile();
           if (!active_file) {
-            new Notice("No active note found");
+            emit_notice_event(env, {
+              event_key: 'status_bar:inspect_active_note_missing',
+              level: 'warning',
+              message: 'No active note found',
+              event_source: 'register_status_bar_context_menu.inspect',
+            });
             return;
           }
           const src = env.smart_sources?.get(active_file.path);
           if (!src) {
-            new Notice("Active note is not indexed by Smart Environment");
+            emit_notice_event(env, {
+              event_key: 'status_bar:inspect_source_missing',
+              level: 'warning',
+              message: 'Active note is not indexed by Smart Environment',
+              event_source: 'register_status_bar_context_menu.inspect',
+            });
             return;
           }
           new SmartNoteInspectModal(plugin, src).open();
@@ -63,7 +74,12 @@ export function register_status_bar_context_menu(env, status_container, deps = {
         .setIcon("download")
         .onClick(() => {
           env.export_json();
-          new Notice("Smart Env exported");
+          emit_notice_event(env, {
+            event_key: 'smart_env:exported',
+            level: 'attention',
+            message: 'Smart Env exported',
+            event_source: 'register_status_bar_context_menu.export',
+          });
         }),
     );
     menu.addItem((item) =>

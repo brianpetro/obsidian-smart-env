@@ -1,4 +1,4 @@
-import { Setting, Notice, requestUrl } from 'obsidian';
+import { Setting, requestUrl } from 'obsidian';
 import {
   get_oauth_storage_prefix,
   get_smart_server_url,
@@ -10,6 +10,7 @@ import {
   get_onboarding_signup_setting_copy,
 } from './onboarding_signup.js';
 import styles from './style.css';
+import { emit_notice_event } from '../../utils/emit_notice_event.js';
 
 const PRO_PLUGINS_DESC = `<a href="https://smartconnections.app/core-plugins/" target="_external">Core plugins</a> provide essential functionality and a "just works" experience. <a href="https://smartconnections.app/pro-plugins/" target="_external">Pro plugins</a> enable advanced configuration and features for Obsidian AI experts.`;
 const PRO_PLUGINS_FOOTER = `All Pro plugins include advanced configurations and additional model providers. Pro users get priority support via email. <a href="https://smartconnections.app/introducing-pro-plugins/" target="_external">Learn more</a> about Pro plugins.`;
@@ -149,12 +150,13 @@ export async function post_process(env, container, params = {}) {
     btn.classList.add('mod-cta');
     btn.textContent = 'Copy';
     btn.addEventListener('click', async () => {
-      const ok = await copy_to_clipboard(login_url);
-      if (ok) {
-        new Notice('Copied login link to clipboard.');
-      } else {
-        new Notice('Copy failed. Please select and copy the link manually.');
-      }
+      await copy_to_clipboard(login_url, {
+        env,
+        event_source: 'pro_plugins.manual_login_copy',
+        success_event_key: 'pro_plugins:login_link_copied',
+        error_event_key: 'pro_plugins:login_link_copy_failed',
+        unavailable_event_key: 'pro_plugins:login_link_copy_unavailable',
+      });
     });
     controls.appendChild(btn);
   };
@@ -184,7 +186,12 @@ export async function post_process(env, container, params = {}) {
       last_login_url = initiate_smart_plugins_oauth();
     }
 
-    new Notice('Please complete the login in your browser.');
+    emit_notice_event(env, {
+      event_key: 'pro_plugins:oauth_browser_login_requested',
+      level: 'info',
+      message: 'Please complete the login in your browser.',
+      event_source: 'pro_plugins.initiate_oauth_login',
+    });
 
   };
 
@@ -216,7 +223,12 @@ export async function post_process(env, container, params = {}) {
       btn.onClick(() => {
         localStorage.removeItem(oauth_storage_prefix + 'token');
         localStorage.removeItem(oauth_storage_prefix + 'refresh');
-        new Notice('Logged out of Smart Plugins');
+        emit_notice_event(env, {
+          event_key: 'pro_plugins:logged_out',
+          level: 'info',
+          message: 'Logged out of Smart Plugins',
+          event_source: 'pro_plugins.logout',
+        });
         render_oauth_login_section();
         render_referral_section();
         render_plugin_list_section();
@@ -264,8 +276,13 @@ export async function post_process(env, container, params = {}) {
       setting.addButton((btn) => {
         btn.setButtonText('Copy link');
         btn.onClick(async () => {
-          const ok = await copy_to_clipboard(referral_link);
-          new Notice(ok ? 'Referral link copied.' : 'Copy failed. Please try again.');
+          const ok = await copy_to_clipboard(referral_link, {
+            env,
+            event_source: 'pro_plugins.referral_copy',
+            success_event_key: 'referrals:copied_link_notice',
+            error_event_key: 'referrals:copy_link_failed',
+            unavailable_event_key: 'referrals:copy_link_unavailable',
+          });
           if (ok) emit_referral_event('referrals:copied_link');
         });
       });
