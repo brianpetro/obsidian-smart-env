@@ -1,5 +1,4 @@
 import { Platform } from 'obsidian';
-import { emit_notice_event } from '../src/utils/emit_notice_event.js';
 
 /**
  * Copy text to clipboard in a cross-platform manner.
@@ -29,16 +28,14 @@ export async function copy_to_clipboard(text, params = {}) {
 
     // Otherwise, no known method for copying
     else {
-      emit_notice_event(env, {
-        event_key: unavailable_event_key,
+      env?.events?.emit?.(unavailable_event_key, {
         level: 'warning',
         message: 'Unable to copy text: no valid method found.',
         event_source,
       });
       return false;
     }
-    emit_notice_event(env, {
-      event_key: success_event_key,
+    env?.events?.emit?.(success_event_key, {
       level: 'info',
       message: `Copied ${text.length} characters to clipboard`,
       event_source,
@@ -46,8 +43,7 @@ export async function copy_to_clipboard(text, params = {}) {
     return true;
   } catch (err) {
     console.error('Failed to copy text:', err);
-    emit_notice_event(env, {
-      event_key: error_event_key,
+    env?.events?.emit?.(error_event_key, {
       level: 'error',
       message: 'Failed to copy.',
       details: err?.message || '',

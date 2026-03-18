@@ -10,7 +10,6 @@ import {
   get_onboarding_signup_setting_copy,
 } from './onboarding_signup.js';
 import styles from './style.css';
-import { emit_notice_event } from '../../utils/emit_notice_event.js';
 
 const PRO_PLUGINS_DESC = `<a href="https://smartconnections.app/core-plugins/" target="_external">Core plugins</a> provide essential functionality and a "just works" experience. <a href="https://smartconnections.app/pro-plugins/" target="_external">Pro plugins</a> enable advanced configuration and features for Obsidian AI experts.`;
 const PRO_PLUGINS_FOOTER = `All Pro plugins include advanced configurations and additional model providers. Pro users get priority support via email. <a href="https://smartconnections.app/introducing-pro-plugins/" target="_external">Learn more</a> about Pro plugins.`;
@@ -186,8 +185,7 @@ export async function post_process(env, container, params = {}) {
       last_login_url = initiate_smart_plugins_oauth();
     }
 
-    emit_notice_event(env, {
-      event_key: 'pro_plugins:oauth_browser_login_requested',
+    env?.events?.emit?.('pro_plugins:oauth_browser_login_requested', {
       level: 'info',
       message: 'Please complete the login in your browser.',
       event_source: 'pro_plugins.initiate_oauth_login',
@@ -223,8 +221,7 @@ export async function post_process(env, container, params = {}) {
       btn.onClick(() => {
         localStorage.removeItem(oauth_storage_prefix + 'token');
         localStorage.removeItem(oauth_storage_prefix + 'refresh');
-        emit_notice_event(env, {
-          event_key: 'pro_plugins:logged_out',
+        env?.events?.emit?.('pro_plugins:logged_out', {
           level: 'info',
           message: 'Logged out of Smart Plugins',
           event_source: 'pro_plugins.logout',

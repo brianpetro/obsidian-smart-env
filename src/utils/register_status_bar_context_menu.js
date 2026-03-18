@@ -19,7 +19,6 @@
 import { Menu } from "obsidian";
 import { SmartNoteInspectModal } from "../../views/source_inspector.js";
 import { EnvStatsModal } from "../modals/env_stats.js";
-import { emit_notice_event } from "./emit_notice_event.js";
 
 export function register_status_bar_context_menu(env, status_container, deps = {}) {
   const { Menu: MenuClass = Menu } = deps;
@@ -38,8 +37,7 @@ export function register_status_bar_context_menu(env, status_container, deps = {
         .onClick(async () => {
           const active_file = plugin.app.workspace.getActiveFile();
           if (!active_file) {
-            emit_notice_event(env, {
-              event_key: 'status_bar:inspect_active_note_missing',
+            env?.events?.emit?.('status_bar:inspect_active_note_missing', {
               level: 'warning',
               message: 'No active note found',
               event_source: 'register_status_bar_context_menu.inspect',
@@ -48,8 +46,7 @@ export function register_status_bar_context_menu(env, status_container, deps = {
           }
           const src = env.smart_sources?.get(active_file.path);
           if (!src) {
-            emit_notice_event(env, {
-              event_key: 'status_bar:inspect_source_missing',
+            env?.events?.emit?.('status_bar:inspect_source_missing', {
               level: 'warning',
               message: 'Active note is not indexed by Smart Environment',
               event_source: 'register_status_bar_context_menu.inspect',
@@ -74,8 +71,7 @@ export function register_status_bar_context_menu(env, status_container, deps = {
         .setIcon("download")
         .onClick(() => {
           env.export_json();
-          emit_notice_event(env, {
-            event_key: 'smart_env:exported',
+          env?.events?.emit?.('smart_env:exported', {
             level: 'attention',
             message: 'Smart Env exported',
             event_source: 'register_status_bar_context_menu.export',

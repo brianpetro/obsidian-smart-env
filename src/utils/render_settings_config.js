@@ -5,7 +5,6 @@ import {
   build_settings_group_map,
   resolve_group_settings_config,
 } from './settings_config_utils.js';
-import { emit_notice_event } from './emit_notice_event.js';
 // polyfill for Obsidian's SettingGroup not being available in older versions
 // jsdocs using imported SettingGroup for type hinting purposes
 /**
@@ -172,8 +171,7 @@ export function render_settings_group(group_name, scope, settings_config, contai
             toggle.setValue(get_by_path(scope.settings, setting_path) || false);
             toggle.onChange((value) => {
               if(settng_is_pro && !env_is_pro) {
-                emit_notice_event(scope, {
-                  event_key: 'settings:pro_feature_blocked',
+                scope?.env?.events?.emit?.('settings:pro_feature_blocked', {
                   level: 'warning',
                   message: 'Nice try! This is a PRO feature. Please upgrade to access this setting.',
                   event_source: 'render_settings_config.toggle',
@@ -247,8 +245,7 @@ export function render_settings_group(group_name, scope, settings_config, contai
             text.setValue(String(get_by_path(scope.settings, setting_path) || ''));
             text.onChange((value) => {
               if(settng_is_pro && !env_is_pro) {
-                emit_notice_event(scope, {
-                  event_key: 'settings:pro_feature_blocked',
+                scope?.env?.events?.emit?.('settings:pro_feature_blocked', {
                   level: 'warning',
                   message: 'Nice try! This is a PRO feature. Please upgrade to access this setting.',
                   event_source: 'render_settings_config.textarea',

@@ -8,7 +8,6 @@ import {
   enable_plugin,
   fetch_zip_from_url,
 } from '../../utils/smart_plugins.js';
-import { emit_notice_event } from '../../utils/emit_notice_event.js';
 
 const PRO_PLUGINS_URL = 'https://smartconnections.app/pro-plugins/';
 
@@ -149,8 +148,7 @@ const download_plugin_zip = async (item, token) => {
 const install_plugin = async (item, params = {}) => {
   const { app, token, on_installed, env = null } = params;
   try {
-    emit_notice_event(env, {
-      event_key: 'pro_plugins:install_started',
+    env?.events?.emit?.('pro_plugins:install_started', {
       level: 'info',
       message: `Installing "${item.repo}" ...`,
       event_source: 'pro_plugins_list_item.install_plugin',
@@ -171,8 +169,7 @@ const install_plugin = async (item, params = {}) => {
     }
     await enable_plugin(app, plugin_id);
 
-    emit_notice_event(env, {
-      event_key: 'pro_plugins:install_completed',
+    env?.events?.emit?.('pro_plugins:install_completed', {
       level: 'attention',
       message: `${item.repo} installed successfully.`,
       event_source: 'pro_plugins_list_item.install_plugin',
@@ -182,8 +179,7 @@ const install_plugin = async (item, params = {}) => {
     }
   } catch (err) {
     console.error('[pro-plugins:list_item] Install error:', err);
-    emit_notice_event(env, {
-      event_key: 'pro_plugins:install_failed',
+    env?.events?.emit?.('pro_plugins:install_failed', {
       level: 'error',
       message: `Install failed: ${err.message}`,
       details: err?.stack || '',
@@ -202,8 +198,7 @@ const show_plugin_readme = async (item, params = {}) => {
     modal.open();
   } catch (err) {
     console.error('[pro-plugins:list_item] Failed to load README:', err);
-    emit_notice_event(env, {
-      event_key: 'pro_plugins:readme_load_failed',
+    env?.events?.emit?.('pro_plugins:readme_load_failed', {
       level: 'error',
       message: 'Failed to load README',
       details: err?.message || '',
