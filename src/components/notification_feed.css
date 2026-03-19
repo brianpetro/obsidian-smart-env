@@ -367,6 +367,9 @@
   --smart-env-notification-accent: color-mix(in srgb, var(--text-faint) 80%, var(--background-modifier-border-hover));
 }
 
+details.smart-env-notification {
+  user-select: text;
+}
 details.smart-env-notification[open] {
   transform: translateY(-1px);
   border-color: color-mix(in srgb, var(--smart-env-notification-accent) 76%, var(--background-modifier-border));
