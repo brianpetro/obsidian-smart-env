@@ -144,7 +144,7 @@ function post_process(env, container, opts = {}) {
     set_status_message(message);
 
     container.setAttribute?.('aria-label', title);
-    container.setAttribute?.('title', title);
+    // container.setAttribute?.('title', title); // no title attribute to avoid redundant tooltip with aria-label!
     container.removeAttribute?.('href');
     container.removeAttribute?.('target');
   };
