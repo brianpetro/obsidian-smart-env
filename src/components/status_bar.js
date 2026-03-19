@@ -96,8 +96,9 @@ function post_process(env, container, opts = {}) {
       ? `${indicator_count} unseen notification${indicator_count === 1 ? '' : 's'}`
       : 'Open notifications feed'
     ;
-    status_indicator.setAttribute('aria-label', indicator_title);
-    // status_indicator.setAttribute('title', indicator_title); // no title attribute to avoid redundant tooltip with aria-label
+    // no aria-label AND title attribute to avoid redundant tooltips (title seems to display better in bottom of screen status bar)
+    // status_indicator.setAttribute('aria-label', indicator_title);
+    status_indicator.setAttribute('title', indicator_title);
   };
 
   const action_handlers = {
@@ -143,8 +144,9 @@ function post_process(env, container, opts = {}) {
     update_indicator(status_state);
     set_status_message(message);
 
-    container.setAttribute?.('aria-label', title);
-    // container.setAttribute?.('title', title); // no title attribute to avoid redundant tooltip with aria-label!
+    // no aria-label AND title attribute to avoid redundant tooltips (title seems to display better in bottom of screen status bar)
+    // container.setAttribute?.('aria-label', title);
+    container.setAttribute?.('title', title);
     container.removeAttribute?.('href');
     container.removeAttribute?.('target');
   };
