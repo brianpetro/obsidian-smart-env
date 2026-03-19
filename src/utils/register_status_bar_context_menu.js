@@ -95,15 +95,27 @@ export function register_status_bar_context_menu(env, status_container, deps = {
         }),
     );
     menu.addSeparator();
-    menu.addItem((item) =>
-      item
-        .setTitle('Start 14-day Pro trial')
-        .setIcon('hand-heart')
-        .onClick(() => {
-          const url = 'https://smartconnections.app/pro-plugins/?utm_source=status-bar';
-          window.open(url, '_external');
-        }),
-    );
+    if (env.is_pro) {
+      menu.addItem((item) =>
+        item
+          .setTitle('Refer a friend (Give 30, Get 30)')
+          .setIcon('hand-heart')
+          .onClick(() => {
+            const url = 'https://smartconnections.app/my-referrals/?utm_source=status-bar';
+            window.open(url, '_external');
+          }),
+      );
+    } else {
+      menu.addItem((item) =>
+        item
+          .setTitle('Start 14-day Pro trial')
+          .setIcon('hand-heart')
+          .onClick(() => {
+            const url = 'https://smartconnections.app/pro-plugins/?utm_source=status-bar';
+            window.open(url, '_external');
+          }),
+      );
+    }
     menu.showAtPosition({ x: ev.pageX, y: ev.pageY });
   };
 

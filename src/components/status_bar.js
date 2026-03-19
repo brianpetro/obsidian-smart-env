@@ -13,14 +13,14 @@ export function build_html() {
     <a
       class="smart-env-status-container"
       role="button"
-      aria-label="Smart Environment status"
+      title="Smart Environment status"
       tabindex="0"
     >
       <span class="smart-env-status-icon" aria-hidden="true"></span>
       <span class="smart-env-status-msg" aria-live="polite"></span>
       <span
         class="smart-env-status-indicator"
-        aria-label="Open events feed"
+        title="Open events feed"
         role="button"
         tabindex="0"
       ></span>
