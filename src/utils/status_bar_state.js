@@ -123,7 +123,7 @@ function to_non_empty_string(value) {
 
 /**
  * Build the primary environment activity state shared by the status bar and
- * the embedding progress item view.
+ * the status view item view.
  *
  * This keeps import, embedding, queued re-import, loading, and ready states
  * aligned across both surfaces so initial import progress renders the same way

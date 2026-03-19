@@ -1,28 +1,28 @@
-import styles from './embedding_progress.css';
+import styles from './env_status.css';
 import {
   get_env_activity_state,
   should_poll_env_activity,
 } from '../utils/status_bar_state.js';
 
 export function build_html() {
-  return `<div class="smart-env-embedding-progress">
-    <div class="smart-env-embedding-progress__header">
-      <div class="smart-env-embedding-progress__eyebrow">Smart Environment</div>
-      <h1 class="smart-env-embedding-progress__title"></h1>
-      <div class="smart-env-embedding-progress__status" aria-live="polite"></div>
+  return `<div class="smart-env-status-view">
+    <div class="smart-env-status-view__header">
+      <div class="smart-env-status-view__eyebrow">Smart Environment</div>
+      <h1 class="smart-env-status-view__title"></h1>
+      <div class="smart-env-status-view__status" aria-live="polite"></div>
     </div>
-    <div class="smart-env-embedding-progress__summary"></div>
+    <div class="smart-env-status-view__summary"></div>
     <div
-      class="smart-env-embedding-progress__progress"
+      class="smart-env-status-view__progress"
       role="progressbar"
       aria-valuemin="0"
       aria-valuemax="100"
       hidden
     >
-      <div class="smart-env-embedding-progress__progress-fill"></div>
+      <div class="smart-env-status-view__progress-fill"></div>
     </div>
-    <div class="smart-env-embedding-progress__details"></div>
-    <div class="smart-env-embedding-progress__actions"></div>
+    <div class="smart-env-status-view__details"></div>
+    <div class="smart-env-status-view__actions"></div>
   </div>`;
 }
 
@@ -35,13 +35,13 @@ export async function render(env, params = {}) {
 }
 
 function post_process(env, container, params = {}) {
-  const title_el = container.querySelector('.smart-env-embedding-progress__title');
-  const status_el = container.querySelector('.smart-env-embedding-progress__status');
-  const summary_el = container.querySelector('.smart-env-embedding-progress__summary');
-  const progress_el = container.querySelector('.smart-env-embedding-progress__progress');
-  const progress_fill_el = container.querySelector('.smart-env-embedding-progress__progress-fill');
-  const details_el = container.querySelector('.smart-env-embedding-progress__details');
-  const actions_el = container.querySelector('.smart-env-embedding-progress__actions');
+  const title_el = container.querySelector('.smart-env-status-view__title');
+  const status_el = container.querySelector('.smart-env-status-view__status');
+  const summary_el = container.querySelector('.smart-env-status-view__summary');
+  const progress_el = container.querySelector('.smart-env-status-view__progress');
+  const progress_fill_el = container.querySelector('.smart-env-status-view__progress-fill');
+  const details_el = container.querySelector('.smart-env-status-view__details');
+  const actions_el = container.querySelector('.smart-env-status-view__actions');
 
   const render_state = () => {
     const view_state = get_env_activity_state(env);
@@ -141,7 +141,7 @@ function render_details(details_el, details = []) {
     .filter(Boolean)
     .forEach((detail) => {
       const detail_el = details_el.ownerDocument.createElement('div');
-      detail_el.className = 'smart-env-embedding-progress__detail';
+      detail_el.className = 'smart-env-status-view__detail';
       detail_el.textContent = detail;
       details_el.appendChild(detail_el);
     });
@@ -159,7 +159,7 @@ function render_actions(actions_el, env, action_keys = []) {
   action_keys.forEach((action_key) => {
     const btn = actions_el.ownerDocument.createElement('button');
     btn.type = 'button';
-    btn.className = 'smart-env-embedding-progress__btn';
+    btn.className = 'smart-env-status-view__btn';
     bind_action_button(btn, env, action_key);
     actions_el.appendChild(btn);
   });
@@ -174,7 +174,7 @@ function render_actions(actions_el, env, action_keys = []) {
 function bind_action_button(btn, env, action_key) {
   switch (action_key) {
     case 'load_env':
-      btn.classList.add('smart-env-embedding-progress__btn--primary');
+      btn.classList.add('smart-env-status-view__btn--primary');
       btn.textContent = 'Load Smart Environment';
       btn.addEventListener('click', () => {
         env.start_mobile_env_load?.({
@@ -190,14 +190,14 @@ function bind_action_button(btn, env, action_key) {
       });
       return;
     case 'resume_embed':
-      btn.classList.add('smart-env-embedding-progress__btn--primary');
+      btn.classList.add('smart-env-status-view__btn--primary');
       btn.textContent = 'Resume embedding';
       btn.addEventListener('click', () => {
         env?.smart_sources?.entities_vector_adapter?.resume_embed_queue_processing?.();
       });
       return;
     case 'run_reimport':
-      btn.classList.add('smart-env-embedding-progress__btn--primary');
+      btn.classList.add('smart-env-status-view__btn--primary');
       btn.textContent = 'Run re-import';
       btn.addEventListener('click', () => {
         env?.run_re_import?.();

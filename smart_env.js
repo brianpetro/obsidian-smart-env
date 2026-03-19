@@ -18,7 +18,7 @@ import { register_completion_variable_adapter_replacements } from './utils/regis
 import { remove_smart_plugins_plugin } from './migrations/remove_smart_plugins_plugin.js';
 import { register_first_of_event_notifications } from './src/utils/onboarding_events.js';
 import { render as render_status_bar_component } from './src/components/status_bar.js';
-import { EmbeddingProgressView } from './src/views/embedding_progress_view.js';
+import { EnvStatusView } from './src/views/env_status_view.js';
 
 export class SmartEnv extends BaseSmartEnv {
   /**
@@ -133,7 +133,7 @@ export class SmartEnv extends BaseSmartEnv {
     }
 
     const plugin_key = plugin.manifest?.id || plugin.constructor?.name || 'main';
-    const view_classes = [EmbeddingProgressView];
+    const view_classes = [EnvStatusView];
 
     view_classes.forEach((ViewClass) => {
       const registration_key = `${plugin_key}:${ViewClass.view_type}`;
@@ -149,14 +149,14 @@ export class SmartEnv extends BaseSmartEnv {
   }
 
   /**
-   * Open the mobile-friendly embedding progress item view.
+   * Open the mobile-friendly status view item view.
    *
    * @param {object} [params={}]
    * @returns {void}
    */
-  open_embedding_progress_view(params = {}) {
+  open_env_status_view(params = {}) {
     this.register_env_item_views();
-    EmbeddingProgressView.open(this.obsidian_app.workspace, params);
+    EnvStatusView.open(this.obsidian_app.workspace, params);
   }
 
   /**
@@ -173,7 +173,7 @@ export class SmartEnv extends BaseSmartEnv {
     } = params;
 
     if (open_progress_view) {
-      this.open_embedding_progress_view({ active: true });
+      this.open_env_status_view({ active: true });
     }
 
     if (this.state === 'loaded') {

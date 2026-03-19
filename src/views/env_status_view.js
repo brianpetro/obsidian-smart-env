@@ -1,9 +1,9 @@
 import { SmartItemView } from '../../views/smart_item_view.js';
-import { render as render_embedding_progress } from '../components/embedding_progress.js';
+import { render as render_env_status } from '../components/env_status.js';
 
-export class EmbeddingProgressView extends SmartItemView {
-  static get view_type() { return 'smart-embedding-progress-view'; }
-  static get display_text() { return 'Embedding progress'; }
+export class EnvStatusView extends SmartItemView {
+  static get view_type() { return 'smart-env-status-view'; }
+  static get display_text() { return 'Environment status'; }
   static get icon_name() { return 'gauge'; }
   static get default_open_location() { return 'right'; }
 
@@ -14,7 +14,7 @@ export class EmbeddingProgressView extends SmartItemView {
 
   async render_view(params = {}, container = this.container) {
     if (!container) return;
-    const view_fragment = await render_embedding_progress.call(this.env.smart_view, this.env, {
+    const view_fragment = await render_env_status.call(this.env.smart_view, this.env, {
       view: this,
       ...params,
     });

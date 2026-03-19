@@ -1,41 +1,41 @@
-.smart-env-embedding-progress {
+.smart-env-status-view {
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
   padding: var(--size-4-4);
 }
 
-.smart-env-embedding-progress__header {
+.smart-env-status-view__header {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
 }
 
-.smart-env-embedding-progress__eyebrow {
+.smart-env-status-view__eyebrow {
   font-size: var(--font-ui-smaller);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-muted);
 }
 
-.smart-env-embedding-progress__title {
+.smart-env-status-view__title {
   margin: 0;
   font-size: var(--h2-size);
   line-height: 1.15;
 }
 
-.smart-env-embedding-progress__status {
+.smart-env-status-view__status {
   color: var(--text-muted);
   font-size: var(--font-ui-small);
   font-variant-numeric: tabular-nums;
 }
 
-.smart-env-embedding-progress__summary {
+.smart-env-status-view__summary {
   color: var(--text-normal);
   line-height: 1.4;
 }
 
-.smart-env-embedding-progress__progress {
+.smart-env-status-view__progress {
   height: 8px;
   border-radius: 999px;
   overflow: hidden;
@@ -43,19 +43,19 @@
   background: var(--background-secondary);
 }
 
-.smart-env-embedding-progress__progress-fill {
+.smart-env-status-view__progress-fill {
   height: 100%;
-  width: var(--smart-env-embedding-progress-pct, 0%);
+  width: var(--smart-env-status-view-pct, 0%);
   background: var(--color-accent);
 }
 
-.smart-env-embedding-progress__details {
+.smart-env-status-view__details {
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
 }
 
-.smart-env-embedding-progress__detail {
+.smart-env-status-view__detail {
   padding: 0.55rem 0.7rem;
   border-radius: var(--radius-m);
   background: var(--background-secondary);
@@ -64,13 +64,13 @@
   line-height: 1.35;
 }
 
-.smart-env-embedding-progress__actions {
+.smart-env-status-view__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
 }
 
-.smart-env-embedding-progress__btn {
+.smart-env-status-view__btn {
   appearance: none;
   border: 1px solid var(--background-modifier-border);
   background: var(--background-modifier-form-field);
@@ -81,25 +81,25 @@
   transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
 }
 
-.smart-env-embedding-progress__btn:hover {
+.smart-env-status-view__btn:hover {
   background: var(--background-modifier-hover);
 }
 
-.smart-env-embedding-progress__btn:active {
+.smart-env-status-view__btn:active {
   transform: translateY(1px);
 }
 
-.smart-env-embedding-progress__btn:focus-visible {
+.smart-env-status-view__btn:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }
 
-.smart-env-embedding-progress__btn--primary {
+.smart-env-status-view__btn--primary {
   background: var(--color-accent);
   border-color: transparent;
   color: var(--text-on-accent, var(--text-normal));
 }
 
-.smart-env-embedding-progress__btn--primary:hover {
+.smart-env-status-view__btn--primary:hover {
   background: var(--interactive-accent-hover);
 }
