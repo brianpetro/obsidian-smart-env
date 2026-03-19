@@ -1,7 +1,46 @@
-import path from 'node:path';
-import { pathToFileURL } from 'node:url';
 import test from 'ava';
 import { context_to_md_tree } from './to_md_tree.js';
+
+function file_href_from_absolute_path(absolute_path = '') {
+  const normalized_path = String(absolute_path).replace(/\\+/g, '/');
+  if (/^[a-zA-Z]:\//.test(normalized_path)) {
+    return `file:///${encodeURI(normalized_path)}`;
+  }
+  return `file://${encodeURI(normalized_path)}`;
+}
+
+function resolve_external_file_href(vault_root_path, normalized_path = '') {
+  const base_href = file_href_from_absolute_path(vault_root_path);
+  const directory_href = base_href.endsWith('/')
+    ? base_href
+    : `${base_href}/`
+  ;
+  return new URL(normalized_path, directory_href).href;
+}
+
+function resolve_external_full_path(vault_root_path, normalized_path = '') {
+  const href = resolve_external_file_href(vault_root_path, normalized_path);
+  const pathname = decodeURIComponent(new URL(href).pathname);
+  if (/^\/[a-zA-Z]:\//.test(pathname)) {
+    return pathname.slice(1);
+  }
+  return pathname;
+}
+
+function build_filesystem_adapter(vault_root_path, params = {}) {
+  return {
+    ...(params.methods || {}),
+    getBasePath: params.include_base_path === false
+      ? undefined
+      : (() => vault_root_path),
+    getFilePath: params.include_file_path === false
+      ? undefined
+      : ((normalized_path) => resolve_external_file_href(vault_root_path, normalized_path)),
+    getFullPath: params.include_full_path === false
+      ? undefined
+      : ((normalized_path) => resolve_external_full_path(vault_root_path, normalized_path)),
+  };
+}
 
 function build_smart_context(keys = [], params = {}) {
   const item_data = params.item_data || {};
@@ -42,14 +81,15 @@ test('context_to_md_tree builds a nested wikilink tree from context_items', (t) 
   );
 });
 
-test('context_to_md_tree resolves external links against the vault root path', (t) => {
+test('context_to_md_tree resolves external links with adapter.getFilePath when available', (t) => {
   const vault_root_path = process.platform === 'win32'
     ? 'C:\\Users\\brian\\Documents\\vault'
     : '/Users/brian/Documents/vault'
   ;
-  const external_href = pathToFileURL(
-    path.resolve(vault_root_path, '../smartconnections.app/main/smart-chat.html')
-  ).href;
+  const external_href = resolve_external_file_href(
+    vault_root_path,
+    '../smartconnections.app/main/smart-chat.html'
+  );
 
   const smart_context = build_smart_context(
     [
@@ -66,11 +106,7 @@ test('context_to_md_tree resolves external links against the vault root path', (
           plugin: {
             app: {
               vault: {
-                adapter: {
-                  getBasePath() {
-                    return vault_root_path;
-                  },
-                },
+                adapter: build_filesystem_adapter(vault_root_path),
               },
             },
           },
@@ -91,17 +127,59 @@ test('context_to_md_tree resolves external links against the vault root path', (
   );
 });
 
+test('context_to_md_tree falls back to adapter.getFullPath for external links', (t) => {
+  const vault_root_path = process.platform === 'win32'
+    ? 'C:\\Users\\brian\\Documents\\vault'
+    : '/Users/brian/Documents/vault'
+  ;
+  const readme_href = resolve_external_file_href(
+    vault_root_path,
+    '../smartconnections.app/README.md'
+  );
+
+  const smart_context = build_smart_context(
+    [
+      'external:../smartconnections.app/README.md',
+    ],
+    {
+      smart_context: {
+        env: {
+          plugin: {
+            app: {
+              vault: {
+                adapter: build_filesystem_adapter(vault_root_path, {
+                  include_file_path: false,
+                }),
+              },
+            },
+          },
+        },
+      },
+    },
+  );
+
+  t.is(
+    context_to_md_tree(smart_context),
+    [
+      '- smartconnections.app',
+      `\t- [README.md](${readme_href})`,
+    ].join('\n')
+  );
+});
+
 test('context_to_md_tree keeps expanded external-folder files as file links', (t) => {
   const vault_root_path = process.platform === 'win32'
     ? 'C:\\Users\\brian\\Documents\\vault'
     : '/Users/brian/Documents/vault'
   ;
-  const smart_chat_href = pathToFileURL(
-    path.resolve(vault_root_path, '../smartconnections.app/main/smart-chat.html')
-  ).href;
-  const readme_href = pathToFileURL(
-    path.resolve(vault_root_path, '../smartconnections.app/README.md')
-  ).href;
+  const smart_chat_href = resolve_external_file_href(
+    vault_root_path,
+    '../smartconnections.app/main/smart-chat.html'
+  );
+  const readme_href = resolve_external_file_href(
+    vault_root_path,
+    '../smartconnections.app/README.md'
+  );
 
   const smart_context = build_smart_context(
     [
@@ -122,11 +200,7 @@ test('context_to_md_tree keeps expanded external-folder files as file links', (t
           plugin: {
             app: {
               vault: {
-                adapter: {
-                  getBasePath() {
-                    return vault_root_path;
-                  },
-                },
+                adapter: build_filesystem_adapter(vault_root_path),
               },
             },
           },

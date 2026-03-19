@@ -1,6 +1,3 @@
-import path from 'node:path';
-import { pathToFileURL } from 'node:url';
-
 /**
  * Normalize a Smart Context item key for wikilink tree output.
  *
@@ -171,6 +168,23 @@ function ensure_path(root_node, dir_segments = []) {
 }
 
 /**
+ * Resolve the current vault adapter from Obsidian internals.
+ *
+ * @param {import('smart-contexts').SmartContext|any} smart_context
+ * @returns {any}
+ */
+function get_vault_adapter(smart_context) {
+  const app = smart_context?.env?.plugin?.app
+    || smart_context?.env?.app
+    || smart_context?.app
+    || globalThis.app
+    || null
+  ;
+
+  return app?.vault?.adapter || null;
+}
+
+/**
  * Resolve the current vault's absolute base path from Obsidian internals.
  *
  * Desktop `FileSystemAdapter` exposes `getBasePath()`. Mobile adapters expose
@@ -181,13 +195,7 @@ function ensure_path(root_node, dir_segments = []) {
  * @returns {string}
  */
 function get_vault_base_path(smart_context) {
-  const app = smart_context?.env?.plugin?.app
-    || smart_context?.env?.app
-    || smart_context?.app
-    || globalThis.app
-    || null
-  ;
-  const adapter = app?.vault?.adapter;
+  const adapter = get_vault_adapter(smart_context);
   if (!adapter) return '';
 
   if (typeof adapter.getBasePath === 'function') {
@@ -216,7 +224,90 @@ function get_vault_base_path(smart_context) {
 }
 
 /**
+ * Percent-encode filesystem path segments for use inside a file URL.
+ *
+ * @param {string} normalized_path
+ * @returns {string}
+ */
+function encode_file_path_segments(normalized_path = '') {
+  return normalized_path
+    .split('/')
+    .map((segment, index) => {
+      if (index === 0 && /^[a-zA-Z]:$/.test(segment)) {
+        return segment;
+      }
+      return encodeURIComponent(segment);
+    })
+    .join('/')
+  ;
+}
+
+/**
+ * Convert an absolute filesystem path into a `file://` href.
+ *
+ * @param {string} absolute_path
+ * @returns {string}
+ */
+function absolute_path_to_file_href(absolute_path = '') {
+  const trimmed_path = typeof absolute_path === 'string'
+    ? absolute_path.trim()
+    : ''
+  ;
+  if (!trimmed_path) return '';
+
+  if (/^[a-zA-Z][a-zA-Z\d+.-]*:\/\//.test(trimmed_path)) {
+    return trimmed_path;
+  }
+
+  const normalized_path = trimmed_path.replace(/\\+/g, '/');
+  const encoded_path = encode_file_path_segments(normalized_path);
+
+  if (/^[a-zA-Z]:\//.test(normalized_path)) {
+    return `file:///${encoded_path}`;
+  }
+
+  if (normalized_path.startsWith('//')) {
+    return `file:${encoded_path}`;
+  }
+
+  if (normalized_path.startsWith('/')) {
+    return `file://${encoded_path}`;
+  }
+
+  return '';
+}
+
+/**
+ * Resolve a normalized path relative to an absolute vault base path.
+ *
+ * @param {string} vault_base_path
+ * @param {string} normalized_path
+ * @returns {string}
+ */
+function resolve_file_href_from_base_path(vault_base_path, normalized_path) {
+  const base_href = absolute_path_to_file_href(vault_base_path);
+  if (!base_href) return '';
+
+  const directory_href = base_href.endsWith('/')
+    ? base_href
+    : `${base_href}/`
+  ;
+  const encoded_relative_path = encode_file_path_segments(normalized_path);
+
+  try {
+    return new URL(encoded_relative_path, directory_href).href;
+  } catch (err) {
+    return '';
+  }
+}
+
+/**
  * Resolve an external Smart Context key into a file URL.
+ *
+ * Prefers Obsidian's native adapter helpers when available:
+ * - `getFilePath(normalizedPath)` already returns a `file://` URL.
+ * - `getFullPath(normalizedPath)` returns an absolute filesystem path that can
+ *   be converted into a `file://` URL without Node's `path`/`url` modules.
  *
  * @param {import('smart-contexts').SmartContext|any} smart_context
  * @param {string} key
@@ -231,13 +322,43 @@ function resolve_external_href(smart_context, key = '') {
     return parsed.normalized_key;
   }
 
+  const absolute_key_href = absolute_path_to_file_href(parsed.normalized_key);
+  if (absolute_key_href) {
+    return absolute_key_href;
+  }
+
+  const adapter = get_vault_adapter(smart_context);
+  if (adapter && typeof adapter.getFilePath === 'function') {
+    try {
+      const file_href = adapter.getFilePath(parsed.normalized_key);
+      if (typeof file_href === 'string' && file_href.trim()) {
+        return file_href.trim();
+      }
+    } catch (err) {
+      /* no-op */
+    }
+  }
+
+  if (adapter && typeof adapter.getFullPath === 'function') {
+    try {
+      const full_path = adapter.getFullPath(parsed.normalized_key);
+      const full_path_href = absolute_path_to_file_href(full_path);
+      if (full_path_href) {
+        return full_path_href;
+      }
+    } catch (err) {
+      /* no-op */
+    }
+  }
+
   const vault_base_path = get_vault_base_path(smart_context);
   if (!vault_base_path) {
     return parsed.normalized_key;
   }
 
-  const absolute_path = path.resolve(vault_base_path, parsed.normalized_key);
-  return pathToFileURL(absolute_path).href;
+  return resolve_file_href_from_base_path(vault_base_path, parsed.normalized_key)
+    || parsed.normalized_key
+  ;
 }
 
 /**
@@ -309,7 +430,7 @@ function list_context_items(smart_context) {
  * Build a wikilink tree for a SmartContext using its context_items collection.
  *
  * External items are rendered as Markdown file links with absolute `file://`
- * URLs resolved from the vault root path.
+ * URLs resolved from Obsidian's vault adapter when available.
  *
  * @param {import('smart-contexts').SmartContext|any} smart_context
  * @returns {string}
