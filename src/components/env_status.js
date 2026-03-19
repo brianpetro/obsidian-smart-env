@@ -34,7 +34,20 @@ export async function render(env, params = {}) {
   return container;
 }
 
-function post_process(env, container, params = {}) {
+export async function post_process(env, container, params = {}) {
+  const {
+    live_updates = true,
+    event = null,
+    event_key = '',
+  } = params;
+
+  if (event_key) {
+    container.dataset.eventKey = event_key;
+  }
+  if (typeof event?.level === 'string' && event.level.trim()) {
+    container.dataset.eventLevel = event.level.trim();
+  }
+
   const title_el = container.querySelector('.smart-env-status-view__title');
   const status_el = container.querySelector('.smart-env-status-view__status');
   const summary_el = container.querySelector('.smart-env-status-view__summary');
@@ -46,13 +59,16 @@ function post_process(env, container, params = {}) {
   const render_state = () => {
     const view_state = get_env_activity_state(env);
 
-    title_el.textContent = view_state.view_title;
-    status_el.textContent = view_state.view_status;
-    summary_el.textContent = view_state.view_summary;
+    set_text(title_el, view_state.view_title);
+    set_text(status_el, view_state.view_status, { hide_empty: true });
+    set_text(summary_el, view_state.view_summary, { hide_empty: true });
 
     render_progress(progress_el, progress_fill_el, view_state);
     render_details(details_el, view_state.view_details);
-    render_actions(actions_el, env, view_state.view_actions);
+    render_actions(actions_el, env, view_state.view_actions, {
+      event,
+      event_key,
+    });
   };
 
   let polling_interval = null;
@@ -82,6 +98,9 @@ function post_process(env, container, params = {}) {
   };
 
   render_state();
+
+  if (!live_updates) return container;
+
   set_polling(should_poll_env_activity(env));
 
   const disposers = [];
@@ -93,6 +112,23 @@ function post_process(env, container, params = {}) {
     if (debounce_timeout) clearTimeout(debounce_timeout);
   });
   this.attach_disposer(container, disposers);
+
+  return container;
+}
+
+/**
+ * @param {HTMLElement} element
+ * @param {string} value
+ * @param {object} [params={}]
+ * @param {boolean} [params.hide_empty=false]
+ * @returns {void}
+ */
+function set_text(element, value, params = {}) {
+  if (!element) return;
+  const { hide_empty = false } = params;
+  const text = typeof value === 'string' ? value : '';
+  element.textContent = text;
+  if (hide_empty) element.hidden = !text;
 }
 
 /**
@@ -144,72 +180,106 @@ function render_details(details_el, details = []) {
       detail_el.className = 'smart-env-status-view__detail';
       detail_el.textContent = detail;
       details_el.appendChild(detail_el);
-    });
+    })
+  ;
+  details_el.hidden = details_el.childElementCount === 0;
 }
 
 /**
  * @param {HTMLElement} actions_el
  * @param {any} env
  * @param {string[]} action_keys
+ * @param {object} [params={}]
  * @returns {void}
  */
-function render_actions(actions_el, env, action_keys = []) {
+function render_actions(actions_el, env, action_keys = [], params = {}) {
   actions_el.replaceChildren();
 
   action_keys.forEach((action_key) => {
     const btn = actions_el.ownerDocument.createElement('button');
     btn.type = 'button';
     btn.className = 'smart-env-status-view__btn';
-    bind_action_button(btn, env, action_key);
+    bind_action_button(btn, env, action_key, params);
     actions_el.appendChild(btn);
   });
+
+  actions_el.hidden = actions_el.childElementCount === 0;
+}
+
+/**
+ * @param {string} action_key
+ * @returns {string}
+ */
+function get_action_label(action_key) {
+  switch (action_key) {
+    case 'load_env':
+      return 'Load Smart Environment';
+    case 'pause_embed':
+      return 'Pause embedding';
+    case 'resume_embed':
+      return 'Resume embedding';
+    case 'run_reimport':
+      return 'Run re-import';
+    case 'open_notifications':
+      return 'Open events feed';
+    default:
+      return action_key;
+  }
 }
 
 /**
  * @param {HTMLButtonElement} btn
  * @param {any} env
  * @param {string} action_key
+ * @param {object} [params={}]
  * @returns {void}
  */
-function bind_action_button(btn, env, action_key) {
+function bind_action_button(btn, env, action_key, params = {}) {
+  const label = get_action_label(action_key);
+  btn.textContent = label;
+
+  if (['load_env', 'resume_embed', 'run_reimport'].includes(action_key)) {
+    btn.classList.add('smart-env-status-view__btn--primary');
+  }
+
+  btn.addEventListener('click', async () => {
+    await run_action_key(env, action_key, params);
+  });
+}
+
+/**
+ * @param {any} env
+ * @param {string} action_key
+ * @param {object} [params={}]
+ * @returns {Promise<void>}
+ */
+async function run_action_key(env, action_key, params = {}) {
   switch (action_key) {
     case 'load_env':
-      btn.classList.add('smart-env-status-view__btn--primary');
-      btn.textContent = 'Load Smart Environment';
-      btn.addEventListener('click', () => {
-        env.start_mobile_env_load?.({
-          source: 'embedding_progress_view',
+      if (typeof env?.start_mobile_env_load === 'function') {
+        await env.start_mobile_env_load({
+          source: 'env_status_component',
           open_progress_view: false,
+          event: params.event,
+          event_key: params.event_key,
         });
-      });
+        return;
+      }
+      await env?.load?.(true);
       return;
     case 'pause_embed':
-      btn.textContent = 'Pause embedding';
-      btn.addEventListener('click', () => {
-        env?.smart_sources?.entities_vector_adapter?.halt_embed_queue_processing?.();
-      });
+      env?.smart_sources?.entities_vector_adapter?.halt_embed_queue_processing?.();
       return;
     case 'resume_embed':
-      btn.classList.add('smart-env-status-view__btn--primary');
-      btn.textContent = 'Resume embedding';
-      btn.addEventListener('click', () => {
-        env?.smart_sources?.entities_vector_adapter?.resume_embed_queue_processing?.();
-      });
+      env?.smart_sources?.entities_vector_adapter?.resume_embed_queue_processing?.();
       return;
     case 'run_reimport':
-      btn.classList.add('smart-env-status-view__btn--primary');
-      btn.textContent = 'Run re-import';
-      btn.addEventListener('click', () => {
-        env?.run_re_import?.();
-      });
+      await env?.run_re_import?.();
       return;
     case 'open_notifications':
-      btn.textContent = 'Open events feed';
-      btn.addEventListener('click', () => {
-        env?.open_notifications_feed_modal?.();
-      });
+      env?.open_notifications_feed_modal?.();
       return;
     default:
-      btn.textContent = action_key;
+      return;
   }
 }

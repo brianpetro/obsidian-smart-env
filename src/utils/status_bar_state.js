@@ -122,6 +122,52 @@ function to_non_empty_string(value) {
 }
 
 /**
+ * @param {string} collection_key
+ * @returns {string}
+ */
+function format_collection_label(collection_key = '') {
+  return collection_key
+    .split('_')
+    .filter(Boolean)
+    .map((part) => part.slice(0, 1).toUpperCase() + part.slice(1))
+    .join(' ')
+  ;
+}
+
+/**
+ * Resolve collection-loading progress while Smart Environment is in its base loading phase.
+ *
+ * `env.collections` advances from `init` to `loaded` one collection at a time.
+ * The first non-loaded collection is treated as the current collection being loaded.
+ *
+ * @param {import('../../smart_env.js').SmartEnv} env
+ * @returns {{
+ *   total: number,
+ *   loaded: number,
+ *   pending: number,
+ *   current_key: string,
+ *   current_label: string,
+ * }}
+ */
+function get_collection_loading_state(env) {
+  const collection_entries = Object.entries(env?.collections || {})
+    .filter(([collection_key]) => Boolean(collection_key))
+  ;
+  const total = collection_entries.length;
+  const loaded = collection_entries.filter(([, state]) => state === 'loaded').length;
+  const pending_entries = collection_entries.filter(([, state]) => state !== 'loaded');
+  const current_key = pending_entries[0]?.[0] || '';
+
+  return {
+    total,
+    loaded,
+    pending: Math.max(0, total - loaded),
+    current_key,
+    current_label: current_key ? format_collection_label(current_key) : '',
+  };
+}
+
+/**
  * Build the primary environment activity state shared by the status bar and
  * the status view item view.
  *
@@ -223,23 +269,51 @@ export function get_env_activity_state(env) {
   }
 
   if (env?.state === 'loading') {
+    const collection_loading = get_collection_loading_state(env);
+    const collection_progress_value = collection_loading.total > 0
+      ? collection_loading.loaded
+      : null
+    ;
+    const collection_progress_total = collection_loading.total > 0
+      ? collection_loading.total
+      : null
+    ;
+    const current_collection_label = collection_loading.current_label;
+    const collection_status = collection_loading.total > 0
+      ? `${collection_loading.loaded}/${collection_loading.total}`
+      : 'In progress'
+    ;
+
     return {
       kind: 'loading',
-      message: 'Loading Smart Env…',
-      title: 'Smart Environment is loading.',
+      message: current_collection_label
+        ? `Loading ${current_collection_label}…`
+        : 'Loading Smart Env…',
+      title: current_collection_label
+        ? `Smart Environment is loading ${current_collection_label}.`
+        : 'Smart Environment is loading.',
       click_action: 'noop',
       indicator_level: null,
-      progress_value: null,
-      progress_total: null,
-      progress_pct: null,
+      progress_value: collection_progress_value,
+      progress_total: collection_progress_total,
+      progress_pct: get_progress_pct(collection_progress_value, collection_progress_total),
       view_title: 'Loading Smart Environment',
-      view_status: 'In progress',
-      view_summary: 'Preparing collections, sources, and shared plugin state.',
+      view_status: current_collection_label
+        ? `${current_collection_label} • ${collection_status}`
+        : collection_status,
+      view_summary: current_collection_label
+        ? `Loading collection: ${current_collection_label}.`
+        : 'Preparing collections, sources, and shared plugin state.',
       view_details: [
+        collection_loading.total > 0
+          ? `${collection_loading.loaded} of ${collection_loading.total} collection${collection_loading.total === 1 ? '' : 's'} loaded.`
+          : '',
+        collection_loading.pending > 0
+          ? `${collection_loading.pending} collection${collection_loading.pending === 1 ? '' : 's'} remaining.`
+          : '',
         reimport_queue_count > 0
           ? `${reimport_queue_count} source${reimport_queue_count === 1 ? '' : 's'} queued for re-import after load.`
           : '',
-        'This sidebar stays available on mobile while loading continues.',
       ].filter(Boolean),
       view_actions: [],
     };
@@ -292,17 +366,17 @@ export function get_env_activity_state(env) {
     progress_pct: null,
     view_title: 'Smart Environment not loaded',
     view_status: 'Idle',
-    view_summary: 'Load Smart Environment to import sources and begin embedding work.',
-    view_details: [
-      'On mobile, this item view remains accessible from the sidebar while loading and embedding continue.',
-    ],
+    view_summary: 'Load Smart Environment to enable Smart Plugins.',
+    view_details: [],
     view_actions: ['load_env'],
   };
 }
 
 /**
  * Determine whether status surfaces should keep polling the shared activity
- * state. Polling is limited to active load/import/embed phases.
+ * state. Polling is limited to active load/import/embed phases and the
+ * deferred pre-load state so mobile status surfaces can transition into
+ * loading without being reopened.
  *
  * @param {import('../../smart_env.js').SmartEnv} env
  * @returns {boolean}
@@ -315,6 +389,7 @@ export function should_poll_env_activity(env) {
     'importing',
     'reimporting',
     'loading',
+    'not_loaded',
   ].includes(activity_state.kind);
 }
 
