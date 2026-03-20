@@ -27,6 +27,9 @@ export function build_suggest_scope_items(modal, params = {}) {
     acc.push({
       select_action: () => {
         modal.update_suggestions(action_key);
+        setTimeout(() => {
+          modal.inputEl.focus(); // re-focus input after click
+        }, 100);
       },
       key: action_key,
       display: display_name,
