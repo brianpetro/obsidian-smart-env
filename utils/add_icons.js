@@ -48,13 +48,13 @@ export function add_smart_chat_icon() {
  * Registers the Smart Connections icon.
  */
 export function add_smart_connections_icon() {
-  addIcon("smart-connections", `<path d="M50,20 L80,40 L80,60 L50,100" stroke="currentColor" stroke-width="4" fill="none"/>
-    <path d="M30,50 L55,70" stroke="currentColor" stroke-width="5" fill="none"/>
-    <circle cx="50" cy="20" r="9" fill="currentColor"/>
-    <circle cx="80" cy="40" r="9" fill="currentColor"/>
-    <circle cx="80" cy="70" r="9" fill="currentColor"/>
-    <circle cx="50" cy="100" r="9" fill="currentColor"/>
-    <circle cx="30" cy="50" r="9" fill="currentColor"/>`);
+  addIcon("smart-connections", `<path d="M44.9,9.18 L75.51,29.59 L75.51,50 L44.9,90.82" stroke="currentColor" stroke-width="4.08" fill="none"/>
+    <path d="M24.49,39.8 L50,60.2" stroke="currentColor" stroke-width="5.1" fill="none"/>
+    <circle cx="44.9" cy="9.18" r="9.18" fill="currentColor"/>
+    <circle cx="75.51" cy="29.59" r="9.18" fill="currentColor"/>
+    <circle cx="75.51" cy="60.2" r="9.18" fill="currentColor"/>
+    <circle cx="44.9" cy="90.82" r="9.18" fill="currentColor"/>
+    <circle cx="24.49" cy="39.8" r="9.18" fill="currentColor"/>`);
 }
 
 /**
