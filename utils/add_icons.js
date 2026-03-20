@@ -3,20 +3,20 @@ const svg_wrap_24 = (inner_svg) => {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${inner_svg}</svg>`;
 };
 const smart_copy_note_svg = svg_wrap_24(`
-  <rect x="9" y="7" width="12" height="14" rx="2"></rect>
-  <path d="M5 17H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v2"></path>
-  <path d="M12 11h6"></path>
-  <path d="M12 14h6"></path>
-  <path d="M12 17h4"></path>
+  <rect x="8.76" y="6.6" width="12.96" height="15.12" rx="2.16"></rect>
+  <path d="M4.44 17.4H3.36a2.16 2.16 0 0 1-2.16-2.16V4.44a2.16 2.16 0 0 1 2.16-2.16h10.8a2.16 2.16 0 0 1 2.16 2.16v2.16"></path>
+  <path d="M12 10.92h6.48"></path>
+  <path d="M12 14.16h6.48"></path>
+  <path d="M12 17.4h4.32"></path>
 `);
 
 const smart_context_builder_svg = svg_wrap_24(`
-  <rect x="3" y="4" width="12" height="16" rx="2"></rect>
-  <path d="M6 8h6"></path>
-  <path d="M6 12h6"></path>
-  <path d="M6 16h4"></path>
-  <path d="M19 10v4"></path>
-  <path d="M17 12h4"></path>
+  <rect x="2.1" y="3.2" width="13.2" height="17.6" rx="2.2"></rect>
+  <path d="M5.4 7.6h6.6"></path>
+  <path d="M5.4 12h6.6"></path>
+  <path d="M5.4 16.4h4.4"></path>
+  <path d="M19.7 9.8v4.4"></path>
+  <path d="M17.5 12h4.4"></path>
 `);
 
 const smart_inline_connections_svg = svg_wrap_24(`
