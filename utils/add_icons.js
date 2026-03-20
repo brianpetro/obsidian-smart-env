@@ -1,7 +1,9 @@
 import { addIcon } from "obsidian";
+
 const svg_wrap_24 = (inner_svg) => {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${inner_svg}</svg>`;
 };
+
 const smart_copy_note_svg = svg_wrap_24(`
   <rect x="8.76" y="6.6" width="12.96" height="15.12" rx="2.16"></rect>
   <path d="M4.44 17.4H3.36a2.16 2.16 0 0 1-2.16-2.16V4.44a2.16 2.16 0 0 1 2.16-2.16h10.8a2.16 2.16 0 0 1 2.16 2.16v2.16"></path>
@@ -20,11 +22,11 @@ const smart_context_builder_svg = svg_wrap_24(`
 `);
 
 const smart_inline_connections_svg = svg_wrap_24(`
-  <path d="M4 6h16"></path>
-  <path d="M4 18h16"></path>
-  <circle cx="12" cy="12" r="3"></circle>
-  <circle cx="7" cy="12" r="1" fill="currentColor" stroke="none"></circle>
-  <circle cx="17" cy="12" r="1" fill="currentColor" stroke="none"></circle>
+  <path d="M2.4 4.8h19.2"></path>
+  <path d="M2.4 19.2h19.2"></path>
+  <circle cx="12" cy="12" r="3.6"></circle>
+  <circle cx="6" cy="12" r="1.2" fill="currentColor" stroke="none"></circle>
+  <circle cx="18" cy="12" r="1.2" fill="currentColor" stroke="none"></circle>
 `);
 
 /**
@@ -46,7 +48,7 @@ export function add_smart_chat_icon() {
  * Registers the Smart Connections icon.
  */
 export function add_smart_connections_icon() {
-    addIcon("smart-connections", `<path d="M50,20 L80,40 L80,60 L50,100" stroke="currentColor" stroke-width="4" fill="none"/>
+  addIcon("smart-connections", `<path d="M50,20 L80,40 L80,60 L50,100" stroke="currentColor" stroke-width="4" fill="none"/>
     <path d="M30,50 L55,70" stroke="currentColor" stroke-width="5" fill="none"/>
     <circle cx="50" cy="20" r="9" fill="currentColor"/>
     <circle cx="80" cy="40" r="9" fill="currentColor"/>
@@ -61,20 +63,20 @@ export function add_smart_connections_icon() {
 export function add_smart_lookup_icon() {
   addIcon("smart-lookup", `<defs>
   <clipPath id="sc-in-search-clip" clipPathUnits="userSpaceOnUse">
-    <circle cx="11" cy="11" r="8"></circle>
+    <circle cx="10.9" cy="10.9" r="8.8"></circle>
   </clipPath>
   <symbol id="smart-lookup-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
     <g clip-path="url(#sc-in-search-clip)">
-      <path d="M10.3,5.4 L14.5,8.2 L14.5,11.0 L10.3,16.6" stroke="currentColor" stroke-width="0.56" fill="none"></path>
-      <path d="M7.5,9.6 L11.0,12.4" stroke="currentColor" stroke-width="0.7" fill="none"></path>
-      <circle cx="10.3" cy="5.4" r="0.3" fill="currentColor"></circle>
-      <circle cx="14.5" cy="8.2" r="0.3" fill="currentColor"></circle>
-      <circle cx="14.5" cy="12.4" r="0.3" fill="currentColor"></circle>
-      <circle cx="10.3" cy="16.6" r="0.3" fill="currentColor"></circle>
-      <circle cx="7.5" cy="9.6" r="0.3" fill="currentColor"></circle>
+      <path d="M10.13 4.74L14.75 7.82L14.75 10.9L10.13 17.06" stroke="currentColor" stroke-width="0.56" fill="none"></path>
+      <path d="M7.05 9.36L10.9 12.44" stroke="currentColor" stroke-width="0.7" fill="none"></path>
+      <circle cx="10.13" cy="4.74" r="0.33" fill="currentColor"></circle>
+      <circle cx="14.75" cy="7.82" r="0.33" fill="currentColor"></circle>
+      <circle cx="14.75" cy="12.44" r="0.33" fill="currentColor"></circle>
+      <circle cx="10.13" cy="17.06" r="0.33" fill="currentColor"></circle>
+      <circle cx="7.05" cy="9.36" r="0.33" fill="currentColor"></circle>
     </g>
-    <circle cx="11" cy="11" r="8"></circle>
-    <path d="m21 21-4.3-4.3"></path>
+    <circle cx="10.9" cy="10.9" r="8.8"></circle>
+    <path d="M21.9 21.9L17.17 17.17"></path>
   </symbol>
 </defs>
 <use href="#smart-lookup-icon" />`);
@@ -105,12 +107,13 @@ export function add_inline_connections_icon() {
 }
 
 const smart_footer_connections_svg = svg_wrap_24(`
-  <path d="M4 6h16"></path>
-  <path d="M4 12h16"></path>
-  <circle cx="12" cy="18" r="3"></circle>
-  <circle cx="7" cy="18" r="1" fill="currentColor" stroke="none"></circle>
-  <circle cx="17" cy="18" r="1" fill="currentColor" stroke="none"></circle>
+  <path d="M2.72 5.04h18.56"></path>
+  <path d="M2.72 12h18.56"></path>
+  <circle cx="12" cy="18.96" r="3.48"></circle>
+  <circle cx="6.2" cy="18.96" r="1.16" fill="currentColor" stroke="none"></circle>
+  <circle cx="17.8" cy="18.96" r="1.16" fill="currentColor" stroke="none"></circle>
 `);
+
 /**
  * Registers the Footer Connections icon (small-size safe).
  * Icon names: smart-footer-connections
@@ -124,14 +127,14 @@ export function add_footer_connections_icon() {
 export function add_smart_dupe_detector_icon() {
   addIcon("smart-dupe-detector", `
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <rect x="3" y="5" width="8" height="14" rx="2"></rect>
-  <rect x="13" y="5" width="8" height="14" rx="2"></rect>
-  <path d="M8 10H16"></path>
-  <path d="M8 14H16"></path>
-  <circle cx="7" cy="10" r="1" fill="currentColor" stroke="none"></circle>
-  <circle cx="7" cy="14" r="1" fill="currentColor" stroke="none"></circle>
-  <circle cx="17" cy="10" r="1" fill="currentColor" stroke="none"></circle>
-  <circle cx="17" cy="14" r="1" fill="currentColor" stroke="none"></circle>
+  <rect x="1.92" y="4.16" width="8.96" height="15.68" rx="2.24"></rect>
+  <rect x="13.12" y="4.16" width="8.96" height="15.68" rx="2.24"></rect>
+  <path d="M7.52 9.76H16.48"></path>
+  <path d="M7.52 14.24H16.48"></path>
+  <circle cx="6.4" cy="9.76" r="1.12" fill="currentColor" stroke="none"></circle>
+  <circle cx="6.4" cy="14.24" r="1.12" fill="currentColor" stroke="none"></circle>
+  <circle cx="17.6" cy="9.76" r="1.12" fill="currentColor" stroke="none"></circle>
+  <circle cx="17.6" cy="14.24" r="1.12" fill="currentColor" stroke="none"></circle>
 </svg>
 `);
 }
@@ -140,10 +143,10 @@ export function add_smart_dupe_detector_icon() {
 export function add_smart_named_contexts_icon() {
   addIcon("smart-named-contexts", `
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path>
-  <path d="M8 8h8"></path>
-  <path d="M8 11h8"></path>
-  <path d="M8 14h6"></path>
+  <path d="M19.84 22.08 12 17.6 4.16 22.08V4.16a2.24 2.24 0 0 1 2.24-2.24H17.6a2.24 2.24 0 0 1 2.24 2.24v17.92Z"></path>
+  <path d="M7.52 7.52h8.96"></path>
+  <path d="M7.52 10.88h8.96"></path>
+  <path d="M7.52 14.24h6.72"></path>
 </svg>
 `);
 }
