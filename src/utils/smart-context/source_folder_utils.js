@@ -10,20 +10,6 @@ export function normalize_folder_path(folder_path) {
 }
 
 /**
- * Check whether a source key belongs to a folder path.
- *
- * @param {string} source_key
- * @param {string} folder_path
- * @returns {boolean}
- */
-export function is_source_in_folder(source_key, folder_path) {
-  const normalized_folder_path = normalize_folder_path(folder_path);
-  if (!normalized_folder_path) return true;
-  if (source_key === normalized_folder_path) return true;
-  return source_key.startsWith(`${normalized_folder_path}/`);
-}
-
-/**
  * Preserve the current modal input before drilling into a nested suggestion scope.
  *
  * @param {object} modal
@@ -45,6 +31,13 @@ export function reset_modal_input(modal) {
  */
 export function get_sources_list(ctx, params = {}) {
   const folder_path = params?.folder_path || '';
-  const items = Object.values(ctx?.env?.smart_sources?.items || {});
-  return items.filter((source) => is_source_in_folder(source.key, folder_path));
+  const normalized_folder_path = normalize_folder_path(folder_path);
+  if(!normalized_folder_path) {
+    return Object.values(ctx?.env?.smart_sources?.items || {});
+  }
+  const starts_with_folder_path = `${normalized_folder_path}/`;
+  return ctx?.env?.smart_sources?.filter((item) => {
+    if (item.key === normalized_folder_path) return true;
+    return item.key.startsWith(starts_with_folder_path);
+  });
 }

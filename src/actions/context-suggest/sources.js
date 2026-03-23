@@ -3,7 +3,7 @@ import { Platform } from 'obsidian';
 import {
   get_sources_list,
   reset_modal_input,
-} from './source_folder_utils.js';
+} from '../../utils/smart-context/source_folder_utils.js';
 
 const MOD_CHAR = Platform.isMacOS ? '⌘' : 'Ctrl';
 
