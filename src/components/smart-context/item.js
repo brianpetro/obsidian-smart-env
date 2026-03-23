@@ -1,35 +1,8 @@
 import styles from './styles.css';
-import { copy_to_clipboard } from '../../../utils/copy_to_clipboard.js';
+import { copy_to_clipboard } from '../../utils/copy_to_clipboard.js';
 import { Menu } from 'obsidian';
 import { context_to_md_tree } from '../../utils/smart-context/to_md_tree.js';
-
-/**
- * @param {Function} callback
- * @returns {void}
- */
-const schedule_next_frame = (callback) => {
-  if (typeof requestAnimationFrame === 'function') {
-    requestAnimationFrame(callback);
-    return;
-  }
-  setTimeout(callback, 0);
-};
-
-/**
- * @param {Function} render_fn
- * @returns {Function}
- */
-const create_render_scheduler = (render_fn) => {
-  let render_pending = false;
-  return () => {
-    if (render_pending) return;
-    render_pending = true;
-    schedule_next_frame(async () => {
-      render_pending = false;
-      await render_fn();
-    });
-  };
-};
+import { create_render_scheduler } from '../../utils/render_utils.js';
 
 export function build_html(ctx, opts = {}) {
   return `<div>
@@ -82,7 +55,7 @@ export async function post_process(ctx, container, opts = {}) {
     });
   };
   const schedule_render_children = create_render_scheduler(render_children);
-  
+
   const plugin = ctx.env.plugin;
   const app = plugin?.app || window.app;
   const register = plugin?.registerDomEvent?.bind(plugin) || ((el, evt, cb) => el.addEventListener(evt, cb));
@@ -93,7 +66,6 @@ export async function post_process(ctx, container, opts = {}) {
     const menu = new Menu(app);
     menu.addItem((mi) =>
       mi.setTitle('Copy link tree').setIcon('copy').onClick(async () => {
-        console.log({container});
         const md = context_to_md_tree(ctx);
         await copy_to_clipboard(md);
       })

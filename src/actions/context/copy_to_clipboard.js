@@ -1,4 +1,4 @@
-import { copy_to_clipboard as base_copy } from '../../../utils/copy_to_clipboard.js';
+import { copy_to_clipboard as base_copy } from '../../utils/copy_to_clipboard.js';
 import { format_stats_message } from '../../utils/smart-context/format_stats_message.js';
 
 export async function copy_to_clipboard(params = {}) {

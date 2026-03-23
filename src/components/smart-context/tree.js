@@ -1,34 +1,8 @@
 import { build_tree_html } from '../../utils/smart-context/build_tree_html.js';
 import tree_styles from './tree.css';
 import { get_nested_context_item_keys } from './tree_utils.js';
+import { create_render_scheduler } from '../../utils/render_utils.js';
 
-/**
- * @param {Function} callback
- * @returns {void}
- */
-const schedule_next_frame = (callback) => {
-  if (typeof requestAnimationFrame === 'function') {
-    requestAnimationFrame(callback);
-    return;
-  }
-  setTimeout(callback, 0);
-};
-
-/**
- * @param {Function} render_fn
- * @returns {Function}
- */
-const create_render_scheduler = (render_fn) => {
-  let render_pending = false;
-  return () => {
-    if (render_pending) return;
-    render_pending = true;
-    schedule_next_frame(() => {
-      render_pending = false;
-      render_fn();
-    });
-  };
-};
 
 /**
  * @param {import('smart-contexts').SmartContext} ctx
@@ -72,11 +46,11 @@ export async function post_process(ctx, container, params = {}) {
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       const li = container.querySelector(`.sc-tree-item[data-path="${item.key}"]`);
-      if (!li){
+      if (!li) {
         console.warn(`Smart Context: Could not find tree item for path: ${item.key}`);
         continue;
       }
-      env.smart_components.render_component('context_item_leaf', item).then(leaf => {
+      env.smart_components.render_component('context_item_leaf', item).then((leaf) => {
         this.empty(li);
         li.appendChild(leaf);
       });
