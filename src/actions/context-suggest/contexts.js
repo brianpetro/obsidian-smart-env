@@ -59,29 +59,6 @@ function list_context_items(env) {
 
 /**
  * @param {import('smart-contexts').SmartContext} ctx
- * @param {Array<{ key: string, d: number }>} items
- * @returns {Array<{ key: string, d: number }>}
- */
-function normalize_items_preserving_depth(ctx, items) {
-  const out = [];
-  for (let i = 0; i < items.length; i += 1) {
-    const item = items[i];
-    if (!item || typeof item.key !== 'string') continue;
-    const incoming_depth = Number.isFinite(item.d) ? item.d : 0;
-
-    const existing = ctx?.data?.context_items?.[item.key];
-    const existing_depth = Number.isFinite(existing?.d) ? existing.d : null;
-
-    out.push({
-      key: item.key,
-      d: existing_depth === null ? incoming_depth : Math.min(existing_depth, incoming_depth),
-    });
-  }
-  return out;
-}
-
-/**
- * @param {import('smart-contexts').SmartContext} ctx
  * @returns {boolean}
  */
 function is_codeblock_context(ctx) {
@@ -112,22 +89,6 @@ function update_codeblock_named_contexts(ctx, params = {}) {
 }
 
 /**
- * @param {import('smart-contexts').SmartContext} ctx
- * @param {object} params
- * @param {Array<{ key: string, d: number }>} params.items
- * @param {string} params.context_name
- * @returns {Array<{ key: string, d: number, from_named_context: string }>}
- */
-function build_codeblock_named_context_items(ctx, params = {}) {
-  const items = Array.isArray(params.items) ? params.items : [];
-  const context_name = params.context_name;
-  return normalize_items_preserving_depth(ctx, items).map((item) => ({
-    ...item,
-    from_named_context: context_name,
-  }));
-}
-
-/**
  * @param {any} other_ctx
  * @returns {Array<{ key: string, d: number }>}
  */
@@ -142,8 +103,7 @@ function get_items_from_context(other_ctx) {
     const [key, item_data] = entries[i];
     if (!key) continue;
     if (item_data?.exclude) continue;
-    const depth = Number.isFinite(item_data?.d) ? item_data.d : 0;
-    out.push({ key, d: depth });
+    out.push({ key });
   }
 
   return out;
@@ -162,34 +122,13 @@ function build_named_context_item_payloads(ctx, params = {}) {
   const context_name = params.context_name;
   const include_named_context = Boolean(params.include_named_context);
   const items = get_items_from_context(other_ctx);
-  if (is_codeblock_context(ctx)) {
-    if (include_named_context) {
-      return build_codeblock_named_context_items(ctx, { items, context_name });
-    }
-    return normalize_items_preserving_depth(ctx, items);
+  for (let i = 0; i < items.length; i += 1) {
+    const item = items[i];
+    if (!item || typeof item.key !== 'string') continue;
+    if (!include_named_context) continue;
+    item.from_named_context = context_name;
   }
-  const normalized_items = normalize_items_preserving_depth(ctx, items);
-  if (!include_named_context) return normalized_items;
-  return normalized_items.map((item) => ({
-    ...item,
-    from_named_context: context_name,
-  }));
-}
-
-/**
- * @param {import('smart-contexts').SmartContext} ctx
- * @param {Array<{ key: string, d: number, from_named_context?: string }>} payloads
- * @returns {void}
- */
-function add_context_payloads(ctx, payloads = []) {
-  if (!payloads.length) return;
-  if (typeof ctx?.add_items === 'function') {
-    ctx.add_items(payloads);
-    return;
-  }
-  if (typeof ctx?.add_item === 'function') {
-    payloads.forEach((payload) => ctx.add_item(payload));
-  }
+  return items;
 }
 
 /**
@@ -209,7 +148,7 @@ function add_named_context_items(ctx, params = {}) {
   if (is_codeblock_context(ctx) && params.include_named_context) {
     update_codeblock_named_contexts(ctx, { context_name: params.context_name });
   }
-  add_context_payloads(ctx, payloads);
+  ctx.add_items(payloads);
   return payloads;
 }
 
