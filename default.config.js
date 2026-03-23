@@ -66,10 +66,6 @@ const smart_env_config = {
       class: SmartView,
       adapter: SmartViewObsidianAdapter,
     },
-    // smart_notices: {
-    //   class: SmartNotices,
-    //   adapter: Notice,
-    // },
     smart_embed_model: {
       class: SmartEmbedModel,
       adapters: {
