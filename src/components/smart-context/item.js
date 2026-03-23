@@ -14,7 +14,7 @@ export function build_html(ctx, opts = {}) {
         <div class="sc-context-tree"></div>
       </div>
       <div class="sc-context-view-footer">
-        <div class="sc-context-meta"></div>
+        <div class="sc-context-exclusions"></div>
       </div>
     </div>
   </div>`;
@@ -36,23 +36,24 @@ export async function post_process(ctx, container, opts = {}) {
   const disposers = [];
 
   const render_children = async () => {
+    const [actions, tree, exclusions, meta] = await Promise.all([
+      ctx.env.smart_components.render_component('smart_context_actions', ctx, opts),
+      ctx.env.smart_components.render_component('smart_context_tree', ctx, opts),
+      ctx.env.smart_components.render_component('smart_context_exclusions_list', ctx, opts),
+    ]);
+
     const header = container.querySelector('.sc-context-view-header');
-    ctx.env.smart_components.render_component('smart_context_actions', ctx, opts).then((actions) => {
-      this.empty(header);
-      header.appendChild(actions);
-    });
+    this.empty(header);
+    if (actions) header.appendChild(actions);
 
     const body = container.querySelector('.sc-context-view-body');
-    ctx.env.smart_components.render_component('smart_context_tree', ctx, opts).then((tree) => {
-      this.empty(body);
-      body.appendChild(tree);
-    });
+    this.empty(body);
+    if (tree) body.appendChild(tree);
 
     const footer = container.querySelector('.sc-context-view-footer');
-    ctx.env.smart_components.render_component('smart_context_meta', ctx, opts).then((meta) => {
-      this.empty(footer);
-      footer.appendChild(meta);
-    });
+    this.empty(footer);
+    if (exclusions) footer.appendChild(exclusions);
+
   };
   const schedule_render_children = create_render_scheduler(render_children);
 

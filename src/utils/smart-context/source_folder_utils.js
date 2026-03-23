@@ -1,12 +1,15 @@
 /**
- * Normalize a folder path for prefix comparisons.
+ * Normalize a folder path for source-list filtering.
  *
  * @param {string} folder_path
  * @returns {string}
  */
-export function normalize_folder_path(folder_path) {
-  if (typeof folder_path !== 'string') return '';
-  return folder_path.replace(/\/+$/g, '');
+function normalize_folder_path(folder_path = '') {
+  return String(folder_path ?? '')
+    .trim()
+    .replace(/\\+/g, '/')
+    .replace(/\/+$/g, '')
+  ;
 }
 
 /**

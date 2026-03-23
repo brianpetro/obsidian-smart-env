@@ -24,6 +24,7 @@ import { render as settings_env_sources_component } from './src/components/setti
 import { render as settings_model_actions_component } from './src/components/settings/model_actions.js';
 import { render as settings_smart_env_component } from './src/components/settings/smart_env.js';
 import { render as smart_context_actions_component } from './src/components/smart-context/actions.js';
+import { render as smart_context_exclusions_list_component } from './src/components/smart-context/exclusions_list.js';
 import { render as smart_context_item_component } from './src/components/smart-context/item.js';
 import { render as smart_context_meta_component } from './src/components/smart-context/meta.js';
 import { render as smart_context_tree_component } from './src/components/smart-context/tree.js';
@@ -79,6 +80,7 @@ export const smart_env_config = {
     settings_model_actions: { render: settings_model_actions_component },
     settings_smart_env: { render: settings_smart_env_component },
     smart_context_actions: { render: smart_context_actions_component },
+    smart_context_exclusions_list: { render: smart_context_exclusions_list_component },
     smart_context_item: { render: smart_context_item_component },
     smart_context_meta: { render: smart_context_meta_component },
     smart_context_tree: { render: smart_context_tree_component },

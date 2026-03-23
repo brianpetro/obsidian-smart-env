@@ -1,5 +1,4 @@
 import { Modal, Platform } from 'obsidian';
-import { open_url_externally } from '../../utils/open_url_externally.js';
 
 export class StoryModal extends Modal {
   constructor(plugin, {title, url}) {
@@ -31,7 +30,7 @@ export class StoryModal extends Modal {
       // Add a button to open the URL externally
       const btn = container.createEl('button', { text: 'Open in browser' });
       btn.addEventListener('click', () => {
-        open_url_externally(this.plugin, this.url);
+        window.open(this.url, '_external');
         this.close();
       });
       return; // nothing else to render on mobile
@@ -47,7 +46,7 @@ export class StoryModal extends Modal {
       webview.addEventListener('did-navigate', (event) => {
         const new_url = event.url || webview.getAttribute('src');
         if (new_url && new_url !== this.url) {
-          open_url_externally(this.plugin, new_url);
+          window.open(new_url, '_external');
           this.close();
         }
       });

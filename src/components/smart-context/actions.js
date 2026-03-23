@@ -1,4 +1,4 @@
-import { render_btn_clear_context, render_btn_help } from '../../utils/smart-context/copy_actions';
+import { render_btn_clear_context, render_btn_help } from '../../utils/smart-context/copy_actions.js';
 export function build_html() {
   return `
     <div class="sc-context-actions">
@@ -21,6 +21,11 @@ async function post_process(ctx, container, opts = {}) {
   const render_ctx_actions = () => {
     const actions_left = container.querySelector('.sc-context-actions-left');
     this.empty(actions_left);
+    ctx.env.smart_components.render_component('smart_context_meta', ctx, opts)
+      .then((meta) => {
+        if (meta) actions_left.appendChild(meta);
+      })
+    ;
     const actions_right = container.querySelector('.sc-context-actions-right');
     this.empty(actions_right);
     render_btn_quick_copy(ctx, actions_right);

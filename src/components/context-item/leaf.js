@@ -1,5 +1,6 @@
 import { register_item_hover_popover } from '../../utils/register_item_hover_popover.js';
 import { Platform } from 'obsidian';
+import { get_nested_context_item_keys } from '../../utils/smart-context/tree_utils.js';
 
 /**
  * Format a context item score for display.
@@ -78,7 +79,7 @@ export function build_html(context_item, params = {}) {
   </span>`;
 }
 
-export async function render(context_item, params={}) {
+export async function render(context_item, params = {}) {
   const html = build_html(context_item, params);
   const frag = this.create_doc_fragment(html);
   const container = frag.firstElementChild;
@@ -86,20 +87,32 @@ export async function render(context_item, params={}) {
   return container;
 }
 
-async function post_process(context_item, container, params={}) {
+async function post_process(context_item, container, params = {}) {
   const env = context_item.env;
   const remove_btn = container.querySelector('.sc-context-item-remove');
   if (remove_btn) {
     remove_btn.addEventListener('click', (event) => {
-      // get from DOM to prevent storing in ContextItem instance
+      event.preventDefault();
+      event.stopPropagation();
       const target = event.currentTarget;
       const tree_container = target.closest('[data-context-key]');
       const ctx_key = tree_container?.getAttribute('data-context-key');
       const ctx = env.smart_contexts.get(ctx_key);
+      if (!ctx) return;
+
+      const nested_keys = get_nested_context_item_keys(ctx, {
+        target_path: context_item.key,
+      });
+
+      if (nested_keys.length > 1) {
+        ctx.remove_items(nested_keys);
+        return;
+      }
+
       ctx.remove_item(context_item.key);
     });
   }
-  if(context_item.item_ref) {
+  if (context_item.item_ref) {
     const name = container.querySelector('.sc-context-item-name');
     name.setAttribute('title', `Hold ${Platform.isMacOS ? '⌘' : 'Ctrl'} to preview`);
     register_item_hover_popover(name, context_item.item_ref);
