@@ -7,6 +7,9 @@ import {
 import { SmartEnv } from "./smart_env.js";
 import { SmartNotices } from 'smart-notices/smart_notices.js';
 
+/**
+ * @extends Plugin
+ */
 export class SmartPlugin extends Plugin {
   SmartEnv = SmartEnv;
   /**

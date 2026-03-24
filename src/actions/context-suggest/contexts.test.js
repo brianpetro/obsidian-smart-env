@@ -45,7 +45,6 @@ const build_ctx = () => {
 const build_codeblock_ctx = () => {
   const { ctx, added_items, emitted_events } = build_ctx();
   ctx.key = 'note.md#codeblock';
-  ctx.data.codeblock_named_contexts = [];
 
   return { ctx, added_items, emitted_events };
 };
@@ -110,7 +109,6 @@ test('context_suggest_contexts stores named context line for codeblock ctx', asy
   const suggestions = await context_suggest_contexts.call(codeblock_ctx, { modal });
   await suggestions[0].mod_select_action({ modal });
 
-  t.deepEqual(codeblock_ctx.data.codeblock_named_contexts, ['Alpha']);
   t.true(added_items.length > 0);
   t.true(added_items.every((item) => item.from_named_context === 'Alpha'));
 });
@@ -124,7 +122,6 @@ test('context_suggest_contexts item select in codeblock ctx adds only selected i
 
   await item_suggestions[0].select_action({ modal });
 
-  t.deepEqual(codeblock_ctx.data.codeblock_named_contexts, []);
   t.is(added_items.length, 1);
   t.is(added_items[0].key, 'note-a.md');
   t.false(Object.prototype.hasOwnProperty.call(added_items[0], 'from_named_context'));

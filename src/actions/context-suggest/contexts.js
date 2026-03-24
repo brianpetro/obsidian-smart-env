@@ -58,37 +58,6 @@ function list_context_items(env) {
 }
 
 /**
- * @param {import('smart-contexts').SmartContext} ctx
- * @returns {boolean}
- */
-function is_codeblock_context(ctx) {
-  const ctx_key = ctx?.key;
-  return typeof ctx_key === 'string' && ctx_key.endsWith('#codeblock');
-}
-
-/**
- * @param {import('smart-contexts').SmartContext} ctx
- * @param {object} params
- * @param {string} params.context_name
- * @returns {string[]}
- */
-function update_codeblock_named_contexts(ctx, params = {}) {
-  const context_name = params.context_name;
-  if (!ctx?.data) ctx.data = {};
-  const existing = Array.isArray(ctx?.data?.codeblock_named_contexts)
-    ? ctx.data.codeblock_named_contexts
-    : [];
-  const named_contexts = new Set(existing);
-
-  if (context_name) {
-    named_contexts.add(context_name);
-  }
-
-  ctx.data.codeblock_named_contexts = [...named_contexts];
-  return ctx.data.codeblock_named_contexts;
-}
-
-/**
  * @param {any} other_ctx
  * @returns {Array<{ key: string }>}
  */
@@ -132,27 +101,6 @@ function build_named_context_item_payloads(ctx, params = {}) {
 }
 
 /**
- * @param {import('smart-contexts').SmartContext} ctx
- * @param {object} params
- * @param {any} params.other_ctx
- * @param {string} params.context_name
- * @param {Array<{ key: string, from_named_context?: string }>} [params.payloads]
- * @param {boolean} [params.include_named_context]
- * @returns {Array<{ key: string, from_named_context?: string }>}
- */
-function add_named_context_items(ctx, params = {}) {
-  const payloads = Array.isArray(params.payloads)
-    ? params.payloads
-    : build_named_context_item_payloads(ctx, params);
-  if (!payloads.length) return [];
-  if (is_codeblock_context(ctx) && params.include_named_context) {
-    update_codeblock_named_contexts(ctx, { context_name: params.context_name });
-  }
-  ctx.add_items(payloads);
-  return payloads;
-}
-
-/**
  * @param {unknown} depth
  * @returns {string}
  */
@@ -182,12 +130,7 @@ function build_named_context_item_suggestions(ctx, params = {}) {
       display: payload.key,
       display_right: format_depth_label(payload.d),
       select_action: ({ modal } = {}) => {
-        add_named_context_items(ctx, {
-          context_name: params.context_name,
-          payloads: [payload],
-          include_named_context: false,
-        });
-        set_named_context_item_instructions(modal, { context_name: params.context_name });
+        ctx.add_item(payload);
       },
       arrow_left_action: ({ modal } = {}) => {
         return context_suggest_contexts.call(ctx, { modal });
