@@ -90,13 +90,13 @@ function update_codeblock_named_contexts(ctx, params = {}) {
 
 /**
  * @param {any} other_ctx
- * @returns {Array<{ key: string, d: number }>}
+ * @returns {Array<{ key: string }>}
  */
 function get_items_from_context(other_ctx) {
   const data = other_ctx?.data?.context_items || {};
   const entries = Object.entries(data);
 
-  /** @type {Array<{ key: string, d: number }>} */
+  /** @type {Array<{ key: string }>} */
   const out = [];
 
   for (let i = 0; i < entries.length; i += 1) {
@@ -115,7 +115,7 @@ function get_items_from_context(other_ctx) {
  * @param {any} params.other_ctx
  * @param {string} params.context_name
  * @param {boolean} [params.include_named_context]
- * @returns {Array<{ key: string, d: number, from_named_context?: string }>}
+ * @returns {Array<{ key: string, from_named_context?: string }>}
  */
 function build_named_context_item_payloads(ctx, params = {}) {
   const other_ctx = params.other_ctx;
@@ -136,9 +136,9 @@ function build_named_context_item_payloads(ctx, params = {}) {
  * @param {object} params
  * @param {any} params.other_ctx
  * @param {string} params.context_name
- * @param {Array<{ key: string, d: number, from_named_context?: string }>} [params.payloads]
+ * @param {Array<{ key: string, from_named_context?: string }>} [params.payloads]
  * @param {boolean} [params.include_named_context]
- * @returns {Array<{ key: string, d: number, from_named_context?: string }>}
+ * @returns {Array<{ key: string, from_named_context?: string }>}
  */
 function add_named_context_items(ctx, params = {}) {
   const payloads = Array.isArray(params.payloads)
