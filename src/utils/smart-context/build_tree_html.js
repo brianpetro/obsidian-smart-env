@@ -100,7 +100,7 @@ export function build_path_tree(selected_items = []) {
   // ────────────────────────────────────────────────────────────────────────────
   const root = { name: '', children: {}, selected: false };
 
-  // Helper – mark if a path is already covered by an ancestor folder
+  // WARNING: PREVENTS TREE RENDER IF "GROUP"-type ContextItems instances present (skipping group-type instances for now)
   const is_redundant = (p, selected_folders) =>
     selected_folders.some((folder) => p.startsWith(`${folder}/`));
 
