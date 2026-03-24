@@ -1,4 +1,4 @@
-import {Platform} from 'obsidian';
+import { Platform } from 'obsidian';
 /**
  * @file contexts.js
  *
@@ -282,4 +282,3 @@ export default {
   display_name,
   context_suggest_contexts,
 };
-

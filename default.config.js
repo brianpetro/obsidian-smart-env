@@ -45,7 +45,6 @@ import { parse_blocks } from "smart-blocks/content_parsers/parse_blocks.js";
 import { merge_env_config } from 'smart-environment/utils/merge_env_config.js';
 // smart components
 import smart_components from 'smart-components';
-import smart_contexts from 'smart-contexts';
 import context_items from 'smart-contexts/context_items.js';
 import event_logs from './src/collections/event_logs.js';
 // base context UX
@@ -108,7 +107,6 @@ const smart_env_config = {
     context_items,
     event_logs,
     smart_components,
-    smart_contexts,
     smart_sources: {
       collection_key: 'smart_sources',
       class: SmartSources,

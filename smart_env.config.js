@@ -2,8 +2,10 @@
 import embedding_models from './src/collections/embedding_models.js';
 import event_logs from './src/collections/event_logs.js';
 import lookup_lists from './src/collections/lookup_lists.js';
+import smart_contexts from './src/collections/smart_contexts.js';
 import { EmbeddingModel } from './src/items/embedding_model.js';
 import { LookupList } from './src/items/lookup_list.js';
+import { SmartContext } from './src/items/smart_context.js';
 
 import { render as collection_settings_component } from './src/components/collection_settings.js';
 import { render as context_item_leaf_component } from './src/components/context-item/leaf.js';
@@ -47,15 +49,18 @@ export const smart_env_config = {
   collections: {
     embedding_models,
     event_logs,
-    lookup_lists
+    lookup_lists,
+    smart_contexts
   },
   item_types: {
     EmbeddingModel,
-    LookupList
+    LookupList,
+    SmartContext
   },
   items: {
     embedding_model: { class: EmbeddingModel },
-    lookup_list: { class: LookupList }
+    lookup_list: { class: LookupList },
+    smart_context: { class: SmartContext }
   },
   modules: {
 

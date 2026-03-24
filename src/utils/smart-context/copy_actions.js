@@ -1,44 +1,48 @@
 import { Menu, setIcon } from 'obsidian';
-import { context_to_md_tree } from './to_md_tree.js';
 import { copy_to_clipboard } from '../copy_to_clipboard.js';
+import { context_to_md_tree } from './to_md_tree.js';
 
 /**
  * @param {import('smart-contexts').SmartContext} ctx
  * @returns {boolean}
  */
-export function has_linked_depth_items(ctx) {
-  const context_items = ctx?.context_items?.filter?.() || [];
-  return context_items.some((context_item) => {
-    const depth = Number.isFinite(context_item?.data?.d)
-      ? context_item.data.d
-      : 0
-    ;
-    return depth > 0;
-  });
+function has_active_context_items(ctx) {
+  return Number(ctx?.item_count || 0) > 0;
 }
 
 /**
  * @param {import('smart-contexts').SmartContext} ctx
- * @returns {Function|null}
+ * @returns {boolean}
  */
-function get_copy_modal_class(ctx) {
-  const modal_class = ctx?.env?.config?.modals?.copy_context_modal?.class;
-  return typeof modal_class === 'function' ? modal_class : null;
+function has_any_context_state(ctx) {
+  return has_active_context_items(ctx) || Number(ctx?.excluded_item_count || 0) > 0;
 }
 
 /**
- * @param {Menu} menu
+ * @param {import('smart-contexts').SmartContext} ctx
+ * @returns {boolean}
+ */
+function has_linked_depth_items(ctx) {
+  if (!ctx?.context_items?.filter) return false;
+  return ctx.context_items
+    .filter((item) => !item?.data?.exclude)
+    .some((item) => Number.isFinite(item?.data?.d) && item.data.d > 0)
+  ;
+}
+
+/**
+ * @param {HTMLButtonElement} button
  * @param {MouseEvent|KeyboardEvent} event
- * @param {HTMLElement} anchor_el
+ * @param {Menu} menu
  * @returns {void}
  */
-function show_menu(menu, event, anchor_el) {
+function show_menu_at_button(button, event, menu) {
   if (event instanceof MouseEvent) {
     menu.showAtMouseEvent(event);
     return;
   }
 
-  const rect = anchor_el.getBoundingClientRect();
+  const rect = button.getBoundingClientRect();
   if (typeof menu.showAtPosition === 'function') {
     menu.showAtPosition({ x: rect.left, y: rect.bottom });
     return;
@@ -53,232 +57,230 @@ function show_menu(menu, event, anchor_el) {
 }
 
 /**
+ * @param {HTMLElement} container
+ * @param {object} params
+ * @param {string} [params.text]
+ * @param {string} [params.icon]
+ * @param {string} [params.aria_label]
+ * @param {boolean} [params.icon_only=false]
+ * @returns {HTMLButtonElement}
+ */
+function create_button(container, params = {}) {
+  const button = container.createEl('button', {
+    text: params.icon_only ? '' : (params.text || ''),
+  });
+
+  if (params.icon) {
+    button.classList.add('clickable-icon');
+    setIcon(button, params.icon);
+  }
+  if (params.aria_label) {
+    button.setAttribute('aria-label', params.aria_label);
+    if (!params.icon_only && !button.textContent) {
+      button.textContent = params.aria_label;
+    }
+  }
+
+  return button;
+}
+
+/**
  * @param {import('smart-contexts').SmartContext} ctx
  * @param {object} [params={}]
  * @param {boolean} [params.with_media=false]
  * @returns {boolean}
  */
-function open_copy_context_modal(ctx, params = {}) {
-  const copy_modal_class = get_copy_modal_class(ctx);
-  if (!copy_modal_class) {
-    ctx?.emit_event?.('context:copy_modal_missing', {
-      level: 'warning',
-      message: 'Copy depth chooser is not available.',
-      event_source: 'builder.copy_actions.open_copy_context_modal',
-    });
-    return false;
-  }
-
-  const modal = new copy_modal_class(ctx, {
-    ...(params.with_media ? { with_media: true } : {}),
-  });
+function open_copy_depth_modal(ctx, params = {}) {
+  const CopyModalClass = ctx?.env?.config?.modals?.copy_context_modal?.class;
+  if (typeof CopyModalClass !== 'function') return false;
+  const modal = new CopyModalClass(ctx, params);
   modal.open();
   return true;
 }
 
 /**
  * @param {import('smart-contexts').SmartContext} ctx
- * @returns {Promise<boolean>}
+ * @returns {string}
  */
-async function copy_link_tree(ctx) {
-  const md_tree = context_to_md_tree(ctx).trim();
-  if (!md_tree) {
-    ctx.emit_event('context:copy_empty', {
-      level: 'warning',
-      message: 'No link tree to copy.',
-      event_source: 'builder.copy_actions.copy_link_tree',
-    });
-    return false;
+function get_help_url(ctx) {
+  const ctx_key = String(ctx?.key || '');
+  if (ctx_key.endsWith('#codeblock')) {
+    return 'https://smartconnections.app/smart-context/codeblock/?utm_source=context-actions';
   }
-
-  const copied = await copy_to_clipboard(md_tree, {
-    env: ctx.env,
-    event_source: 'builder.copy_actions.copy_link_tree',
-    success_event_key: 'context:clipboard_raw_copied',
-    error_event_key: 'context:clipboard_raw_copy_failed',
-    unavailable_event_key: 'context:clipboard_copy_unavailable',
-  });
-  if (!copied) return false;
-
-  ctx.emit_event('context:copied', {
-    level: 'info',
-    message: 'Copied link tree to clipboard.',
-    event_source: 'builder.copy_actions.copy_link_tree',
-  });
-  return true;
+  return 'https://smartconnections.app/smart-context/builder/?utm_source=context-actions';
 }
 
 /**
- * Build the Builder copy menu actions.
- *
  * @param {import('smart-contexts').SmartContext} ctx
  * @param {object} [params={}]
  * @param {boolean} [params.supports_media=false]
- * @returns {Array<{ key: string, title: string, icon: string, on_click: Function }>}
+ * @returns {boolean}
  */
-export function build_copy_action_descriptors(ctx, params = {}) {
-  const supports_media = params.supports_media === true;
-  const descriptors = [
-    {
-      key: 'copy_text',
-      title: supports_media ? 'Copy text' : 'Copy current',
-      icon: 'copy',
-      on_click: () => ctx.actions.context_copy_to_clipboard(),
-    },
-  ];
-
-  if (supports_media) {
-    descriptors.push({
-      key: 'copy_media',
-      title: 'Copy media',
-      icon: 'copy',
-      on_click: () => ctx.actions.context_copy_to_clipboard({ with_media: true }),
-    });
-  }
-
-  if (has_linked_depth_items(ctx) && get_copy_modal_class(ctx)) {
-    descriptors.push({
-      key: 'copy_depth_text',
-      title: supports_media ? 'Copy text (choose link depth)' : 'Copy with link depth',
-      icon: 'copy',
-      on_click: () => open_copy_context_modal(ctx),
-    });
-
-    if (supports_media) {
-      descriptors.push({
-        key: 'copy_depth_media',
-        title: 'Copy media (choose link depth)',
-        icon: 'copy',
-        on_click: () => open_copy_context_modal(ctx, { with_media: true }),
-      });
-    }
-  }
-
-  descriptors.push({
-    key: 'copy_link_tree',
-    title: 'Copy link tree',
-    icon: 'copy',
-    on_click: () => copy_link_tree(ctx),
-  });
-
-  return descriptors;
+function should_render_copy_menu(ctx, params = {}) {
+  return Boolean(params.supports_media) || has_linked_depth_items(ctx);
 }
 
 /**
- * Open the Builder copy menu.
+ * Render the primary quick-copy button.
  *
  * @param {import('smart-contexts').SmartContext} ctx
- * @param {MouseEvent|KeyboardEvent} event
- * @param {HTMLElement} anchor_el
+ * @param {HTMLElement} container
  * @param {object} [params={}]
  * @param {boolean} [params.supports_media=false]
- * @returns {void}
+ * @returns {HTMLButtonElement|null}
  */
-export function open_copy_menu(ctx, event, anchor_el, params = {}) {
-  const app = ctx?.env?.plugin?.app || window.app || null;
-  if (!app) return;
+export function render_btn_quick_copy(ctx, container, params = {}) {
+  if (!has_active_context_items(ctx)) return null;
 
-  const menu = new Menu(app);
-  const action_descriptors = build_copy_action_descriptors(ctx, params);
-  action_descriptors.forEach((descriptor) => {
-    menu.addItem((menu_item) => {
-      menu_item
-        .setTitle(descriptor.title)
-        .setIcon(descriptor.icon)
+  const has_copy_menu = should_render_copy_menu(ctx, params);
+  const label = has_copy_menu ? 'Copy' : 'Copy to clipboard';
+  const button = create_button(container, {
+    text: label,
+    aria_label: 'Quick copy current context',
+  });
+
+  button.addEventListener('click', async () => {
+    await ctx.actions.context_copy_to_clipboard();
+  });
+
+  return button;
+}
+
+/**
+ * Render the optional copy menu button.
+ *
+ * @param {import('smart-contexts').SmartContext} ctx
+ * @param {HTMLElement} container
+ * @param {object} [params={}]
+ * @param {boolean} [params.supports_media=false]
+ * @returns {HTMLButtonElement|null}
+ */
+export function render_btn_copy_menu(ctx, container, params = {}) {
+  if (!has_active_context_items(ctx)) return null;
+  if (!should_render_copy_menu(ctx, params)) return null;
+
+  const app = ctx?.env?.plugin?.app || ctx?.env?.obsidian_app || window?.app || globalThis?.app || null;
+  if (!app) return null;
+
+  const button = create_button(container, {
+    icon: 'chevron-down',
+    aria_label: 'Open copy menu',
+    icon_only: true,
+  });
+
+  const open_menu = (event) => {
+    const menu = new Menu(app);
+    const can_choose_depth = has_linked_depth_items(ctx) && typeof ctx?.env?.config?.modals?.copy_context_modal?.class === 'function';
+
+    menu.addItem((mi) => {
+      mi.setTitle('Quick copy current context')
+        .setIcon('copy')
         .onClick(async () => {
-          await descriptor.on_click();
+          await ctx.actions.context_copy_to_clipboard();
         })
       ;
     });
-  });
 
-  show_menu(menu, event, anchor_el);
-}
+    menu.addItem((mi) => {
+      mi.setTitle('Copy text')
+        .setIcon('documents')
+        .onClick(async () => {
+          if (can_choose_depth && open_copy_depth_modal(ctx)) return;
+          await ctx.actions.context_copy_to_clipboard();
+        })
+      ;
+    });
 
-/**
- * Render a one-click Builder copy button.
- *
- * @param {import('smart-contexts').SmartContext} ctx
- * @param {HTMLElement} container
- * @param {object} [params={}]
- * @returns {HTMLButtonElement}
- */
-export function render_btn_quick_copy(ctx, container, params = {}) {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'clickable-icon sc-copy-clipboard-quick';
-  button.setAttribute('aria-label', 'Quick copy current context');
-  setIcon(button, 'smart-copy-note');
+    if (params.supports_media) {
+      menu.addItem((mi) => {
+        mi.setTitle('Copy media')
+          .setIcon('image-file')
+          .onClick(async () => {
+            if (can_choose_depth && open_copy_depth_modal(ctx, { with_media: true })) return;
+            await ctx.actions.context_copy_to_clipboard({ with_media: true });
+          })
+        ;
+      });
+    }
 
-  const has_active_items = (ctx?.item_count || 0) > 0;
-  button.hidden = !has_active_items;
-  button.disabled = !has_active_items;
+    menu.addItem((mi) => {
+      mi.setTitle('Copy link tree')
+        .setIcon('list-tree')
+        .onClick(async () => {
+          const md_tree = context_to_md_tree(ctx).trim();
+          if (!md_tree) {
+            ctx.emit_event('context:copy_empty', {
+              level: 'warning',
+              message: 'No context items to copy.',
+              event_source: 'smart_context.copy_link_tree',
+            });
+            return;
+          }
+          await copy_to_clipboard(md_tree, {
+            env: ctx.env,
+            event_source: 'smart_context.copy_link_tree',
+            success_event_key: 'context:clipboard_raw_copied',
+            error_event_key: 'context:clipboard_raw_copy_failed',
+            unavailable_event_key: 'context:clipboard_copy_unavailable',
+          });
+        })
+      ;
+    });
 
-  container.appendChild(button);
-  button.addEventListener('click', async () => {
-    if (button.disabled) return;
-    await ctx.actions.context_copy_to_clipboard();
-  });
-  return button;
-}
+    show_menu_at_button(button, event, menu);
+  };
 
-/**
- * Render the Builder copy menu trigger button.
- *
- * @param {import('smart-contexts').SmartContext} ctx
- * @param {HTMLElement} container
- * @param {object} [params={}]
- * @param {boolean} [params.supports_media=false]
- * @returns {HTMLButtonElement}
- */
-export function render_btn_copy_menu(ctx, container, params = {}) {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'sc-copy-context-menu-btn';
-  button.textContent = 'Copy';
-  button.setAttribute('aria-label', 'Open copy actions');
-
-  const has_active_items = (ctx?.item_count || 0) > 0;
-  button.hidden = !has_active_items;
-  button.disabled = !has_active_items;
-
-  container.appendChild(button);
   button.addEventListener('click', (event) => {
-    if (button.disabled) return;
-    open_copy_menu(ctx, event, button, params);
+    event.preventDefault();
+    open_menu(event);
   });
   button.addEventListener('keydown', (event) => {
-    if (button.disabled) return;
     if (event.key !== 'Enter' && event.key !== ' ') return;
     event.preventDefault();
-    open_copy_menu(ctx, event, button, params);
+    open_menu(event);
+  });
+
+  return button;
+}
+
+/**
+ * Render the clear button.
+ *
+ * @param {import('smart-contexts').SmartContext} ctx
+ * @param {HTMLElement} container
+ * @returns {HTMLButtonElement|null}
+ */
+export function render_btn_clear_context(ctx, container) {
+  if (!has_any_context_state(ctx)) return null;
+
+  const button = create_button(container, {
+    text: 'Clear',
+    aria_label: 'Clear context',
+  });
+  button.addEventListener('click', () => {
+    ctx.clear_all?.();
   });
   return button;
 }
-export function render_btn_clear_context(ctx, container) {
-  // const clear_btn = container.querySelector('.sc-clear-context-btn');
-  const clear_btn = document.createElement('button');
-  clear_btn.type = 'button';
-  clear_btn.className = 'sc-clear-context-btn';
-  clear_btn.textContent = 'Clear';
-  if (!ctx.has_context_items) {
-    clear_btn.style.display = 'none';
-  }
-  container.appendChild(clear_btn);
-  clear_btn.addEventListener('click', () => {
-    ctx.clear_all();
-  });
-}
-export function render_btn_help(ctx, container) {
-  // const help_btn = container.querySelector('.sc-help-btn');
-  const help_btn = document.createElement('button');
-  help_btn.type = 'button';
-  help_btn.className = 'sc-help-btn';
-  help_btn.setAttribute('aria-label', 'Learn more');
-  container.appendChild(help_btn);
-  setIcon(help_btn, 'help-circle');
-  help_btn.addEventListener('click', () => {
-    window.open('https://smartconnections.app/smart-context/builder/?utm_source=context-selector-modal', '_external');
-  });
-}
 
+/**
+ * Render the help button.
+ *
+ * @param {import('smart-contexts').SmartContext} ctx
+ * @param {HTMLElement} container
+ * @returns {HTMLButtonElement|null}
+ */
+export function render_btn_help(ctx, container) {
+  const button = create_button(container, {
+    icon: 'help-circle',
+    aria_label: 'Help',
+    icon_only: true,
+  });
+  button.addEventListener('click', () => {
+    const url = get_help_url(ctx);
+    if (typeof globalThis.open === 'function') {
+      globalThis.open(url, '_external');
+    }
+  });
+  return button;
+}
