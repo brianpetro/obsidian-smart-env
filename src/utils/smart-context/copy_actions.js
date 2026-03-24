@@ -22,12 +22,29 @@ function has_any_context_state(ctx) {
  * @param {import('smart-contexts').SmartContext} ctx
  * @returns {boolean}
  */
-function has_linked_depth_items(ctx) {
+export function has_linked_depth_items(ctx) {
   if (!ctx?.context_items?.filter) return false;
   return ctx.context_items
     .filter((item) => !item?.data?.exclude)
     .some((item) => Number.isFinite(item?.data?.d) && item.data.d > 0)
   ;
+}
+
+/**
+ * Resolve the Pro "Copy with media" preference.
+ *
+ * This helper intentionally accepts either a SmartContext instance or an env-like
+ * object so command helpers can read the setting without needing a context first.
+ *
+ * @param {any} scope
+ * @returns {boolean}
+ */
+export function get_copy_with_media_setting(scope) {
+  const env = scope?.env || scope || null;
+  if (!env?.is_pro) return false;
+  return Boolean(
+    env?.smart_contexts?.settings?.actions?.context_copy_to_clipboard?.copy_with_media,
+  );
 }
 
 /**
@@ -37,7 +54,7 @@ function has_linked_depth_items(ctx) {
  * @returns {void}
  */
 function show_menu_at_button(button, event, menu) {
-  if (event instanceof MouseEvent) {
+  if (typeof MouseEvent !== 'undefined' && event instanceof MouseEvent) {
     menu.showAtMouseEvent(event);
     return;
   }
@@ -111,25 +128,156 @@ function get_help_url(ctx) {
 }
 
 /**
+ * Copy the current context as a markdown link tree.
+ *
+ * @param {import('smart-contexts').SmartContext} ctx
+ * @returns {Promise<boolean>}
+ */
+async function copy_link_tree(ctx) {
+  const md_tree = context_to_md_tree(ctx).trim();
+  if (!md_tree) {
+    ctx.emit_event('context:copy_empty', {
+      level: 'warning',
+      message: 'No context items to copy.',
+      event_source: 'smart_context.copy_link_tree',
+    });
+    return false;
+  }
+
+  const copied = await copy_to_clipboard(md_tree, {
+    env: ctx.env,
+    event_source: 'smart_context.copy_link_tree',
+    success_event_key: 'context:clipboard_raw_copied',
+    error_event_key: 'context:clipboard_raw_copy_failed',
+    unavailable_event_key: 'context:clipboard_copy_unavailable',
+  });
+  if (!copied) return false;
+
+  ctx.emit_event('context:link_tree_copied', {
+    level: 'info',
+    message: 'Copied link tree to clipboard.',
+    event_source: 'smart_context.copy_link_tree',
+  });
+  return true;
+}
+
+/**
+ * Build the descriptor list used by the Copy menu.
+ *
+ * Keeping this data-driven lets the menu and tests share one canonical source
+ * of truth while also making it easier to add or retire actions later.
+ *
+ * @param {import('smart-contexts').SmartContext} ctx
+ * @param {object} [params={}]
+ * @param {boolean} [params.supports_media=false]
+ * @returns {Array<{
+ *   key: string,
+ *   title: string,
+ *   icon: string,
+ *   run: () => Promise<boolean|void>|boolean|void,
+ * }>}
+ */
+export function build_copy_action_descriptors(ctx, params = {}) {
+  if (!has_active_context_items(ctx)) return [];
+
+  const can_choose_depth = has_linked_depth_items(ctx)
+    && typeof ctx?.env?.config?.modals?.copy_context_modal?.class === 'function'
+  ;
+
+  /** @type {Array<{ key: string, title: string, icon: string, run: () => Promise<boolean|void>|boolean|void }>} */
+  const descriptors = [
+    {
+      key: 'copy_text',
+      title: 'Copy text',
+      icon: 'copy',
+      run: async () => {
+        return await ctx.actions.context_copy_to_clipboard({ with_media: false });
+      },
+    },
+  ];
+  // Pro: configurable copy button
+  if (ctx?.env?.is_pro) {
+    descriptors.unshift({
+      is_separator: true,
+    });
+    descriptors.unshift({
+      key: 'smart_copy',
+      title: 'Smart Copy',
+      icon: 'smart-copy-note',
+      run: async () => {
+        // TODO: replace with ctx.actions.context_smart_copy() (implemented in smart-context-obsidian-early)
+        return await ctx.actions.context_copy_to_clipboard();
+      },
+    });
+  }
+
+  if (params.supports_media) {
+    descriptors.push({
+      key: 'copy_media',
+      title: 'Copy media',
+      icon: 'image-file',
+      run: async () => {
+        return await ctx.actions.context_copy_to_clipboard({ with_media: true });
+      },
+    });
+  }
+
+  if (can_choose_depth) {
+    descriptors.push({
+      key: 'copy_depth_text',
+      title: 'Copy text (choose link depth)',
+      icon: 'copy',
+      run: async () => {
+        return open_copy_depth_modal(ctx, { with_media: false });
+      },
+    });
+
+    if (params.supports_media) {
+      descriptors.push({
+        key: 'copy_depth_media',
+        title: 'Copy media (choose link depth)',
+        icon: 'image-file',
+        run: async () => {
+          return open_copy_depth_modal(ctx, { with_media: true });
+        },
+      });
+    }
+  }
+
+  descriptors.push({
+    key: 'copy_link_tree',
+    title: 'Copy link tree',
+    icon: 'list-tree',
+    run: async () => {
+      return await copy_link_tree(ctx);
+    },
+  });
+
+  return descriptors;
+}
+
+/**
  * @param {import('smart-contexts').SmartContext} ctx
  * @param {object} [params={}]
  * @param {boolean} [params.supports_media=false]
  * @returns {boolean}
  */
 function should_render_copy_menu(ctx, params = {}) {
-  return Boolean(params.supports_media) || has_linked_depth_items(ctx);
+  return build_copy_action_descriptors(ctx, params).length > 1;
 }
 
 /**
  * Render the primary quick-copy button.
  *
+ * This stays text-only on purpose so there is always a predictable one-click
+ * copy path regardless of Pro media preferences.
+ *
  * @param {import('smart-contexts').SmartContext} ctx
  * @param {HTMLElement} container
  * @param {object} [params={}]
- * @param {boolean} [params.supports_media=false]
  * @returns {HTMLButtonElement|null}
  */
-export function render_btn_quick_copy(ctx, container, params = {}) {
+export function render_btn_quick_copy(ctx, container, params = {}) { // eslint-disable-line no-unused-vars
   if (!has_active_context_items(ctx)) return null;
 
   const button = create_button(container, {
@@ -139,6 +287,7 @@ export function render_btn_quick_copy(ctx, container, params = {}) {
   });
 
   button.addEventListener('click', async () => {
+    // TODO: replace with ctx.actions.context_smart_copy() (implemented in smart-context-obsidian-early)
     await ctx.actions.context_copy_to_clipboard();
   });
 
@@ -165,69 +314,27 @@ export function render_btn_copy_menu(ctx, container, params = {}) {
     icon: 'chevron-down',
     text: 'Copy',
     aria_label: 'Open copy menu',
-    icon_after: true,
   });
 
   const open_menu = (event) => {
     const menu = new Menu(app);
-    const can_choose_depth = has_linked_depth_items(ctx) && typeof ctx?.env?.config?.modals?.copy_context_modal?.class === 'function';
+    const descriptors = build_copy_action_descriptors(ctx, params);
 
-    menu.addItem((mi) => {
-      mi.setTitle('Smart Copy')
-        .setIcon('smart-copy-note')
-        .onClick(async () => {
-          await ctx.actions.context_copy_to_clipboard();
-        })
-      ;
-    });
-
-    menu.addItem((mi) => {
-      mi.setTitle('Copy text')
-        .setIcon('copy')
-        .onClick(async () => {
-          if (can_choose_depth && open_copy_depth_modal(ctx)) return;
-          await ctx.actions.context_copy_to_clipboard();
-        })
-      ;
-    });
-
-    if (params.supports_media) {
+    descriptors.forEach((descriptor) => {
+      if (descriptor.is_separator) {
+        menu.addSeparator();
+        return;
+      }
       menu.addItem((mi) => {
-        mi.setTitle('Copy media')
-          .setIcon('image-file')
+        mi.setTitle(descriptor.title)
+          .setIcon(descriptor.icon)
           .onClick(async () => {
-            if (can_choose_depth && open_copy_depth_modal(ctx, { with_media: true })) return;
-            await ctx.actions.context_copy_to_clipboard({ with_media: true });
+            await descriptor.run();
           })
         ;
       });
-    }
-
-    menu.addItem((mi) => {
-      mi.setTitle('Copy link tree')
-        .setIcon('list-tree')
-        .onClick(async () => {
-          const md_tree = context_to_md_tree(ctx).trim();
-          if (!md_tree) {
-            ctx.emit_event('context:copy_empty', {
-              level: 'warning',
-              message: 'No context items to copy.',
-              event_source: 'smart_context.copy_link_tree',
-            });
-            return;
-          }
-          await copy_to_clipboard(md_tree, {
-            env: ctx.env,
-            event_source: 'smart_context.copy_link_tree',
-            success_event_key: 'context:clipboard_raw_copied',
-            error_event_key: 'context:clipboard_raw_copy_failed',
-            unavailable_event_key: 'context:clipboard_copy_unavailable',
-          });
-        })
-      ;
     });
 
-    //separator
     menu.addSeparator();
 
     menu.addItem((mi) => {
@@ -271,8 +378,7 @@ export function render_btn_clear_context(ctx, container) {
     icon: 'rotate-ccw',
     icon_only: true,
   });
-  button.addEventListener('click', (e) => {
-    // add confirm via dataset and check in case we want to add a "don't ask me again" option in the future
+  button.addEventListener('click', () => {
     if (!button.dataset.confirmed) {
       button.dataset.confirmed = 'true';
       button.style.backgroundColor = 'var(--color-red)';
