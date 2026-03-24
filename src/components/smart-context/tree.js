@@ -24,12 +24,13 @@ export async function post_process(ctx, container, params = {}) {
   const render_tree_leaves = () => {
     const env = ctx.env;
     const items = ctx.context_items.filter(params.filter);
-    const list_html = build_tree_html(items);
+    const included_items = items.filter((item) => !item.data.exclude); // no excluded items in tree for now (2026-03-24)
+    const list_html = build_tree_html(included_items);
     const list_frag = this.create_doc_fragment(list_html);
     this.empty(container);
     container.appendChild(list_frag);
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
+    for (let i = 0; i < included_items.length; i++) {
+      const item = included_items[i];
       const li = container.querySelector(`.sc-tree-item[data-path="${item.key}"]`);
       if (!li) {
         console.warn(`Smart Context: Could not find tree item for path: ${item.key}`);
@@ -50,7 +51,13 @@ export async function post_process(ctx, container, params = {}) {
     event.preventDefault();
     event.stopPropagation();
     const target_path = target.getAttribute('data-path');
-    ctx.remove_by_path(target_path);
+    // if closest li has class "dir"
+    const li = target.closest('.sc-tree-item');
+    if (li && li.classList.contains('dir')) {
+      ctx.remove_by_path(target_path, {folder: true});
+    } else {
+      ctx.remove_by_path(target_path);
+    }
   });
 
   const disposers = [];
