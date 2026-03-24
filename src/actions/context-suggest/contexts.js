@@ -259,17 +259,10 @@ export async function context_suggest_contexts(params = {}) {
         });
       },
       mod_select_action: ({ modal } = {}) => {
-        const payloads = add_named_context_items(ctx, {
-          other_ctx: other,
-          context_name: other_name,
-          include_named_context: true,
+        ctx.add_item({
+          key: `${other_key}`,
+          named_context: true,
         });
-        if (modal?.setInstructions) {
-          const purpose = payloads.length
-            ? `Added ${payloads.length} item(s) from ${other_name}`
-            : `No items to add from ${other_name}`;
-          modal.setInstructions([{ command: 'Enter', purpose }]);
-        }
         return context_suggest_contexts.call(ctx, { modal });
       },
     });
