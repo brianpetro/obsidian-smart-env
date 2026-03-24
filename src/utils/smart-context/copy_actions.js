@@ -74,9 +74,9 @@ function create_button(container, params = {}) {
     button.classList.add('clickable-icon');
     setIcon(button, params.icon);
   }
-  if (params.aria_label) {
-    button.setAttribute('aria-label', params.aria_label);
-    if (!params.icon_only && !button.textContent) {
+  if (params.aria_label || params.text) {
+    button.setAttribute('aria-label', params.aria_label || params.text);
+    if (!params.icon_only && !params.text) {
       button.textContent = params.aria_label;
     }
   }
@@ -132,11 +132,10 @@ function should_render_copy_menu(ctx, params = {}) {
 export function render_btn_quick_copy(ctx, container, params = {}) {
   if (!has_active_context_items(ctx)) return null;
 
-  const has_copy_menu = should_render_copy_menu(ctx, params);
-  const label = has_copy_menu ? 'Copy' : 'Copy to clipboard';
   const button = create_button(container, {
-    text: label,
-    aria_label: 'Quick copy current context',
+    icon: 'smart-copy-note',
+    icon_only: true,
+    aria_label: 'Smart Copy',
   });
 
   button.addEventListener('click', async () => {
@@ -164,8 +163,9 @@ export function render_btn_copy_menu(ctx, container, params = {}) {
 
   const button = create_button(container, {
     icon: 'chevron-down',
+    text: 'Copy',
     aria_label: 'Open copy menu',
-    icon_only: true,
+    icon_after: true,
   });
 
   const open_menu = (event) => {
@@ -173,8 +173,8 @@ export function render_btn_copy_menu(ctx, container, params = {}) {
     const can_choose_depth = has_linked_depth_items(ctx) && typeof ctx?.env?.config?.modals?.copy_context_modal?.class === 'function';
 
     menu.addItem((mi) => {
-      mi.setTitle('Quick copy current context')
-        .setIcon('copy')
+      mi.setTitle('Smart Copy')
+        .setIcon('smart-copy-note')
         .onClick(async () => {
           await ctx.actions.context_copy_to_clipboard();
         })
@@ -183,7 +183,7 @@ export function render_btn_copy_menu(ctx, container, params = {}) {
 
     menu.addItem((mi) => {
       mi.setTitle('Copy text')
-        .setIcon('documents')
+        .setIcon('copy')
         .onClick(async () => {
           if (can_choose_depth && open_copy_depth_modal(ctx)) return;
           await ctx.actions.context_copy_to_clipboard();
@@ -227,6 +227,18 @@ export function render_btn_copy_menu(ctx, container, params = {}) {
       ;
     });
 
+    //separator
+    menu.addSeparator();
+
+    menu.addItem((mi) => {
+      mi.setTitle('Clear this context')
+        .setIcon('rotate-ccw')
+        .onClick(() => {
+          ctx.clear_all?.();
+        })
+      ;
+    });
+
     show_menu_at_button(button, event, menu);
   };
 
@@ -256,9 +268,19 @@ export function render_btn_clear_context(ctx, container) {
   const button = create_button(container, {
     text: 'Clear',
     aria_label: 'Clear context',
+    icon: 'rotate-ccw',
+    icon_only: true,
   });
-  button.addEventListener('click', () => {
+  button.addEventListener('click', (e) => {
+    // add confirm via dataset and check in case we want to add a "don't ask me again" option in the future
+    if (!button.dataset.confirmed) {
+      button.dataset.confirmed = 'true';
+      button.style.backgroundColor = 'var(--color-red)';
+      return;
+    }
     ctx.clear_all?.();
+    button.dataset.confirmed = '';
+    button.style.backgroundColor = '';
   });
   return button;
 }
