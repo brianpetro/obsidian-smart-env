@@ -33,7 +33,7 @@ test('get_nested_context_item_keys returns descendants for files and blocks', (t
     'folder/file.md',
   ]);
 
-  t.deepEqual(get_nested_context_item_keys(ctx, { target_path: 'external:../repo/src/index.js' }), [
+  t.deepEqual(get_nested_context_item_keys(ctx, { target_path: 'external:../repo/src' }), [
     'external:../repo/src/index.js#Main',
     'external:../repo/src/index.js',
   ]);
