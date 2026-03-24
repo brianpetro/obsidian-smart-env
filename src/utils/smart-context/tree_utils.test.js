@@ -43,6 +43,5 @@ test('get_nested_context_item_keys excludes excluded items unless requested', (t
   t.false(get_nested_context_item_keys(ctx, { target_path: 'folder' }).includes('folder/ignored.md'));
   t.true(get_nested_context_item_keys(ctx, {
     target_path: 'folder',
-    include_excluded: true,
   }).includes('folder/ignored.md'));
 });
