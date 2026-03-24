@@ -1,6 +1,5 @@
 import { SmartContext as BaseClass } from 'smart-contexts/smart_context.js';
-import { get_nested_context_item_keys } from '../utils/smart-context/tree_utils';
-
+import { get_nested_context_item_keys } from '../utils/smart-context/tree_utils.js';
 
 export class SmartContext extends BaseClass {
   /**
@@ -20,6 +19,7 @@ export class SmartContext extends BaseClass {
       nested_keys,
       { emit_updated: false } // emit below to include synthetic folder exclusion in one update
     );
+
     if (is_folder_path || is_from_named) {
       this.data.context_items[target_path] = {
         ...(this.data.context_items[target_path] || {}),
@@ -28,12 +28,13 @@ export class SmartContext extends BaseClass {
         exclude: true,
       };
     }
+
     if (!removed_keys.length && !is_folder_path) return [];
 
     this.queue_save();
     this.emit_event('context:updated', {
       removed_keys,
-      exclusion_key: is_folder_path ? target_path : null,
+      exclusion_key: (is_folder_path || is_from_named) ? target_path : null,
     });
 
     return removed_keys;

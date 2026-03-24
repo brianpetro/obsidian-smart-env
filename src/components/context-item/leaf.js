@@ -1,6 +1,5 @@
 import { register_item_hover_popover } from '../../utils/register_item_hover_popover.js';
 import { Platform } from 'obsidian';
-import { get_nested_context_item_keys } from '../../utils/smart-context/tree_utils.js';
 
 /**
  * Format a context item score for display.
