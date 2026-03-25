@@ -9,11 +9,17 @@ export class SmartContext extends BaseClass {
     if (item_data) {
       delete this.data.context_items[target_path];
     } else {
-      this.data.context_items[target_path] = {
-        key: target_path,
-        exclude: true,
-        ...(params.folder ? { folder: true } : {}),
-      };
+      const starts_with_items = Object.entries(this.data?.context_items || {}).filter(([key]) => key.startsWith(`${target_path}/`));
+      starts_with_items.forEach(([key]) => {
+        delete this.data.context_items[key];
+      });
+      if(!starts_with_items.length) {
+        this.data.exclusions[target_path] = {
+          key: target_path,
+          exclude: true,
+          ...(params.folder ? { folder: true } : {}),
+        };
+      }
     }
     this.emit_event('context:updated', {
       removed_key: target_path,
