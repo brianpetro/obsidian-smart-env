@@ -188,11 +188,28 @@ export async function context_suggest_contexts(params = {}) {
       display: `${other_name} (${item_count})`,
       item: other,
       select_action: ({ modal }) => {
-        return build_named_context_item_suggestions(ctx, {
-          other_ctx: other,
-          context_name: other_name,
-          modal,
-        });
+        return [
+          {
+            key: other_name,
+            display: `Add all: ${other_name} (${item_count})`,
+            item: other,
+            select_action: ({ modal } = {}) => {
+              ctx.add_item({
+                key: `${other_name}`,
+                named_context: true,
+              });
+              return context_suggest_contexts.call(ctx, { modal });
+            },
+            arrow_left_action: ({ modal } = {}) => {
+              return context_suggest_contexts.call(ctx, { modal });
+            },
+          },
+          ...build_named_context_item_suggestions(ctx, {
+            other_ctx: other,
+            context_name: other_name,
+            modal,
+          })
+        ]
       },
       arrow_right_action: ({ modal }) => {
         return build_named_context_item_suggestions(ctx, {
@@ -203,7 +220,7 @@ export async function context_suggest_contexts(params = {}) {
       },
       mod_select_action: ({ modal } = {}) => {
         ctx.add_item({
-          key: `${other_key}`,
+          key: `${other_name}`,
           named_context: true,
         });
         return context_suggest_contexts.call(ctx, { modal });
