@@ -36,11 +36,14 @@ export async function post_process(ctx, container, opts = {}) {
   const disposers = [];
 
   const render_children = async () => {
-    const [actions, tree, exclusions, meta] = await Promise.all([
+    const component_renderers = [
       ctx.env.smart_components.render_component('smart_context_actions', ctx, opts),
       ctx.env.smart_components.render_component('smart_context_tree', ctx, opts),
-      ctx.env.smart_components.render_component('smart_context_exclusions_list', ctx, opts),
-    ]);
+    ];
+    if (ctx.env._config.components.smart_context_exclusions_list) {
+      component_renderers.push(ctx.env.smart_components.render_component('smart_context_exclusions_list', ctx, opts));
+    }
+    const [actions, tree, exclusions] = await Promise.all(component_renderers);
 
     const header = container.querySelector('.sc-context-view-header');
     this.empty(header);
