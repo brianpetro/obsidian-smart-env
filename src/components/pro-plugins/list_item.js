@@ -64,6 +64,7 @@ export async function render(item, params = {}) {
 
 async function post_process(item, container, params = {}) {
   const { app, token, installed_map = {}, on_installed } = params;
+  const env = this.env;
 
   if (is_fallback_item(item)) {
     const row = new Setting(container)
