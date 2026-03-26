@@ -102,7 +102,6 @@ export async function copy_to_clipboard(text = '', params = {}) {
   try {
     if (await write_with_navigator_clipboard(value)) {
       emit_clipboard_event(env, success_event_key, {
-        level: 'info',
         message: 'Text copied to clipboard.',
         event_source,
       });
@@ -115,7 +114,6 @@ export async function copy_to_clipboard(text = '', params = {}) {
   try {
     if (write_with_electron_clipboard(value)) {
       emit_clipboard_event(env, success_event_key, {
-        level: 'info',
         message: 'Text copied to clipboard.',
         event_source,
       });
@@ -128,7 +126,6 @@ export async function copy_to_clipboard(text = '', params = {}) {
   try {
     if (write_with_exec_command(value)) {
       emit_clipboard_event(env, success_event_key, {
-        level: 'info',
         message: 'Text copied to clipboard.',
         event_source,
       });

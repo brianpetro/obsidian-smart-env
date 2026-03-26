@@ -40,7 +40,7 @@ export class ContextModal extends SmartFuzzySuggestModal {
   async render(params=this.params) {
     this.modalEl.style.display = 'flex';
     this.modalEl.style.flexDirection = 'column';
-    this.modalEl.style.height = '100%';
+    // this.modalEl.style.height = '100%';
     // header: show compact context view (actions + tree + meta)
     this.modalEl.prepend(
       await this.env.smart_components.render_component(
