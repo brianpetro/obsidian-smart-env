@@ -79,6 +79,12 @@ export class SmartItemView extends ItemView {
   static register_item_view(plugin) {
     const View = /** @type {typeof SmartItemView} */ (this);
 
+    // check if already registered
+    if (plugin.app.viewRegistry?.viewByType?.[View.view_type]) {
+      plugin.app.viewRegistry.unregisterView(View.view_type);
+      console.warn(`View type "${View.view_type}" was already registered. Overwriting with new registration.`);
+    }
+
     // Register the view with Obsidian
     plugin.registerView(View.view_type, (leaf) => new View(leaf, plugin));
 
