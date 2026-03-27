@@ -9,9 +9,9 @@ import { BasesSourceContentAdapter } from "./adapters/smart-sources/bases.js";
 import { RenderedSourceContentAdapter } from "./adapters/smart-sources/rendered.js";
 import { CanvasSourceContentAdapter } from "./adapters/smart-sources/canvas.js";
 import { ExcalidrawSourceContentAdapter } from "./adapters/smart-sources/excalidraw.js";
-import { SmartBlocks, SmartBlock } from 'smart-blocks';
-import { AjsonMultiFileBlocksDataAdapter } from "smart-blocks/adapters/data/ajson_multi_file.js";
-import { MarkdownBlockContentAdapter } from "smart-blocks/adapters/markdown_block.js";
+// import { SmartBlocks, SmartBlock } from 'smart-blocks';
+// import { AjsonMultiFileBlocksDataAdapter } from "smart-blocks/adapters/data/ajson_multi_file.js";
+// import { MarkdownBlockContentAdapter } from "smart-blocks/adapters/markdown_block.js";
 // smart model
 import { SmartEmbedModel } from "smart-embed-model";
 import { SmartEmbedOpenAIAdapter } from "smart-embed-model/adapters/openai.js";
@@ -39,7 +39,7 @@ import {
 import { SmartHttpRequest, SmartHttpObsidianRequestAdapter } from "smart-http-request";
 import { requestUrl } from "obsidian";
 // actions architecture
-import smart_block from "smart-blocks/smart_block.js";
+// import smart_block from "smart-blocks/smart_block.js";
 import smart_source from "smart-sources/smart_source.js";
 import { parse_blocks } from "smart-blocks/content_parsers/parse_blocks.js";
 import { merge_env_config } from 'smart-environment/utils/merge_env_config.js';
