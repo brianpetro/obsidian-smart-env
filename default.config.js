@@ -128,25 +128,25 @@ const smart_env_config = {
       process_embed_queue: true, // trigger embedding on load
       load_order: 100, // load last
     },
-    smart_blocks: {
-      collection_key: 'smart_blocks',
-      class: SmartBlocks,
-      data_adapter: AjsonMultiFileBlocksDataAdapter,
-      block_adapters: {
-        "md": MarkdownBlockContentAdapter,
-        "txt": MarkdownBlockContentAdapter,
-        "excalidraw.md": MarkdownBlockContentAdapter,
-        // "canvas": MarkdownBlockContentAdapter,
-      },
-    },
+    // smart_blocks: {
+    //   collection_key: 'smart_blocks',
+    //   class: SmartBlocks,
+    //   data_adapter: AjsonMultiFileBlocksDataAdapter,
+    //   block_adapters: {
+    //     "md": MarkdownBlockContentAdapter,
+    //     "txt": MarkdownBlockContentAdapter,
+    //     "excalidraw.md": MarkdownBlockContentAdapter,
+    //     // "canvas": MarkdownBlockContentAdapter,
+    //   },
+    // },
   },
   item_types: {
     SmartSource,
-    SmartBlock,
+    // SmartBlock,
   },
   items: {
     smart_source,
-    smart_block,
+    // smart_block,
   },
   default_settings,
   // begin obsidian-smart-env specific modules (need to update build_env_config.js to handle)

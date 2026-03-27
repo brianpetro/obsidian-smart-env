@@ -2,9 +2,11 @@
 import embedding_models from './src/collections/embedding_models.js';
 import event_logs from './src/collections/event_logs.js';
 import lookup_lists from './src/collections/lookup_lists.js';
+import smart_blocks from './src/collections/smart_blocks.js';
 import smart_contexts from './src/collections/smart_contexts.js';
 import { EmbeddingModel } from './src/items/embedding_model.js';
 import { LookupList } from './src/items/lookup_list.js';
+import { SmartBlock } from './src/items/smart_block.js';
 import { SmartContext } from './src/items/smart_context.js';
 
 import { render as collection_settings_component } from './src/components/collection_settings.js';
@@ -48,16 +50,19 @@ export const smart_env_config = {
     embedding_models,
     event_logs,
     lookup_lists,
+    smart_blocks,
     smart_contexts
   },
   item_types: {
     EmbeddingModel,
     LookupList,
+    SmartBlock,
     SmartContext
   },
   items: {
     embedding_model: { class: EmbeddingModel },
     lookup_list: { class: LookupList },
+    smart_block: { class: SmartBlock },
     smart_context: { class: SmartContext }
   },
   modules: {
