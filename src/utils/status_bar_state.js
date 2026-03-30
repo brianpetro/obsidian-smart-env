@@ -1,4 +1,8 @@
 import { get_event_level } from 'smart-events/event_level_utils.js';
+import {
+  get_native_notice_message,
+  get_native_notice_timeout,
+} from './event_logs_utils.js';
 
 const indicator_level_rank = {
   info: 1,
@@ -65,6 +69,69 @@ export function get_notification_indicator_level(event_logs) {
       return get_next_indicator_level(current_level, entry?.event_key, entry?.event);
     }, null)
   ;
+}
+
+/**
+ * Return the first line of the native notice message.
+ *
+ * @param {string} event_key
+ * @param {Record<string, unknown>} [event={}]
+ * @returns {string}
+ */
+function get_status_bar_notice_line(event_key = '', event = {}) {
+  const message = get_native_notice_message(event_key, event);
+  return String(message || '')
+    .split(/\r?\n/u)[0]
+    .trim()
+  ;
+}
+
+/**
+ * Truncate a status bar notice preview to 20 chars plus ellipsis when needed.
+ *
+ * @param {string} value
+ * @returns {string}
+ */
+function format_status_bar_notice_message(value = '') {
+  const text = typeof value === 'string' ? value.trim() : '';
+  if (!text) return '';
+  if (text.length <= 20) return text;
+  return `${text.slice(0, 20)}…`;
+}
+
+/**
+ * Resolve the latest active muted-notice preview for the status bar.
+ *
+ * Canonical notification events that did not render a native notice still get a
+ * short-lived status bar message using the same timeout window as the notice.
+ *
+ * @param {Object} [event_logs]
+ * @returns {{ message: string, title: string }|null}
+ */
+function get_status_bar_notice_preview(event_logs) {
+  const session_events = event_logs?.session_events;
+  if (!Array.isArray(session_events) || session_events.length === 0) return null;
+
+  for (let i = session_events.length - 1; i >= 0; i -= 1) {
+    const entry = session_events[i];
+    const event_key = typeof entry?.event_key === 'string' ? entry.event_key : '';
+    const event = entry?.event && typeof entry.event === 'object' ? entry.event : {};
+
+    if (!get_event_level(event_key, event)) continue;
+    if (entry?.native_notice_shown === true) return null;
+
+    const timeout_ms = get_native_notice_timeout(event_key, event);
+    const expires_at = get_entry_timestamp(entry) + timeout_ms;
+    if (Date.now() > expires_at) return null;
+
+    const title = get_status_bar_notice_line(event_key, event);
+    const message = format_status_bar_notice_message(title);
+    if (!message) return null;
+
+    return { message, title };
+  }
+
+  return null;
 }
 
 /**
@@ -384,6 +451,7 @@ export function get_env_activity_state(env) {
  */
 export function should_poll_env_activity(env) {
   const activity_state = get_env_activity_state(env);
+  if (get_status_bar_notice_preview(env?.event_logs)) return true;
   return [
     'embed_active',
     'embed_paused',
@@ -405,6 +473,10 @@ export function get_status_bar_state(env) {
   const notification_indicator_level = get_notification_indicator_level(env?.event_logs);
   const activity_state = get_env_activity_state(env);
   const embed_queue_count = get_reimport_queue_count(env);
+  const status_bar_notice_preview = get_status_bar_notice_preview(env?.event_logs);
+  const can_show_notice_preview = Boolean(status_bar_notice_preview)
+    && !['embed_active', 'embed_paused', 'importing', 'reimporting', 'loading'].includes(activity_state.kind)
+  ;
 
   let title = activity_state.title;
   let indicator_level = activity_state.indicator_level;
@@ -417,12 +489,28 @@ export function get_status_bar_state(env) {
     title = `${notification_count} unseen notification${notification_count === 1 ? '' : 's'}`;
   }
 
+  if (can_show_notice_preview && status_bar_notice_preview?.title) {
+    title = status_bar_notice_preview.title;
+  }
+
   return {
-    message: activity_state.message,
+    message: can_show_notice_preview
+      ? status_bar_notice_preview.message
+      : activity_state.message,
     title,
     indicator_count: notification_count,
     indicator_level,
     embed_queue_count,
     click_action: activity_state.click_action,
   };
+}
+
+/**
+ * @param {object} entry
+ * @returns {number}
+ */
+export function get_entry_timestamp(entry) {
+  if (typeof entry?.event?.at === 'number') return entry.event.at;
+  if (typeof entry?.at === 'number') return entry.at;
+  return Date.now();
 }

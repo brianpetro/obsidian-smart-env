@@ -167,7 +167,7 @@ function post_process(env, container, opts = {}) {
     if (active) {
       if (progress_poll_interval) return;
       progress_poll_interval = setInterval(() => {
-        render_status_elm();
+        refresh_status_bar();
       }, 1000);
       return;
     }
