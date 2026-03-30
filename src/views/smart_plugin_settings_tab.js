@@ -63,23 +63,18 @@ export class SmartPluginSettingsTab extends PluginSettingTab {
     if (!container) return;
     container.empty?.();
     if (!this.env) return;
-    if(this.env.is_pro) {
-      const settings_item_div = container.createDiv({ cls: 'setting-item' });
-      const info_div = settings_item_div.createDiv({ cls: 'setting-item-info' });
-      info_div.createDiv({ cls: 'setting-item-name', text: 'Smart Environment' });
-      info_div.createDiv({
-        cls: 'setting-item-description',
-        text: 'Manage global settings in the dedicated Smart Environment settings tab.',
-      });
-      const control_div = settings_item_div.createDiv({ cls: 'setting-item-control' });
-      const button = control_div.createEl('button', { text: 'Open settings' });
-      button.addEventListener('click', () => {
-        this.app.setting.openTabById('smart-environment');
-      });
-    }else {
-      const settings_smart_env = await this.render_component('settings_smart_env', this.env);
-      if (settings_smart_env) container.appendChild(settings_smart_env);
-    }
+    const settings_item_div = container.createDiv({ cls: 'setting-item' });
+    const info_div = settings_item_div.createDiv({ cls: 'setting-item-info' });
+    info_div.createDiv({ cls: 'setting-item-name', text: 'Smart Environment' });
+    info_div.createDiv({
+      cls: 'setting-item-description',
+      text: 'Manage global settings in the dedicated Smart Environment settings tab.',
+    });
+    const control_div = settings_item_div.createDiv({ cls: 'setting-item-control' });
+    const button = control_div.createEl('button', { text: 'Open settings' });
+    button.addEventListener('click', () => {
+      this.app.setting.openTabById('smart-environment');
+    });
     render_plugin_store_setting(this, this.pro_plugins_container);
   }
 
