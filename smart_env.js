@@ -117,6 +117,10 @@ export class SmartEnv extends BaseSmartEnv {
       this.open_notifications_feed_modal?.();
     });
 
+    this.events.on('pro_plugins_modal:open', () => {
+      this.open_pro_plugins_modal?.();
+    });
+
     this.events.on('smart_env:load_mobile_requested', () => {
       this.start_mobile_env_load({ source: 'native_notice_button' });
     });
@@ -304,19 +308,6 @@ export class SmartEnv extends BaseSmartEnv {
   }
 
   // Smart Plugins
-  /**
-   * This is the function that is called by the new "Sign in with Smart Plugins" button.
-   * @deprecated 2025-12-13 moved to components/pro-plugins/list.js
-   * It replicates the old 'initiate_oauth()' logic from sc_settings_tab.js
-   */
-  initiate_smart_plugins_oauth() {
-    console.log('initiate_smart_plugins_oauth');
-    const state = Math.random().toString(36).slice(2);
-    const redirect_uri = encodeURIComponent('obsidian://smart-plugins/callback');
-    const url = `${get_smart_server_url()}/oauth?client_id=smart-plugins-op&redirect_uri=${redirect_uri}&state=${state}`;
-    window.open(url, '_external');
-    return url;
-  }
 
   /**
    * Handles the OAuth callback from the Smart Plugins server.
@@ -394,6 +385,13 @@ export class SmartEnv extends BaseSmartEnv {
   open_milestones_modal() {
     const MilestonesModalClass = this.config.modals.milestones_modal.class;
     const modal = new MilestonesModalClass(this.obsidian_app, this);
+    modal.open();
+  }
+
+  open_pro_plugins_modal() {
+    const ProPluginsModalClass = this.config?.modals?.pro_plugins_modal?.class;
+    if (typeof ProPluginsModalClass !== 'function') return;
+    const modal = new ProPluginsModalClass(this.obsidian_app, this);
     modal.open();
   }
 

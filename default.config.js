@@ -51,6 +51,7 @@ import event_logs from './src/collections/event_logs.js';
 import { ContextModal } from './src/modals/context_selector.js';
 import { NotificationsFeedModal } from './src/modals/notifications_feed_modal.js';
 import { MilestonesModal } from './src/modals/milestones_modal.js';
+import { ProPluginsModal } from './src/modals/pro_plugins_modal.js';
 // 2025-11-26
 import { default_settings } from './default.settings.js';
 
@@ -162,6 +163,9 @@ const smart_env_config = {
     },
     notifications_feed_modal: {
       class: NotificationsFeedModal,
+    },
+    pro_plugins_modal: {
+      class: ProPluginsModal,
     },
   },
 };

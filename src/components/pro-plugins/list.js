@@ -181,9 +181,7 @@ export async function post_process(env, container, params = {}) {
       render_manual_login_link(last_login_url);
     }
 
-    if (env && typeof env.initiate_smart_plugins_oauth === 'function') {
-      last_login_url = initiate_smart_plugins_oauth();
-    }
+    last_login_url = initiate_smart_plugins_oauth();
 
     env?.events?.emit?.('pro_plugins:oauth_browser_login_requested', {
       level: 'info',
@@ -385,9 +383,11 @@ export async function post_process(env, container, params = {}) {
     await render_plugin_list_section();
   };
 
-  env.events.on('smart_plugins_oauth_completed', () => {
+  const disposers = [];
+  disposers.push(env.events.on('smart_plugins_oauth_completed', () => {
     render_smart_plugins();
-  });
+  }));
+  this.attach_disposer?.(container, disposers);
 
   await render_smart_plugins();
   return container;

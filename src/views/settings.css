@@ -53,14 +53,6 @@
   filter: brightness(1.05);
 }
 
-.pro-plugins-container {
-  border: 1px solid var(--color-accent);
-  border-radius: var(--radius-m);
-  padding: 1rem;
-  margin-top: 1rem;
-  background-color: var(--background-secondary);
-}
-
 .smart-plugin-settings-header .actions-container {
   display: flex;
   flex-wrap: wrap;

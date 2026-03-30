@@ -1,5 +1,6 @@
 import { PluginSettingTab } from 'obsidian';
-import { render_pre_env_load } from '../utils/render_pre_env_load';
+import { render_pre_env_load } from '../utils/render_pre_env_load.js';
+import { render_plugin_store_setting } from '../utils/render_plugin_store_setting.js';
 import styles from './settings.css';
 
 
@@ -39,9 +40,7 @@ export class SmartEnvSettingTab extends PluginSettingTab {
     this.header_container.createEl('p', { text: 'Manage all global Smart Environment settings from one tab. These settings apply to all Smart Plugins.' });
     const settings_smart_env = await this.render_component('settings_smart_env', this.env);
     if (settings_smart_env) this.plugin_container.appendChild(settings_smart_env);
-    const smart_plugins_settings = await this.render_component('pro_plugins_list', this.env);
-    this.pro_plugins_container.empty?.();
-    this.pro_plugins_container.appendChild(smart_plugins_settings);
+    render_plugin_store_setting(this, this.pro_plugins_container);
   }
 
 }

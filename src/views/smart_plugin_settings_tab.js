@@ -1,6 +1,7 @@
 import { PluginSettingTab } from 'obsidian';
 import styles from './settings.css';
 import { render_pre_env_load } from '../utils/render_pre_env_load.js';
+import { render_plugin_store_setting } from '../utils/render_plugin_store_setting.js';
 
 /**
  * @class SmartPluginSettingsTab
@@ -79,9 +80,7 @@ export class SmartPluginSettingsTab extends PluginSettingTab {
       const settings_smart_env = await this.render_component('settings_smart_env', this.env);
       if (settings_smart_env) container.appendChild(settings_smart_env);
     }
-    const smart_plugins_settings = await this.render_component('pro_plugins_list', this.env);
-    this.pro_plugins_container.empty?.();
-    this.pro_plugins_container.appendChild(smart_plugins_settings);
+    render_plugin_store_setting(this, this.pro_plugins_container);
   }
 
   async render_component(name, scope, params={}) {
@@ -89,5 +88,3 @@ export class SmartPluginSettingsTab extends PluginSettingTab {
   }
 
 }
-
-

@@ -1,12 +1,12 @@
 /**
  * @file register_status_bar_context_menu.js
  * @description
- * Adds a native Obsidian right‑click context‑menu to a Smart Env status‑bar
+ * Adds a native Obsidian right-click context-menu to a Smart Env status-bar
  * element.  The menu exposes an **Inspect active note** action that launches
  * the existing `SmartNoteInspectModal`, allowing developers and users to
- * debug the Smart Source backing the currently‑focused file.
+ * debug the Smart Source backing the currently-focused file.
  *
- * The helper is pure / side‑effect‑free except for the single DOM‑listener it
+ * The helper is pure / side-effect-free except for the single DOM-listener it
  * returns (handy for tests).  It deliberately avoids new deps, follows
  * functional style, and uses `snake_case`.
  *
@@ -95,6 +95,14 @@ export function register_status_bar_context_menu(env, status_container, deps = {
         }),
     );
     menu.addSeparator();
+    menu.addItem((item) =>
+      item
+        .setTitle('Browse Smart Plugins')
+        .setIcon('package')
+        .onClick(() => {
+          env.open_pro_plugins_modal?.();
+        }),
+    );
     if (env.is_pro) {
       menu.addItem((item) =>
         item
@@ -119,7 +127,7 @@ export function register_status_bar_context_menu(env, status_container, deps = {
     menu.showAtPosition({ x: ev.pageX, y: ev.pageY });
   };
 
-  // Auto‑unregistered on plugin unload
+  // Auto-unregistered on plugin unload
   plugin.registerDomEvent(status_container, "contextmenu", on_context_menu);
   return on_context_menu;
 }

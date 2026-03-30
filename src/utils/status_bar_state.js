@@ -196,8 +196,9 @@ export function get_env_activity_state(env) {
   const import_progress = get_import_progress_state(env);
   const embed_progress = get_embed_progress_state(env);
   const reimport_queue_count = get_reimport_queue_count(env);
-  const version = env?.is_pro ? 'Pro' : env?.constructor?.version;
-  const default_message = `Smart Env${version ? ` ${version}` : ''}`;
+  // const version = `v${(env?.constructor?.version.split('.').slice(0, 2).join('.') || '')}`;
+  const version = `v${(env?.constructor?.version || '')}`;
+  const default_message = `${env?.is_pro ? 'Pro' : 'Smart'} ${version}`;
 
   if (import_progress?.active) {
     const progress = normalize_number(import_progress.progress);
