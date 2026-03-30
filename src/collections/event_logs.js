@@ -12,28 +12,28 @@ import { dispatch_notice_action } from '../utils/notice_action_dispatch.js';
 
 export const settings_config = {
   native_notice_info: {
-    name: 'Native notice: Info',
-    description: 'Show Obsidian native notices for info level events.',
+    name: 'Info',
+    description: 'Show Obsidian native notices for "info" level events.',
     type: 'toggle',
   },
   native_notice_warning: {
-    name: 'Native notice: Warning',
-    description: 'Show Obsidian native notices for warning level events.',
+    name: 'Warning',
+    description: 'Show Obsidian native notices for "warning" level events.',
     type: 'toggle',
   },
   native_notice_error: {
-    name: 'Native notice: Error',
-    description: 'Show Obsidian native notices for error level events.',
+    name: 'Error',
+    description: 'Show Obsidian native notices for "error" level events.',
     type: 'toggle',
   },
   native_notice_attention: {
-    name: 'Native notice: Attention',
-    description: 'Show Obsidian native notices for attention level events.',
+    name: 'Attention',
+    description: 'Show Obsidian native notices for "attention" level events.',
     type: 'toggle',
   },
   native_notice_milestone: {
-    name: 'Native notice: Milestone',
-    description: 'Show Obsidian native notices for milestone level events.',
+    name: 'Milestone',
+    description: 'Show Obsidian native notices for "milestone" level events.',
     type: 'toggle',
   },
 };
