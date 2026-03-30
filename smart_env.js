@@ -46,7 +46,39 @@ export class SmartEnv extends BaseSmartEnv {
 
     const opts = merge_env_config(env_config, default_config);
     opts.env_path = ''; // scope handled by Obsidian FS methods
-    return await super.create(plugin, opts);
+    const existing_env = this.global_env;
+    const plugin_id = plugin?.manifest?.id || 'unknown-plugin';
+
+    if (existing_env && ['loading', 'loaded', 'restart_required'].includes(existing_env.state)) {
+      const notice_message = `Restart Obsidian to load ${plugin_id} into the Smart Environment.`;
+      existing_env.events?.emit?.('smart_env:restart_required', {
+        level: 'attention',
+        plugin_id,
+        message: notice_message,
+        event_source: 'SmartEnv.create',
+        btn_text: 'Restart Obsidian',
+        btn_callback: 'app:reload',
+      });
+      existing_env.state = 'restart_required'; // prevent new Plugin from detecting "env loaded" state and trying to continue
+      this.create_env_getter(plugin);
+      return existing_env;
+    }
+
+    const env = await super.create(plugin, opts);
+    if (!env.plugin_ids) env.plugin_ids = {};
+    env.plugin_ids[plugin_id] = true;
+    clearTimeout(env.load_timeout); // prevent base-level load in favor of using onLayoutReady for better timing with Obsidian's startup process
+    env.load_timeout = null;
+
+    if (!env._startup_load_registration) {
+      env._startup_load_registration = true;
+      plugin.registerEvent(plugin.app.workspace.onLayoutReady(() => {
+        if (env.state !== 'init') return;
+        env.load();
+      }));
+    }
+
+    return env;
   }
 
   async load(force_load = false) {
@@ -418,13 +450,6 @@ export class SmartEnv extends BaseSmartEnv {
   }
 }
 
-async function disable_plugin(app, plugin_id) {
-  console.log('disabling plugin ' + plugin_id);
-  await app.plugins.unloadPlugin(plugin_id);
-  await app.plugins.disablePluginAndSave(plugin_id);
-  await app.plugins.loadManifests();
-}
-
 /**
  * Triggers a browser download for the provided JSON string.
  * @param {string} json
@@ -440,4 +465,20 @@ function download_json(json, filename) {
   anchor.click();
   document.body.removeChild(anchor);
   URL.revokeObjectURL(url);
+}
+
+
+/**
+ * Build a consistent restart-required notice for late plugin detection.
+ *
+ * @param {object} [params={}]
+ * @param {string} [params.plugin_id]
+ * @returns {string}
+ */
+export function create_restart_notice_message(params = {}) {
+  const plugin_id = typeof params.plugin_id === 'string' && params.plugin_id.length
+    ? `Smart plugin "${params.plugin_id}"`
+    : 'A smart plugin'
+  ;
+  return `${plugin_id} was detected after Smart Environment startup. Restart Obsidian to fully wire it in.`;
 }
