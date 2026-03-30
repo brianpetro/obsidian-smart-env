@@ -1,23 +1,32 @@
-import { Platform, PluginSettingTab } from 'obsidian';
-import { wait_for_env_to_load } from '../../utils/wait_for_env_to_load.js';
+import { PluginSettingTab } from 'obsidian';
 import styles from './settings.css';
+import { render_pre_env_load } from '../utils/render_pre_env_load.js';
 
 /**
  * @class SmartPluginSettingsTab
  * @extends PluginSettingTab
  */
 export class SmartPluginSettingsTab extends PluginSettingTab {
-  constructor(app, plugin) {
-    super(app, plugin);
+  constructor(app, plugin, icon='smart-connections') {
+    super(app, plugin, icon);
     this.plugin = plugin;
     this.header_container = null;
     this.plugin_container = null;
     this.global_settings_container = null;
     this.plugin?.env?.create_env_getter?.(this);
-    if(this.env.is_pro && !this.env_settings_tab) this.plugin.addSettingTab(new SmartEnvSettingTab(this.plugin.app, this.plugin));
-    this.icon = 'smart-connections';
-    if (this.env.is_pro) {
-      this.name = this.name.replace('Smart ', '');
+    if (!this.icon && icon) this.icon = icon;
+    this.name = this.name.replace('Smart ', ' ');
+    this.polyfill_icon();
+  }
+  async polyfill_icon() {
+    let max_attempts = 100;
+    while (!this.navEl?.querySelector('.vertical-tab-nav-item-icon') && max_attempts > 0) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      max_attempts--;
+    }
+    if (this.icon && this.navEl.querySelector('.vertical-tab-nav-item-icon')) {
+      const tab_item = this.navEl.querySelector('.vertical-tab-nav-item-icon');
+      tab_item.style.display = 'flex';
     }
   }
   get smart_view() {
@@ -90,74 +99,7 @@ export class SmartPluginSettingsTab extends PluginSettingTab {
   async render_component(name, scope, params={}) {
     return await this.env.smart_components.render_component(name, scope, params);
   }
-  // Detect Existing Smart Environment Settings Tab
-  get env_settings_tab() {
-    const app = this.plugin.app || window.app;
-    return app.setting.pluginTabs.find(t => t.id === 'smart-environment');
-  }
 
 }
 
-export class SmartEnvSettingTab extends PluginSettingTab {
-  constructor(app, plugin) {
-    super(app, plugin);
-    this.plugin = plugin;
-    this.header_container = null;
-    this.plugin_container = null;
-    this.global_settings_container = null;
-    this.plugin?.env?.create_env_getter?.(this);
-    this.plugin = plugin;
-    this.name = 'Smart Env Pro';
-    this.id = 'smart-environment';
-    this.icon = 'smart-connections';
-  }
-  get smart_view() {
-    return this.env?.smart_view;
-  }
-  display() {
-    this.render();
-  }
-  async render_component(name, scope, params={}) {
-    return await this.env.smart_components.render_component(name, scope, params);
-  }
 
-  async render() {
-    this.containerEl.empty();
-    this.smart_view.apply_style_sheet(styles);
-    render_pre_env_load(this);
-    await this.env.constructor.wait_for({ loaded: true });
-    this.containerEl.empty();
-    this.header_container = this.containerEl.createDiv({ cls: 'smart-plugin-settings-header' });
-    this.plugin_container = this.containerEl.createDiv({ cls: 'smart-plugin-settings-main' });
-    this.pro_plugins_container = this.containerEl.createDiv({ cls: 'smart-plugin-settings-pro-plugins' });
-    this.header_container.createEl('p', { text: 'Manage all global Smart Environment settings from one tab. These settings apply to all Smart Plugins.' });
-    const settings_smart_env = await this.render_component('settings_smart_env', this.env);
-    if (settings_smart_env) this.plugin_container.appendChild(settings_smart_env);
-    const smart_plugins_settings = await this.render_component('pro_plugins_list', this.env);
-    this.pro_plugins_container.empty?.();
-    this.pro_plugins_container.appendChild(smart_plugins_settings);
-  }
-
-}
-
-function render_pre_env_load(scope) {
-  const container = scope.containerEl;
-  const env = scope.env;
-  if (env.state !== 'loaded') {
-    if (env.state === 'loading') {
-      container.createEl('p', { text: 'Smart Environment is loading…' });
-    } else {
-      container.createEl('p', { text: 'Smart Environment not yet initialized.' });
-      const load_btn = container.createEl('button', { text: 'Load Smart Environment' });
-      load_btn.addEventListener('click', async () => {
-        load_btn.disabled = true;
-        load_btn.textContent = 'Loading Smart Environment…';
-        if (Platform.isMobile && typeof env.start_mobile_env_load === 'function') {
-          await env.start_mobile_env_load({ source: 'settings_tab' });
-          return;
-        }
-        await env.load(true);
-      });
-    }
-  }
-}

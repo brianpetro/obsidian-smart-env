@@ -19,6 +19,7 @@ import { remove_smart_plugins_plugin } from './migrations/remove_smart_plugins_p
 import { register_first_of_event_notifications } from './src/utils/onboarding_events.js';
 import { render as render_status_bar_component } from './src/components/status_bar.js';
 import { EnvStatusView } from './src/views/env_status_view.js';
+import { SmartEnvSettingTab } from './src/views/smart_env_settings_tab.js';
 
 export class SmartEnv extends BaseSmartEnv {
   /**
@@ -52,6 +53,7 @@ export class SmartEnv extends BaseSmartEnv {
     this.run_migrations();
     this.register_notification_dispatchers();
     this.register_env_item_views();
+    this.register_env_settings_tab();
 
     if (typeof this._onboarding_events_teardown !== 'function') {
       this._onboarding_events_teardown = register_first_of_event_notifications(this);
@@ -405,6 +407,16 @@ export class SmartEnv extends BaseSmartEnv {
     remove_smart_plugins_plugin({ app: this.plugin.app, plugin_ids: ['smart-perplexity'] });
     remove_smart_plugins_plugin({ app: this.plugin.app, plugin_ids: ['smart-grok'] });
     remove_smart_plugins_plugin({ app: this.plugin.app, plugin_ids: ['smart-aistudio'] });
+  }
+
+  // Detect Existing Smart Environment Settings Tab
+  get env_settings_tab() {
+    const app = this.plugin.app || window.app;
+    return app.setting.pluginTabs.find(t => t.id === 'smart-environment');
+  }
+  register_env_settings_tab() {
+    if (this.env_settings_tab) return;
+    this.plugin.addSettingTab(new SmartEnvSettingTab(this.plugin.app, this.plugin));
   }
 }
 
