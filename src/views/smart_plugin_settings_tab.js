@@ -16,18 +16,6 @@ export class SmartPluginSettingsTab extends PluginSettingTab {
     this.plugin?.env?.create_env_getter?.(this);
     if (!this.icon && icon) this.icon = icon;
     this.name = this.name.replace('Smart ', ' ');
-    this.polyfill_icon();
-  }
-  async polyfill_icon() {
-    let max_attempts = 100;
-    while (!this.navEl?.querySelector('.vertical-tab-nav-item-icon') && max_attempts > 0) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-      max_attempts--;
-    }
-    if (this.icon && this.navEl.querySelector('.vertical-tab-nav-item-icon')) {
-      const tab_item = this.navEl.querySelector('.vertical-tab-nav-item-icon');
-      tab_item.style.display = 'flex';
-    }
   }
   get smart_view() {
     return this.env?.smart_view;

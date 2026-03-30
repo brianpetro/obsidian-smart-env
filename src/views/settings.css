@@ -85,3 +85,8 @@
     border: var(--setting-items-border-width, 0) solid var(--setting-items-border-color, var(--background-modifier-border));
   }
 }
+
+/* show icon for all smart-* plugins except the main smart environment settings tab */
+.vertical-tab-header-group-items[data-section="community-plugins"] [data-setting-id^="smart-"]:not([data-setting-id^="smart-environment"]) .vertical-tab-nav-item-icon {
+  display: flex;
+}

@@ -15,6 +15,7 @@ export class SmartEnvSettingTab extends PluginSettingTab {
     this.name = '  Smart Environment';
     this.id = 'smart-environment';
     if (!this.icon && icon) this.icon = icon;
+    this.smart_view.apply_style_sheet(styles);
   }
   get smart_view() {
     return this.env?.smart_view;
@@ -28,7 +29,7 @@ export class SmartEnvSettingTab extends PluginSettingTab {
 
   async render() {
     this.containerEl.empty();
-    this.smart_view.apply_style_sheet(styles);
+    // this.smart_view.apply_style_sheet(styles); // moved to constructor
     render_pre_env_load(this);
     await this.env.constructor.wait_for({ loaded: true });
     this.containerEl.empty();
