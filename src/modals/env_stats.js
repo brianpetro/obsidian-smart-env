@@ -12,7 +12,7 @@ export class EnvStatsModal extends Modal {
     setTimeout(this.render.bind(this), 100); // setTimeout to prevent blocking UI
   }
   async render() {
-    const frag = await this.env.render_component("env_stats", this.env);
+    const frag = await this.env.smart_components.render_component("env_stats", this.env);
     this.contentEl.empty();
     if (frag) {
       this.contentEl.appendChild(frag);

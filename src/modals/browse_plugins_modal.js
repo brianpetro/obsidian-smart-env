@@ -1,6 +1,6 @@
 import { Modal } from 'obsidian';
 
-export class ProPluginsModal extends Modal {
+export class BrowseSmartPlugins extends Modal {
   constructor(app, env) {
     super(app);
     this.env = env;
@@ -19,8 +19,8 @@ export class ProPluginsModal extends Modal {
     this.titleEl.setText('Smart Plugins');
     this.contentEl.empty();
 
-    const plugin_store = await this.env.smart_components.render_component('pro_plugins_list', this.env, {
-      event_source: 'pro_plugins_modal',
+    const plugin_store = await this.env.smart_components.render_component('smart_plugins_list', this.env, {
+      event_source: 'browse_plugins_modal',
     });
     if (plugin_store) {
       this.contentEl.appendChild(plugin_store);

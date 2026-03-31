@@ -149,8 +149,8 @@ export class SmartEnv extends BaseSmartEnv {
       this.open_notifications_feed_modal?.();
     });
 
-    this.events.on('pro_plugins_modal:open', () => {
-      this.open_pro_plugins_modal?.();
+    this.events.on('smart_plugins:browse', () => {
+      this.browse_smart_plugns?.();
     });
 
     this.events.on('smart_env:load_mobile_requested', () => {
@@ -170,7 +170,7 @@ export class SmartEnv extends BaseSmartEnv {
       this._registered_env_item_views = new Set();
     }
 
-    const plugin_key = plugin.manifest?.id || plugin.constructor?.name || 'main';
+    const plugin_key = plugin.manifest?.id || 'unknown-plugin';
     const view_classes = [EnvStatusView];
 
     view_classes.forEach((ViewClass) => {
@@ -196,6 +196,13 @@ export class SmartEnv extends BaseSmartEnv {
     this.register_env_item_views();
     EnvStatusView.open(this.obsidian_app.workspace, params);
   }
+
+  get env_status_view_command_id() {
+    const command_id = this._registered_env_item_views.find((id) => id.endsWith(EnvStatusView.view_type));
+    console.log({ command_id });
+    return command_id || this.plugin.manifest?.id + ':' + EnvStatusView.view_type;
+  }
+
 
   /**
    * Centralized mobile load flow used by native notices, settings tabs, and views.
@@ -420,7 +427,7 @@ export class SmartEnv extends BaseSmartEnv {
     modal.open();
   }
 
-  open_pro_plugins_modal() {
+  browse_smart_plugns() {
     const ProPluginsModalClass = this.config?.modals?.pro_plugins_modal?.class;
     if (typeof ProPluginsModalClass !== 'function') return;
     const modal = new ProPluginsModalClass(this.obsidian_app, this);

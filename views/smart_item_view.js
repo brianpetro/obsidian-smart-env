@@ -52,14 +52,6 @@ export class SmartItemView extends ItemView {
   }
 
   /**
-   * The env states that satisfy pre-render readiness.
-   * @returns {string[]}
-   */
-  static get wait_for_env_states() {
-    return ['loaded'];
-  }
-
-  /**
    * Registers this ItemView subclass against a plugin instance and
    * installs ergonomic accessors, an open helper, and an `${view_type}:open` listener.
    *
@@ -227,10 +219,7 @@ export class SmartItemView extends ItemView {
     await this.render_mobile_status_bar();
 
     const should_wait_for_env = this.constructor.wait_for_env !== false;
-    const wait_for_states = Array.isArray(this.constructor.wait_for_env_states)
-      ? this.constructor.wait_for_env_states
-      : ['loaded']
-    ;
+    const wait_for_states = ['loaded'];
 
     if (should_wait_for_env) {
       await wait_for_env_to_load(this, { wait_for_states });

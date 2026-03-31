@@ -16,7 +16,7 @@ export class SmartNoteInspectModal extends Modal {
   async render() {
     this.contentEl.empty();
 
-    const frag = await this.env.render_component('source_inspector', this.entity);
+    const frag = await this.env.smart_components.render_component('source_inspector', this.entity);
 
     this.contentEl.appendChild(frag);
   }

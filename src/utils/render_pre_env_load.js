@@ -6,6 +6,11 @@ export function render_pre_env_load(scope) {
   if (env.state !== 'loaded') {
     if (env.state === 'loading') {
       container.createEl('p', { text: 'Smart Environment is loading…' });
+      // button to open show env status view
+      const status_btn = container.createEl('button', { text: 'Show loading status' });
+      status_btn.addEventListener('click', () => {
+        env.open_env_status_view();
+      });
     } else {
       container.createEl('p', { text: 'Smart Environment not yet initialized.' });
       const load_btn = container.createEl('button', { text: 'Load Smart Environment' });

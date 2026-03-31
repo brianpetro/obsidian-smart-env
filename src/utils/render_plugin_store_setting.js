@@ -11,7 +11,9 @@ export function render_plugin_store_setting(scope, container) {
   setting.addButton((btn) => {
     btn.setButtonText('Browse Smart Plugins');
     btn.onClick(() => {
-      scope.env?.open_pro_plugins_modal?.();
+      scope.env?.events?.emit?.('smart_plugins:browse', {
+        event_source: `${scope.id}-settings`,
+      });
     });
   });
 

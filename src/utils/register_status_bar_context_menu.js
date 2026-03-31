@@ -100,7 +100,9 @@ export function register_status_bar_context_menu(env, status_container, deps = {
         .setTitle('Browse Smart Plugins')
         .setIcon('package')
         .onClick(() => {
-          env.open_pro_plugins_modal?.();
+          env.events?.emit?.('smart_plugins:browse', {
+            event_source: 'status_bar',
+          });
         }),
     );
     if (env.is_pro) {

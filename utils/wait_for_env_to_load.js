@@ -1,4 +1,5 @@
 import { Platform } from "obsidian";
+// TODO: this should utilize SmartEnv wait_for static method (2026-03-30)
 export async function wait_for_env_to_load(scope, opts = {}) {
   const { wait_for_states = ['loaded'] } = opts;
   const container = scope.container || scope.containerEl;

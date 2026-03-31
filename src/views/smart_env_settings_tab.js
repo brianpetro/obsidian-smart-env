@@ -33,17 +33,16 @@ export class SmartEnvSettingTab extends PluginSettingTab {
     if(!this.env || ['init', 'loading'].includes(this.env.state)) {
       render_pre_env_load(this);
       await this.env.constructor.wait_for({ loaded: true });
-    } else if (this.env.state === 'restart_required') {
+    }
+    // this.smart_view.apply_style_sheet(styles); // moved to constructor
+    this.containerEl.empty();
+    if (this.env.state === 'restart_required') {
       this.containerEl.createDiv({ text: 'Smart Plugins are waiting to be loaded. Restart Obsidian to finish loading the Smart Environment.' });
       const button = this.containerEl.createEl('button', { text: 'Restart Obsidian' });
       button.addEventListener('click', () => {
         window.location.reload();
       });
-      return;
     }
-    // this.smart_view.apply_style_sheet(styles); // moved to constructor
-    await this.env.constructor.wait_for({ loaded: true });
-    this.containerEl.empty();
     this.header_container = this.containerEl.createDiv({ cls: 'smart-plugin-settings-header' });
     this.plugin_container = this.containerEl.createDiv({ cls: 'smart-plugin-settings-main' });
     this.pro_plugins_container = this.containerEl.createDiv({ cls: 'smart-plugin-settings-pro-plugins' });

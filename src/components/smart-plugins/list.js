@@ -300,7 +300,7 @@ export async function post_process(env, container, params = {}) {
     if (!pro_list_el || placeholders.length === 0) return;
 
     for (const item of placeholders) {
-      const row = await env.smart_components.render_component("pro_plugins_list_item", item, {
+      const row = await env.smart_components.render_component("smart_plugins_list_item", item, {
         env,
         app,
         installed_map: {},
@@ -363,7 +363,7 @@ export async function post_process(env, container, params = {}) {
       }
 
       for (const item of list) {
-        const row = await env.smart_components.render_component("pro_plugins_list_item", item, {
+        const row = await env.smart_components.render_component("smart_plugins_list_item", item, {
           env,
           app,
           token,
