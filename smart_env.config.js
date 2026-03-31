@@ -18,8 +18,6 @@ import { render as lean_coffee_callout_component } from './src/components/lean_c
 import { render as milestone_notification_component } from './src/components/milestone_notification.js';
 import { render as milestones_component } from './src/components/milestones.js';
 import { render as notifications_feed_component } from './src/components/notifications_feed.js';
-import { render as pro_plugins_list_component } from './src/components/pro-plugins/list.js';
-import { render as pro_plugins_list_item_component } from './src/components/pro-plugins/list_item.js';
 import { render as settings_env_model_component } from './src/components/settings/env_model.js';
 import { render as settings_env_model_type_component } from './src/components/settings/env_model_type.js';
 import { render as settings_env_models_component } from './src/components/settings/env_models.js';
@@ -30,6 +28,8 @@ import { render as smart_context_actions_component } from './src/components/smar
 import { render as smart_context_item_component } from './src/components/smart-context/item.js';
 import { render as smart_context_meta_component } from './src/components/smart-context/meta.js';
 import { render as smart_context_tree_component } from './src/components/smart-context/tree.js';
+import { render as smart_plugins_list_component } from './src/components/smart-plugins/list.js';
+import { render as smart_plugins_list_item_component } from './src/components/smart-plugins/list_item.js';
 import { render as source_inspector_component } from './src/components/source_inspector.js';
 import { render as status_bar_component } from './src/components/status_bar.js';
 import { render as suggest_display_right_component } from './src/components/suggest_display_right.js';
@@ -78,8 +78,6 @@ export const smart_env_config = {
     milestone_notification: { render: milestone_notification_component },
     milestones: { render: milestones_component },
     notifications_feed: { render: notifications_feed_component },
-    pro_plugins_list: { render: pro_plugins_list_component },
-    pro_plugins_list_item: { render: pro_plugins_list_item_component },
     settings_env_model: { render: settings_env_model_component },
     settings_env_model_type: { render: settings_env_model_type_component },
     settings_env_models: { render: settings_env_models_component },
@@ -90,6 +88,8 @@ export const smart_env_config = {
     smart_context_item: { render: smart_context_item_component },
     smart_context_meta: { render: smart_context_meta_component },
     smart_context_tree: { render: smart_context_tree_component },
+    smart_plugins_list: { render: smart_plugins_list_component },
+    smart_plugins_list_item: { render: smart_plugins_list_item_component },
     source_inspector: { render: source_inspector_component },
     status_bar: { render: status_bar_component },
     suggest_display_right: { render: suggest_display_right_component },
