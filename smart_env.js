@@ -121,6 +121,20 @@ export class SmartEnv extends BaseSmartEnv {
 
     this.register_configured_modals();
     this.refresh_status_bar();
+
+    if (!this._registered_browse_smart_plugins_command) {
+      this._registered_browse_smart_plugins_command = this.plugin.manifest?.id + ':browse-smart-plugins';
+      this.plugin.addCommand({
+        id: 'browse-smart-plugins',
+        name: 'Browse Smart Plugins',
+        callback: () => {
+          this.events.emit('smart_plugins:browse', {
+            event_source: 'command_palette',
+          });
+        },
+      });
+    }
+
   }
 
   unload() {
