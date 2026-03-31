@@ -152,7 +152,7 @@ const install_plugin = async (item, params = {}) => {
     env?.events?.emit?.('pro_plugins:install_started', {
       level: 'info',
       message: `Installing "${item.repo}" ...`,
-      event_source: 'pro_plugins_list_item.install_plugin',
+      event_source: 'browse_smart_plugins.list_item',
     });
 
     const zip_data = await download_plugin_zip(item, token);
@@ -173,7 +173,7 @@ const install_plugin = async (item, params = {}) => {
     env?.events?.emit?.('pro_plugins:install_completed', {
       level: 'attention',
       message: `${item.repo} installed successfully.`,
-      event_source: 'pro_plugins_list_item.install_plugin',
+      event_source: 'browse_smart_plugins.list_item',
     });
     if (typeof on_installed === 'function') {
       await on_installed();
@@ -184,7 +184,7 @@ const install_plugin = async (item, params = {}) => {
       level: 'error',
       message: `Install failed: ${err.message}`,
       details: err?.stack || '',
-      event_source: 'pro_plugins_list_item.install_plugin',
+      event_source: 'browse_smart_plugins.list_item',
     });
   }
 };
@@ -203,7 +203,7 @@ const show_plugin_readme = async (item, params = {}) => {
       level: 'error',
       message: 'Failed to load README',
       details: err?.message || '',
-      event_source: 'pro_plugins_list_item.show_plugin_readme',
+      event_source: 'browse_smart_plugins.show_readme',
     });
   }
 };
