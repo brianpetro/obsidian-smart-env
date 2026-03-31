@@ -63,17 +63,25 @@ export class SmartEnv extends BaseSmartEnv {
           const notice_frag = document.createDocumentFragment();
           notice_frag.createEl('p', { text: `Detected outdated ${smart_env_config_keys[i]} in Smart Environment.` });
           notice_frag.createEl('p', { text: `Please update ${smart_env_config_keys[i]} then restart Obsidian to load all Smart Plugins.` });
-          if(!this.global_env.is_pro) {
-            notice_frag.createEl('button', { text: 'Check for Updates' }).addEventListener('click', () => {
+          notice_frag.createEl('button', { text: 'Check for Updates' }).addEventListener('click', () => {
+            if(window.smart_env.is_pro) {
+              window.smart_env.events.emit('smart_plugins:browse', {
+                event_source: 'outdated_env_notice_button',
+              });
+            }else {
+              // DECIDED: should always open Browse Smart Plugins?
               plugin.app.plugins.checkForUpdates().then(() => {
                 plugin.app.setting.openTabById('community-plugins');
               });
               plugin.app.setting.open();
-            });
-          }
+            }
+          });
           new Notice(notice_frag, 0); // DEPRECATED: here because no notices shown on events.emit in earlier versions
-          _config.main?.unload?.(); // removes settings tab and other registrations (ribbon icons)
-          delete this.smart_env_configs[smart_env_config_keys[i]]; // this should be handled by unload but here for redundancy during transition period
+          try{
+            _config.main?.unload?.(); // removes settings tab and other registrations (ribbon icons)
+          } catch(error) {
+            delete this.smart_env_configs[smart_env_config_keys[i]]; // this should be handled by unload but here for redundancy during transition period
+          }
         }
       }
       // DOES NOT HALT & NO NEED TO DELETE GLOBAL ENV HERE: super.create will replace global_env
