@@ -20,10 +20,16 @@ import { register_first_of_event_notifications } from './src/utils/onboarding_ev
 import { render as render_status_bar_component } from './src/components/status_bar.js';
 import { EnvStatusView } from './src/views/env_status_view.js';
 import { SmartEnvSettingTab } from './src/views/smart_env_settings_tab.js';
+import { compare_versions } from 'smart-environment/utils/compare_versions.js';
 
 export class SmartEnv extends BaseSmartEnv {
+  constructor(opts = {}) {
+    super(opts);
+    this.plugin_states = {};
+  }
   /**
    * Creates and initializes a SmartEnv instance tailored for Obsidian.
+   * @deprecated 2026-03-31 This code is so stinky I cringe. It will be replaced in next major version. Continue using but expect replacement. Do not depend on returned SmartEnv instance.
    * @param {Object} plugin - The Obsidian plugin instance.
    * @param {Object} [env_config] - Required environment configuration object.
    * @returns {Promise<SmartEnv>} The initialized SmartEnv instance.
@@ -36,22 +42,46 @@ export class SmartEnv extends BaseSmartEnv {
     add_smart_connections_icon();
     add_smart_lookup_icon();
     add_smart_icons();
-    // TODO: can this be safely removed? Does downstream version detection handle this case (no version)? 2026-02-07
-    if (window.smart_env && !window.smart_env.constructor.version) {
-      const update_notice = 'Detected ancient SmartEnv. Removing it to prevent issues with new plugins. Make sure your Smart Plugins are up-to-date!';
-      console.warn(update_notice);
-      new Notice(update_notice, 0);
-      window.smart_env = null;
-    }
 
     const opts = merge_env_config(env_config, default_config);
     opts.env_path = ''; // scope handled by Obsidian FS methods
-    const existing_env = this.global_env;
     const plugin_id = plugin?.manifest?.id || 'unknown-plugin';
-
-    if (existing_env && ['loading', 'loaded', 'restart_required'].includes(existing_env.state)) {
+    // Handle already initiated smart_env with deprecated version
+    const global_version_pcs = this.global_env.constructor.version.split('.');
+    const global_minor = parseInt(global_version_pcs[1] || '0');
+    if (this.global_env && this.global_env.state === 'init' &&
+      compare_versions(this.global_env.constructor.version, this.version) === -1 // old existing
+      && global_minor < 4 
+    ) {
+      // remove smart_env_configs from older versions
+      const smart_env_config_keys = Object.keys(this.smart_env_configs);
+      for (let i = 0; i < smart_env_config_keys.length; i++) {
+        const _config = this.smart_env_configs[smart_env_config_keys[i]];
+        const _config_env_version = _config.opts.version;
+        if (!_config_env_version.startsWith('2.4') && !(_config_env_version.startsWith('2.5'))) {
+          console.log(`Removing deprecated smart_env_config for version ${_config_env_version} at key "${smart_env_config_keys[i]}"`);
+          const notice_frag = document.createDocumentFragment();
+          notice_frag.createEl('p', { text: `Detected outdated ${smart_env_config_keys[i]} in Smart Environment.` });
+          notice_frag.createEl('p', { text: `Please update ${smart_env_config_keys[i]} then restart Obsidian to load all Smart Plugins.` });
+          if(!this.global_env.is_pro) {
+            notice_frag.createEl('button', { text: 'Check for Updates' }).addEventListener('click', () => {
+              plugin.app.plugins.checkForUpdates().then(() => {
+                plugin.app.setting.openTabById('community-plugins');
+              });
+              plugin.app.setting.open();
+            });
+          }
+          new Notice(notice_frag, 0); // DEPRECATED: here because no notices shown on events.emit in earlier versions
+          _config.main?.unload?.(); // removes settings tab and other registrations (ribbon icons)
+          delete this.smart_env_configs[smart_env_config_keys[i]]; // this should be handled by unload but here for redundancy during transition period
+        }
+      }
+      // DOES NOT HALT & NO NEED TO DELETE GLOBAL ENV HERE: super.create will replace global_env
+    }
+    if (this.global_env && this.global_env.state !== 'init') {
       const notice_message = `Restart Obsidian to load ${plugin_id} into the Smart Environment.`;
-      existing_env.events?.emit?.('smart_env:restart_required', {
+      console.warn(`SmartEnv: Detected existing environment in "${this.global_env.state}" state. ${notice_message}`);
+      this.global_env.events.emit('smart_env:restart_required', {
         level: 'attention',
         plugin_id,
         message: notice_message,
@@ -59,46 +89,54 @@ export class SmartEnv extends BaseSmartEnv {
         btn_text: 'Restart Obsidian',
         btn_callback: 'app:reload',
       });
-      existing_env.state = 'restart_required'; // prevent new Plugin from detecting "env loaded" state and trying to continue
+      if (!this.global_env.plugin_states) this.global_env.plugin_states = {};
+      this.global_env.plugin_states[plugin_id] = 'deferred';
       this.create_env_getter(plugin);
-      return existing_env;
+      return this.global_env;
     }
 
     const env = await super.create(plugin, opts);
-    if (!env.plugin_ids) env.plugin_ids = {};
-    env.plugin_ids[plugin_id] = true;
     clearTimeout(env.load_timeout); // prevent base-level load in favor of using onLayoutReady for better timing with Obsidian's startup process
     env.load_timeout = null;
 
     if (!env._startup_load_registration) {
       env._startup_load_registration = true;
-      plugin.registerEvent(plugin.app.workspace.onLayoutReady(() => {
-        if (env.state !== 'init') return;
-        env.load();
+      plugin.registerEvent(plugin.app.workspace.onLayoutReady(async () => {
+        if (env.state !== 'init') {
+          console.warn(`Skipping SmartEnv (v${env.constructor.version}) load on layout ready; env.state: "${env.state}".`);
+          return;
+        }
+        const continue_load = await env.before_load()
+        if (continue_load === false) {
+          console.warn('SmartEnv before_load returned false, skipping load.');
+          return;
+        }
+        await env.load(); // calls after_load internally and sets state to 'loaded' at the end
       }));
     }
 
     return env;
   }
 
-  async load(force_load = false) {
+  async before_load() {
     this.run_migrations();
     this.register_notification_dispatchers();
     this.register_env_item_views();
     this.register_env_settings_tab();
-
+  
     if (typeof this._onboarding_events_teardown !== 'function') {
       this._onboarding_events_teardown = register_first_of_event_notifications(this);
     }
-
+  
     if (!this.plugin.app.workspace.protocolHandlers.has('smart-plugins/callback')) {
       // Register protocol handler for obsidian://smart-plugins/callback
       this.plugin.registerObsidianProtocolHandler('smart-plugins/callback', async (params) => {
         await this.handle_smart_plugins_oauth_callback(params);
       });
     }
-
-    if (Platform.isMobile && !force_load && this.state !== 'loaded') {
+    if(Platform.isDesktop) this.register_status_bar();
+  
+    if (Platform.isMobile && this.state !== 'loaded') {
       const frag = this.smart_view.create_doc_fragment(
         '<div><p>Smart Environment loading deferred on mobile.</p><button>Load Smart Environment</button></div>',
       );
@@ -106,12 +144,13 @@ export class SmartEnv extends BaseSmartEnv {
         this.start_mobile_env_load({ source: 'mobile_deferred_notice' });
       });
       new Notice(frag, 0);
-      return;
+      return false;
     }
+  
+    return true;
+  }
 
-    this.register_status_bar();
-    await super.load();
-
+  async after_load() {
     this.smart_sources?.register_source_watchers?.(this.smart_sources);
     this.register_workspace_source_events();
 
@@ -226,7 +265,7 @@ export class SmartEnv extends BaseSmartEnv {
    * @param {boolean} [params.open_progress_view=true]
    * @returns {Promise<SmartEnv>|SmartEnv}
    */
-  start_mobile_env_load(params = {}) {
+  async start_mobile_env_load(params = {}) {
     const {
       open_progress_view = true,
     } = params;
@@ -244,7 +283,9 @@ export class SmartEnv extends BaseSmartEnv {
       return this._load_promise;
     }
 
-    return this.load(true);
+    await this.load();
+    await this.after_load();
+    return this;
   }
 
   /**

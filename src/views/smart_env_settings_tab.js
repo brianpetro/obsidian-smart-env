@@ -36,7 +36,7 @@ export class SmartEnvSettingTab extends PluginSettingTab {
     }
     // this.smart_view.apply_style_sheet(styles); // moved to constructor
     this.containerEl.empty();
-    if (this.env.state === 'restart_required') {
+    if (Object.values(this.env.plugin_states).some(state => state === 'deferred')) {
       this.containerEl.createDiv({ text: 'Smart Plugins are waiting to be loaded. Restart Obsidian to finish loading the Smart Environment.' });
       const button = this.containerEl.createEl('button', { text: 'Restart Obsidian' });
       button.addEventListener('click', () => {
