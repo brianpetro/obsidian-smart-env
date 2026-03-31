@@ -102,7 +102,13 @@ export class SmartItemView extends ItemView {
     }
 
     // Always (re)bind the open method to the latest View.open behavior
-    plugin[open_method_name] = (params = {}) => View.open(plugin.app.workspace, params);
+    plugin[open_method_name] = (params = {}) => {
+      if (!plugin.app.viewRegistry?.viewByType?.[View.view_type]) {
+        console.warn(`View type "${View.view_type}" not registered when calling ${open_method_name}. Registering now. This should NOT happen frequently.`);
+        plugin.registerView(View.view_type, (leaf) => new View(leaf, plugin));
+      }
+      View.open(plugin.app.workspace, params);
+    };
 
     // Register `${view_type}:open` event listener on SmartEnv events, if available
     const event_name = `${method_name}:open`;
