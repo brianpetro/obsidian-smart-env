@@ -46,45 +46,47 @@ export class SmartEnv extends BaseSmartEnv {
     const opts = merge_env_config(env_config, default_config);
     opts.env_path = ''; // scope handled by Obsidian FS methods
     const plugin_id = plugin?.manifest?.id || 'unknown-plugin';
-    // Handle already initiated smart_env with deprecated version
-    const global_version_pcs = this.global_env.constructor.version.split('.');
-    const global_minor = parseInt(global_version_pcs[1] || '0');
-    if (this.global_env && this.global_env.state === 'init' &&
-      compare_versions(this.global_env.constructor.version, this.version) === -1 // old existing
-      && global_minor < 4 
-    ) {
-      // remove smart_env_configs from older versions
-      const smart_env_config_keys = Object.keys(this.smart_env_configs);
-      for (let i = 0; i < smart_env_config_keys.length; i++) {
-        const _config = this.smart_env_configs[smart_env_config_keys[i]];
-        const _config_env_version = _config.opts.version;
-        if (!_config_env_version.startsWith('2.4') && !(_config_env_version.startsWith('2.5'))) {
-          console.log(`Removing deprecated smart_env_config for version ${_config_env_version} at key "${smart_env_config_keys[i]}"`);
-          const notice_frag = document.createDocumentFragment();
-          notice_frag.createEl('p', { text: `Detected outdated ${smart_env_config_keys[i]} in Smart Environment.` });
-          notice_frag.createEl('p', { text: `Please update ${smart_env_config_keys[i]} then restart Obsidian to load all Smart Plugins.` });
-          notice_frag.createEl('button', { text: 'Check for Updates' }).addEventListener('click', () => {
-            if(window.smart_env.is_pro) {
-              window.smart_env.events.emit('smart_plugins:browse', {
-                event_source: 'outdated_env_notice_button',
-              });
-            }else {
-              // DECIDED: should always open Browse Smart Plugins?
-              plugin.app.plugins.checkForUpdates().then(() => {
-                plugin.app.setting.openTabById('community-plugins');
-              });
-              plugin.app.setting.open();
+    if (this.global_env && this.global_env.state === 'init') {
+      // Handle already initiated smart_env with deprecated version
+      const global_version_pcs = this.global_env.constructor.version.split('.');
+      const global_minor = parseInt(global_version_pcs[1] || '0');
+      if (
+        compare_versions(this.global_env.constructor.version, this.version) === -1 // old existing
+        && global_minor < 4 
+      ) {
+        // remove smart_env_configs from older versions
+        const smart_env_config_keys = Object.keys(this.smart_env_configs);
+        for (let i = 0; i < smart_env_config_keys.length; i++) {
+          const _config = this.smart_env_configs[smart_env_config_keys[i]];
+          const _config_env_version = _config.opts.version;
+          if (!_config_env_version.startsWith('2.4') && !(_config_env_version.startsWith('2.5'))) {
+            console.log(`Removing deprecated smart_env_config for version ${_config_env_version} at key "${smart_env_config_keys[i]}"`);
+            const notice_frag = document.createDocumentFragment();
+            notice_frag.createEl('p', { text: `Detected outdated ${smart_env_config_keys[i]} in Smart Environment.` });
+            notice_frag.createEl('p', { text: `Please update ${smart_env_config_keys[i]} then restart Obsidian to load all Smart Plugins.` });
+            notice_frag.createEl('button', { text: 'Check for Updates' }).addEventListener('click', () => {
+              if(window.smart_env.is_pro) {
+                window.smart_env.events.emit('smart_plugins:browse', {
+                  event_source: 'outdated_env_notice_button',
+                });
+              }else {
+                // DECIDED: should always open Browse Smart Plugins?
+                plugin.app.plugins.checkForUpdates().then(() => {
+                  plugin.app.setting.openTabById('community-plugins');
+                });
+                plugin.app.setting.open();
+              }
+            });
+            new Notice(notice_frag, 0); // DEPRECATED: here because no notices shown on events.emit in earlier versions
+            try{
+              _config.main?.unload?.(); // removes settings tab and other registrations (ribbon icons)
+            } catch(error) {
+              delete this.smart_env_configs[smart_env_config_keys[i]]; // this should be handled by unload but here for redundancy during transition period
             }
-          });
-          new Notice(notice_frag, 0); // DEPRECATED: here because no notices shown on events.emit in earlier versions
-          try{
-            _config.main?.unload?.(); // removes settings tab and other registrations (ribbon icons)
-          } catch(error) {
-            delete this.smart_env_configs[smart_env_config_keys[i]]; // this should be handled by unload but here for redundancy during transition period
           }
         }
+        // DOES NOT HALT & NO NEED TO DELETE GLOBAL ENV HERE: super.create will replace global_env
       }
-      // DOES NOT HALT & NO NEED TO DELETE GLOBAL ENV HERE: super.create will replace global_env
     }
     if (this.global_env && this.global_env.state !== 'init') {
       const notice_message = `Restart Obsidian to load ${plugin_id} into the Smart Environment.`;
