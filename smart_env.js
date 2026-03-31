@@ -150,7 +150,7 @@ export class SmartEnv extends BaseSmartEnv {
     });
 
     this.events.on('smart_plugins:browse', () => {
-      this.browse_smart_plugns?.();
+      this.browse_smart_plugins?.();
     });
 
     this.events.on('smart_env:load_mobile_requested', () => {
@@ -427,10 +427,10 @@ export class SmartEnv extends BaseSmartEnv {
     modal.open();
   }
 
-  browse_smart_plugns() {
-    const ProPluginsModalClass = this.config?.modals?.pro_plugins_modal?.class;
-    if (typeof ProPluginsModalClass !== 'function') return;
-    const modal = new ProPluginsModalClass(this.obsidian_app, this);
+  browse_smart_plugins() {
+    const BrowseSmartPluginsClass = this.config?.modals?.browse_plugins_modal?.class;
+    if (typeof BrowseSmartPluginsClass !== 'function') return;
+    const modal = new BrowseSmartPluginsClass(this.obsidian_app, this);
     modal.open();
   }
 
@@ -472,20 +472,4 @@ function download_json(json, filename) {
   anchor.click();
   document.body.removeChild(anchor);
   URL.revokeObjectURL(url);
-}
-
-
-/**
- * Build a consistent restart-required notice for late plugin detection.
- *
- * @param {object} [params={}]
- * @param {string} [params.plugin_id]
- * @returns {string}
- */
-export function create_restart_notice_message(params = {}) {
-  const plugin_id = typeof params.plugin_id === 'string' && params.plugin_id.length
-    ? `Smart plugin "${params.plugin_id}"`
-    : 'A smart plugin'
-  ;
-  return `${plugin_id} was detected after Smart Environment startup. Restart Obsidian to fully wire it in.`;
 }
