@@ -314,6 +314,15 @@ export class PluginListItem {
   }
 
   get should_update() {
+    if (this.item_type !== this.installed_type) return false;
+    if (this.can_install && this.is_enabled && !this.is_loaded && !this.is_deferred) {
+      // check if outdated SmartEnv version
+      const env_version = this.app.plugins.plugins[this.plugin_id]?.SmartEnv.version;
+      if(env_version) {
+        const env_version_minor = parseInt(env_version.split('.')[1] || '0');
+        if (env_version_minor < 4) return true; // incompatible smart env version, requires update
+      }
+    }
     return Boolean(
       this.item_type === this.installed_type
       && typeof this.data.version === 'string'
@@ -390,8 +399,13 @@ export class PluginListItem {
     return this.description;
   }
 
+  get is_loaded() {
+    return this.is_enabled && this.env.plugin_states?.[this.plugin_id] === 'loaded';
+  }
+
   get row_control_state() {
     if (this.is_deferred) return 'deferred';
+    if (this.is_loaded) return 'loaded';
 
     if (this.group_size > 1) {
       if (this.group_state === 'pro_can_install') {
@@ -421,15 +435,17 @@ export class PluginListItem {
     switch (this.row_control_state) {
       case 'deferred':
         return [
-          { type: 'status', text: 'Installed & enabled. Requires reloading Obsidian to activate.' },
+          { type: 'status', text: 'Installed & enabled. Reload to activate' },
           { type: 'button', action: 'restart_obsidian', text: 'Reload', variant: 'primary' },
         ];
       case 'update_available':
         return [
+          { type: 'status', text: 'Update available' },
           { type: 'button', action: 'install', text: 'Update', variant: 'primary' },
         ];
-      case 'installed':
+      case 'loaded':
         return [
+          { type: 'status', text: 'Active' },
           { type: 'button', action: 'open_settings', text: 'Open settings', variant: 'secondary' },
         ];
       case 'can_enable':
@@ -522,22 +538,19 @@ export class PluginListItem {
   }
 
   async enable(params = {}) {
-    const app = params.app || this.app;
-    const env = params.env || null;
-
     try {
-      await enable_plugin(app, this.plugin_id);
-      env?.events?.emit?.('pro_plugins:enabled', {
+      await enable_plugin(this.app, this.plugin_id);
+      this.env?.events?.emit?.('pro_plugins:enabled', {
         level: 'info',
         message: `${this.label} enabled.`,
         event_source: 'browse_smart_plugins.list_item',
       });
-      env?.events?.emit?.('pro_plugins:refresh', {
+      this.env?.events?.emit?.('pro_plugins:refresh', {
         event_source: 'browse_smart_plugins.list_item.enable',
       });
     } catch (err) {
       console.error('[smart-plugins:list] Enable error:', err);
-      env?.events?.emit?.('pro_plugins:enable_failed', {
+      this.env?.events?.emit?.('pro_plugins:enable_failed', {
         level: 'error',
         message: `Enable failed: ${err.message}`,
         details: err?.stack || '',
@@ -576,6 +589,7 @@ export class PluginListItem {
         id: this.plugin_id,
         name: this.label,
       });
+      await this.enable();
       this.env?.events?.emit?.('smart_plugins:install_completed', {
         level: 'attention',
         message: `${this.label} installed successfully.`,
