@@ -302,9 +302,12 @@ export class PluginListItem {
   }
 
   get is_deferred() {
-    return this.env_plugin_state === 'deferred'
-      && this.installed_type === this.item_type
-    ;
+    return this.installed_type === this.item_type
+      && this.is_enabled
+      && (
+        this.env_plugin_state === 'deferred'
+        || this.loaded_version !== this.installed_version
+      );
   }
 
   get can_install() {
@@ -343,6 +346,10 @@ export class PluginListItem {
     if (!this.data.manifest) return null;
     if (['smart-file-nav'].includes(this.plugin_id)) return 'pro'; // TEMP special case for plugins that don't follow standard naming conventions
     return this.data.manifest.name.includes('Pro') ? 'pro' : 'core';
+  }
+
+  get loaded_version() {
+    return this.app.plugins.plugins[this.plugin_id]?.manifest?.version;
   }
 
   get installed_version() {
@@ -409,6 +416,7 @@ export class PluginListItem {
   }
 
   get row_control_state() {
+    if (this.should_update) return 'update_available';
     if (this.is_deferred) return 'deferred';
     if (this.is_loaded) return 'loaded';
 
@@ -439,8 +447,9 @@ export class PluginListItem {
   get control_specs() {
     switch (this.row_control_state) {
       case 'deferred':
+        const is_updated = this.loaded_version && this.loaded_version !== this.installed_version;
         return [
-          { type: 'status', text: 'Installed & enabled. Reload to activate' },
+          { type: 'status', text: `${is_updated ? 'Update ready.' : 'Installed & enabled.'} Reload to activate` },
           { type: 'button', action: 'restart_obsidian', text: 'Reload', variant: 'primary' },
         ];
       case 'update_available':
