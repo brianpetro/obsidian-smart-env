@@ -433,6 +433,13 @@ details.smart-env-notification > .smart-env-notification__summary:focus-visible 
   white-space: nowrap;
 }
 
+.smart-env-notification__summary-action {
+  margin-left: auto;
+  font-size: var(--font-ui-smaller);
+  min-height: var(--touch-size-xxs);
+  padding: 0 var(--size-2-3);
+}
+
 .smart-env-notification__time {
   color: var(--text-muted);
   font-size: var(--font-ui-small);

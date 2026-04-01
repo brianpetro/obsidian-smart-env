@@ -9,6 +9,7 @@ import {
   get_entry_event_key,
   get_entry_level,
   get_entry_payload_text,
+  get_entry_summary_action,
   get_entry_timestamp,
   get_entry_title,
   get_filtered_entries,
@@ -24,6 +25,7 @@ import {
   should_show_load_more,
   to_time_ago,
 } from '../utils/notifications_feed_utils.js';
+import { dispatch_notice_action } from '../utils/notice_action_dispatch.js';
 
 const feed_excluded_event_keys = new Set([
   'collection:save_started',
@@ -465,6 +467,7 @@ function append_entry(feed_container, entry, params = {}) {
   const collection_key = entry?.event?.collection_key ?? '';
   const event_key = get_entry_event_key(entry) || 'event';
   const payload_text = get_entry_payload_text(entry);
+  const summary_action = get_entry_summary_action(entry);
   const is_canonical = is_canonical_notification_entry(entry);
   const is_muted = is_canonical && Boolean(env?.event_logs?.is_event_key_muted?.(event_key));
   const is_feed_only = Boolean(level) && !is_canonical;
@@ -503,6 +506,23 @@ function append_entry(feed_container, entry, params = {}) {
   time_el.title = format_timestamp(timestamp);
 
   top.appendChild(event_el);
+  if (summary_action) {
+    const cta_btn = feed_container.ownerDocument.createElement('button');
+    cta_btn.className = 'smart-env-btn smart-env-btn--ghost smart-env-notification__summary-action';
+    cta_btn.type = 'button';
+    cta_btn.textContent = summary_action.btn_text;
+    cta_btn.setAttribute('aria-label', summary_action.btn_text);
+    cta_btn.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      dispatch_notice_action(env, summary_action.btn_callback, {
+        event_key,
+        event: entry?.event,
+        event_source: 'notifications_feed',
+      });
+    });
+    top.appendChild(cta_btn);
+  }
   top.appendChild(time_el);
 
   const bottom = feed_container.ownerDocument.createElement('div');

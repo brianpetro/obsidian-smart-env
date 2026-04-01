@@ -4,6 +4,7 @@ import {
   are_all_levels_active,
   create_all_levels_set,
   debug_levels_filter_key,
+  get_entry_summary_action,
   get_canonical_entry_level,
   get_entry_level,
   get_filtered_entries,
@@ -127,4 +128,21 @@ test('get_filtered_entries and get_level_counts use derived levels plus debug co
     info: 1,
     debug: 1,
   });
+});
+
+test('get_entry_summary_action returns only valid CTA payloads', (t) => {
+  t.deepEqual(get_entry_summary_action({
+    event: { btn_text: 'View milestones', btn_callback: 'milestones_modal:open' },
+  }), {
+    btn_text: 'View milestones',
+    btn_callback: 'milestones_modal:open',
+  });
+
+  t.is(get_entry_summary_action({
+    event: { btn_text: 'View milestones', btn_callback: '' },
+  }), null);
+
+  t.is(get_entry_summary_action({
+    event: { btn_text: '', btn_callback: 'milestones_modal:open' },
+  }), null);
 });

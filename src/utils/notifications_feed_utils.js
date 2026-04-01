@@ -285,6 +285,18 @@ export function get_entry_payload_text(entry) {
 
 /**
  * @param {object} entry
+ * @returns {{ btn_text: string, btn_callback: string }|null}
+ */
+export function get_entry_summary_action(entry) {
+  const event_obj = entry?.event && typeof entry.event === 'object' ? entry.event : {};
+  const btn_text = typeof event_obj.btn_text === 'string' ? event_obj.btn_text.trim() : '';
+  const btn_callback = typeof event_obj.btn_callback === 'string' ? event_obj.btn_callback.trim() : '';
+  if (!btn_text || !btn_callback) return null;
+  return { btn_text, btn_callback };
+}
+
+/**
+ * @param {object} entry
  * @returns {string}
  */
 export function get_entry_meta_text(entry) {
