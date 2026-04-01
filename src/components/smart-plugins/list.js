@@ -11,8 +11,8 @@ import {
 import styles from './style.css';
 import { compare_versions } from 'smart-environment/utils/compare_versions.js';
 
-const SMART_PLUGINS_DESC = `<a href="https://smartconnections.app/core-plugins/" target="_external">Core plugins</a> provide essential functionality and a "just works" experience. <a href="https://smartconnections.app/pro-plugins/" target="_external">Pro plugins</a> enable advanced configuration and features for Obsidian AI experts.`;
-const PRO_PLUGINS_FOOTER = `All Pro plugins include advanced configurations and additional model providers. Pro users get priority support via email. <a href="https://smartconnections.app/introducing-pro-plugins/" target="_external">Learn more</a> about Pro plugins.`;
+const SMART_PLUGINS_DESC = `<a href="https://smartconnections.app/core-plugins/?utm_source=plugin-store" target="_external">Core plugins</a> provide essential functionality and a "just works" experience. Pro plugins enable advanced configuration and features for Obsidian AI experts. <a href="https://smartconnections.app/smart-plugins/?utm_source=plugin-store" target="_external">Learn more</a> about Smart Plugins.`;
+const PRO_PLUGINS_FOOTER = `All Pro plugins include advanced configurations and additional model providers. Pro users get priority support via email. <a href="https://smartconnections.app/pro-plugins/?utm_source=plugin-store" target="_external">Learn more</a> about Pro Plugins.`;
 const PRO_PLUGINS_URL = 'https://smartconnections.app/pro-plugins/';
 const OBSIDIAN_PLUGIN_URL = 'https://obsidian.md/plugins?id=';
 
@@ -107,11 +107,10 @@ export function build_html(env, params = {}) {
         </div>
         <p>${SMART_PLUGINS_DESC}</p>
         <div class="smart-plugins-section">
-          <div class="setting-item-name smart-plugins-section-title">Official plugins</div>
-          <div class="setting-items smart-plugins-official-list">Loading...</div>
+          <div class="smart-plugins-official-list">Loading...</div>
         </div>
         <div class="smart-plugins-section">
-          <div class="setting-item-name smart-plugins-section-title">Community plugins</div>
+          <div class="smart-plugins-section-title">Community plugins</div>
           <div class="setting-items smart-plugins-community-list">Coming soon...</div>
         </div>
         <p>${PRO_PLUGINS_FOOTER}</p>
@@ -154,7 +153,6 @@ export async function post_process(env, container, params = {}) {
 
   const render_smart_plugins = async () => {
     this.empty(official_list_el);
-    this.empty(community_list_el);
 
     const token = localStorage.getItem(oauth_storage_prefix + 'token') || '';
     await render_login();
@@ -168,7 +166,7 @@ export async function post_process(env, container, params = {}) {
       await render_login(sub_exp);
       await render_referrals(token, sub_exp);
 
-      hydrate_plugins_list(resp, app);
+      hydrate_plugins_list(resp, env);
       console.log('Hydrated plugin list:', SMART_PLUGINS_LIST);
       const plugin_groups = annotate_plugin_groups(SMART_PLUGINS_LIST);
       console.log('Plugin groups:', plugin_groups);
