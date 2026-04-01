@@ -589,6 +589,7 @@ function handle_env_load_attempt_after_loaded(env) {
       event_source: 'SmartEnv.create',
       btn_text: 'Restart Obsidian',
       btn_callback: 'app:reload',
+      timeout: 10000, // 10 seconds
     });
   } else {
     // TEMP handle older versions that don't support events.emit for notices

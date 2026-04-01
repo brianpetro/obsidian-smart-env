@@ -5,8 +5,8 @@ export function render_plugin_store_setting(scope, container) {
   container.empty?.();
 
   const setting = new Setting(container)
-    .setName('Plugin store')
-    .setDesc('Browse Smart Plugins, connect your account, and install Pro plugins from the dedicated modal.');
+    .setName('Browse Smart Plugins')
+    .setDesc('Discover Core (free) and Pro Smart Plugins to supercharge your Obsidian AI experience.');
 
   setting.addButton((btn) => {
     btn.setButtonText('Browse Smart Plugins');

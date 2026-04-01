@@ -30,6 +30,8 @@ import { render as smart_context_meta_component } from './src/components/smart-c
 import { render as smart_context_tree_component } from './src/components/smart-context/tree.js';
 import { render as smart_plugins_list_component } from './src/components/smart-plugins/list.js';
 import { render as smart_plugins_list_item_component } from './src/components/smart-plugins/list_item.js';
+import { render as smart_plugins_login_component } from './src/components/smart-plugins/login.js';
+import { render as smart_plugins_referral_component } from './src/components/smart-plugins/referral.js';
 import { render as source_inspector_component } from './src/components/source_inspector.js';
 import { render as status_bar_component } from './src/components/status_bar.js';
 import { render as suggest_display_right_component } from './src/components/suggest_display_right.js';
@@ -90,6 +92,8 @@ export const smart_env_config = {
     smart_context_tree: { render: smart_context_tree_component },
     smart_plugins_list: { render: smart_plugins_list_component },
     smart_plugins_list_item: { render: smart_plugins_list_item_component },
+    smart_plugins_login: { render: smart_plugins_login_component },
+    smart_plugins_referral: { render: smart_plugins_referral_component },
     source_inspector: { render: source_inspector_component },
     status_bar: { render: status_bar_component },
     suggest_display_right: { render: suggest_display_right_component },
