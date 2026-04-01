@@ -1,13 +1,20 @@
 import { requestUrl } from 'obsidian';
 import {
+  enable_plugin,
+  fetch_plugin_zip,
+  fetch_zip_from_url,
   get_oauth_storage_prefix,
   get_smart_server_url,
+  parse_zip_into_files,
+  write_files_with_adapter,
 } from '../../utils/smart_plugins.js';
 import styles from './style.css';
 import { compare_versions } from 'smart-environment/utils/compare_versions.js';
 
 const SMART_PLUGINS_DESC = `<a href="https://smartconnections.app/core-plugins/" target="_external">Core plugins</a> provide essential functionality and a "just works" experience. <a href="https://smartconnections.app/pro-plugins/" target="_external">Pro plugins</a> enable advanced configuration and features for Obsidian AI experts.`;
 const PRO_PLUGINS_FOOTER = `All Pro plugins include advanced configurations and additional model providers. Pro users get priority support via email. <a href="https://smartconnections.app/introducing-pro-plugins/" target="_external">Learn more</a> about Pro plugins.`;
+const PRO_PLUGINS_URL = 'https://smartconnections.app/pro-plugins/';
+const OBSIDIAN_PLUGIN_URL = 'https://obsidian.md/plugins?id=';
 
 function default_smart_plugins_list() {
   return [
@@ -16,6 +23,7 @@ function default_smart_plugins_list() {
       install_type: 'obsidian',
       item_name: 'Smart Connections',
       item_desc: 'See notes related to what you are working on right now.',
+      item_repo: 'brianpetro/obsidian-smart-connections',
       plugin_id: 'smart-connections',
       url: 'https://smartconnections.app/smart-connections/',
     },
@@ -31,6 +39,7 @@ function default_smart_plugins_list() {
       install_type: 'obsidian',
       item_name: 'Smart Context',
       item_desc: 'Assemble notes into AI-ready context with selectors, links, and templates.',
+      item_repo: 'brianpetro/smart-context-obsidian',
       plugin_id: 'smart-context',
       url: 'https://smartconnections.app/smart-context/',
     },
@@ -47,6 +56,7 @@ function default_smart_plugins_list() {
       item_name: 'Smart Chat',
       item_desc: 'Run chat workflows in Obsidian with Smart Environment context.',
       plugin_id: 'smart-chatgpt',
+      item_repo: 'brianpetro/smart-chatgpt-obsidian',
       url: 'https://smartconnections.app/smart-chat/',
     },
     {
@@ -60,16 +70,17 @@ function default_smart_plugins_list() {
       item_type: 'core',
       item_name: 'Smart Lookup',
       item_desc: 'Run semantic search as a dedicated Smart Plugin.',
+      item_repo: 'brianpetro/smart-lookup-obsidian',
       plugin_id: 'smart-lookup',
       url: 'https://smartconnections.app/smart-lookup/',
       install_type: 'github',
-      item_repo: 'brianpetro/smart-lookup-obsidian',
     },
     {
       item_type: 'core',
       install_type: 'obsidian',
       item_name: 'Smart Templates',
       item_desc: 'Create structured templates designed for Smart Plugins workflows.',
+      item_repo: 'brianpetro/smart-templates-obsidian',
       plugin_id: 'smart-templates',
       url: 'https://smartconnections.app/smart-templates/',
     },
@@ -97,11 +108,11 @@ export function build_html(env, params = {}) {
         <p>${SMART_PLUGINS_DESC}</p>
         <div class="smart-plugins-section">
           <div class="setting-item-name smart-plugins-section-title">Official plugins</div>
-          <div class="setting-items smart-plugins-official-list"></div>
+          <div class="setting-items smart-plugins-official-list">Loading...</div>
         </div>
         <div class="smart-plugins-section">
           <div class="setting-item-name smart-plugins-section-title">Community plugins</div>
-          <div class="setting-items smart-plugins-community-list"></div>
+          <div class="setting-items smart-plugins-community-list">Coming soon...</div>
         </div>
         <p>${PRO_PLUGINS_FOOTER}</p>
         <div class="smart-plugins-referral"></div>
@@ -182,7 +193,8 @@ export async function post_process(env, container, params = {}) {
         }
       }
 
-      community_list_el.appendChild(this.create_doc_fragment('<div class="coming-soon"><p>Community plugins are coming soon!</p></div>'));
+      // TODO: added Evan's visualizer plugins in community section
+
     } catch (err) {
       console.error('[smart-plugins:list] Failed to fetch plugin list:', err);
       this.empty(official_list_el);
@@ -224,7 +236,7 @@ async function fetch_server_plugin_list(token) {
   return resp.json;
 }
 
-function hydrate_plugins_list(server_resp, app) {
+function hydrate_plugins_list(server_resp, env) {
   SMART_PLUGINS_LIST = default_smart_plugins_list();
 
   const { list = [], sub_exp } = server_resp || {};
@@ -251,7 +263,7 @@ function hydrate_plugins_list(server_resp, app) {
     });
   }
 
-  const installed_plugins = Object.values(app.plugins.manifests || {});
+  const installed_plugins = Object.values(env.obsidian_app.plugins.manifests || {});
   for (const installed_item of installed_plugins) {
     const matches = SMART_PLUGINS_LIST.filter((item) => item.plugin_id === installed_item.id);
 
@@ -261,19 +273,24 @@ function hydrate_plugins_list(server_resp, app) {
   }
 
   for (let i = 0; i < SMART_PLUGINS_LIST.length; i += 1) {
-    SMART_PLUGINS_LIST[i] = new PluginListItem(app, SMART_PLUGINS_LIST[i], sub_active);
+    SMART_PLUGINS_LIST[i] = new PluginListItem(env, SMART_PLUGINS_LIST[i], sub_active);
   }
 }
 
 export class PluginListItem {
-  constructor(app, item, sub_active) {
-    this.app = app;
+  constructor(env, item, sub_active) {
+    this.env = env;
+    this.app = env.obsidian_app;
     this.data = item;
     this.sub_active = sub_active;
-    this.can_enable = this.is_installed && !this.is_enabled;
     this.group_size = 1;
     this.group_index = 0;
     this.group_state = 'single';
+  }
+
+  get auth_token() {
+    const oauth_storage_prefix = get_oauth_storage_prefix(this.app);
+    return localStorage.getItem(oauth_storage_prefix + 'token') || '';
   }
 
   get plugin_id() {
@@ -292,10 +309,10 @@ export class PluginListItem {
 
   get should_update() {
     return Boolean(
-      this.data.item_type === this.data.installed_type
+      this.item_type === this.installed_type
       && typeof this.data.version === 'string'
       && this.data.version
-      && compare_versions(this.data.version, this.data.installed_version) > 0
+      && compare_versions(this.data.version, this.installed_version) > 0
     );
   }
 
@@ -311,6 +328,7 @@ export class PluginListItem {
     if (!this.data.manifest) return null;
     return this.data.manifest.name.includes('Pro') ? 'pro' : 'core';
   }
+
   get installed_version() {
     if (!this.data.manifest) return null;
     return this.data.manifest.version || null;
@@ -322,28 +340,33 @@ export class PluginListItem {
       if (!this.is_enabled) return 'can_enable';
       return 'installed';
     }
-    
+
     if (this.item_type === 'core') {
       if (this.installed_type === 'pro') return 'pro_installed';
       return 'can_install';
     }
-    
+
     if (this.installed_type === 'core') return 'core_installed';
     if (this.can_install) return 'can_install';
     return 'cant_install';
+  }
+
+  get install_type() {
+    return this.data.install_type || 'server';
   }
 
   get repo() {
     return this.data.item_repo || this.data.repo;
   }
 
-  get label () {
+  get label() {
     return this.data.item_name || this.data.name || this.data.plugin_id || this.data.repo || 'plugin';
   }
 
   get name() {
     return this.data.item_name || this.data.name || this.data.plugin_id || '';
   }
+
   get formatted_name() {
     return this.name
       .replace(/\bSmart\s+/g, '')
@@ -352,11 +375,352 @@ export class PluginListItem {
       .trim()
     ;
   }
+
   get description() {
     return this.data.item_desc || this.data.description || '';
   }
+
   get formatted_description() {
     return this.description;
+  }
+
+  get row_control_state() {
+    if (this.group_size > 1) {
+      if (this.group_state === 'pro_can_install') {
+        if (this.item_type === 'core' && this.state === 'can_install') {
+          return 'included_in_pro';
+        }
+        if (this.item_type === 'pro' && this.state === 'can_install') {
+          return 'can_install_pro';
+        }
+      }
+
+      if (this.group_state === 'core_can_install') {
+        if (this.item_type === 'core' && this.state === 'can_install') {
+          return 'can_install_core_only';
+        }
+      }
+    }
+
+    if (this.item_type === 'pro' && this.state === 'can_install') {
+      return 'can_install_pro';
+    }
+
+    return this.state || 'can_install';
+  }
+
+  get control_specs() {
+    switch (this.row_control_state) {
+      case 'update_available':
+        return [
+          { type: 'button', action: 'install', text: 'Update', variant: 'primary' },
+        ];
+      case 'installed':
+        return [
+          { type: 'button', action: 'open_settings', text: 'Open settings', variant: 'secondary' },
+        ];
+      case 'can_enable':
+        return [
+          { type: 'button', action: 'enable', text: 'Enable', variant: 'primary' },
+        ];
+      case 'pro_installed':
+        return [
+          { type: 'status', text: 'Pro installed' },
+        ];
+      case 'included_in_pro':
+        return [
+          { type: 'status', text: 'Included in Pro' },
+        ];
+      case 'core_installed':
+        return [
+          { type: 'status', text: 'Core installed' },
+          ...(this.can_install
+            ? [{ type: 'button', action: 'install', text: 'Install Pro', variant: 'primary' }]
+            : []),
+          { type: 'button', action: 'learn_more', text: 'Learn more', variant: 'secondary' },
+        ];
+      case 'can_install_core_only':
+        return [
+          { type: 'button', action: 'install', text: 'Install Core', variant: 'primary' },
+        ];
+      case 'can_install_pro':
+        return [
+          { type: 'button', action: 'install', text: 'Install Pro', variant: 'primary' },
+          { type: 'button', action: 'learn_more', text: 'Learn more', variant: 'secondary' },
+        ];
+      case 'cant_install':
+        return [
+          { type: 'button', action: 'learn_more', text: 'Learn more', variant: 'secondary' },
+        ];
+      case 'can_install':
+      default:
+        return [
+          { type: 'button', action: 'install', text: 'Install', variant: 'primary' },
+          { type: 'button', action: 'learn_more', text: 'Learn more', variant: 'secondary' },
+        ];
+    }
+  }
+
+  get_busy_text(action) {
+    switch (action) {
+      case 'install':
+        return this.should_update ? 'Updating…' : 'Installing…';
+      case 'enable':
+        return 'Enabling…';
+      default:
+        return '';
+    }
+  }
+
+  async handle_action(action, params = {}) {
+    switch (action) {
+      case 'install':
+        await this.install(params);
+        return;
+      case 'enable':
+        await this.enable(params);
+        return;
+      case 'open_settings':
+        this.open_settings();
+        return;
+      case 'learn_more':
+        this.open_plugin_url();
+        return;
+      default:
+        return;
+    }
+  }
+
+  async install(params = {}) {
+    if (this.item_type === 'core') {
+      if (this.install_type === 'github') {
+        await this.install_github_release_plugin(params);
+        return;
+      }
+
+      this.install_core_plugin();
+      return;
+    }
+
+    await this.install_plugin(params);
+  }
+
+  async enable(params = {}) {
+    const app = params.app || this.app;
+    const env = params.env || null;
+
+    try {
+      await enable_plugin(app, this.plugin_id);
+      env?.events?.emit?.('pro_plugins:enabled', {
+        level: 'info',
+        message: `${this.label} enabled.`,
+        event_source: 'browse_smart_plugins.list_item',
+      });
+      env?.events?.emit?.('pro_plugins:refresh', {
+        event_source: 'browse_smart_plugins.list_item.enable',
+      });
+    } catch (err) {
+      console.error('[smart-plugins:list] Enable error:', err);
+      env?.events?.emit?.('pro_plugins:enable_failed', {
+        level: 'error',
+        message: `Enable failed: ${err.message}`,
+        details: err?.stack || '',
+        event_source: 'browse_smart_plugins.list_item',
+      });
+    }
+  }
+
+  open_settings() {
+    this.app.setting.open();
+    this.app.setting.openTabById(this.plugin_id);
+  }
+
+  open_plugin_url() {
+    const url = with_utm_source(this.data.url || PRO_PLUGINS_URL, 'plugin-store');
+    window.open(url, '_external');
+  }
+
+  open_community_index_page() {
+    window.open(`${OBSIDIAN_PLUGIN_URL}${encodeURIComponent(this.plugin_id)}`, '_external');
+  }
+
+  async install_core_plugin() {
+    try {
+      const { json: release } = await this.get_latest_github_release();
+      const version = release?.tag_name;
+      await this.app.plugins.installPlugin(this.repo, version, {
+        id: this.plugin_id,
+        name: this.label,
+      });
+      this.env?.events?.emit?.('smart_plugins:install_completed', {
+        level: 'attention',
+        message: `${this.label} installed successfully.`,
+        event_source: 'browse_smart_plugins.list_item',
+      });
+      this.env?.events?.emit?.('pro_plugins:refresh', {
+        event_source: 'browse_smart_plugins.list_item.core_install',
+      });
+    } catch (err) {
+      console.error('[smart-plugins:list] Core install error:', err);
+      this.env?.events?.emit?.('smart_plugins:install_failed', {
+        level: 'error',
+        message: `Install failed: ${err.message}`,
+        details: err?.stack || '',
+        event_source: 'browse_smart_plugins.list_item',
+      });
+    }
+  }
+
+  async download_plugin_zip() {
+    const resolved_download_url = typeof this.data.resolve_download_url === 'function'
+      ? await this.data.resolve_download_url()
+      : this.data.download_url
+    ;
+
+    if (resolved_download_url) {
+      return fetch_zip_from_url(resolved_download_url);
+    }
+
+    if (!this.auth_token) {
+      throw new Error('Login required to install this plugin.');
+    }
+
+    return fetch_plugin_zip(this.repo, this.auth_token);
+  }
+
+  async install_plugin(params = {}) {
+
+    try {
+      this.env?.events?.emit?.('pro_plugins:install_started', {
+        level: 'info',
+        message: `Installing "${this.label}" ...`,
+        event_source: 'browse_smart_plugins.list_item',
+      });
+
+      const zip_data = await this.download_plugin_zip();
+      const { files, pluginManifest } = await parse_zip_into_files(zip_data);
+      const folder_name = (this.plugin_id || pluginManifest?.id || '').trim();
+      if (!folder_name) {
+        throw new Error(`Missing plugin id for "${this.label}".`);
+      }
+
+      const base_folder = `${this.app.vault.configDir}/plugins/${folder_name}`;
+      await write_files_with_adapter(this.app.vault.adapter, base_folder, files);
+
+      await this.app.plugins.loadManifests();
+
+      if (this.app.plugins.enabledPlugins.has(this.plugin_id)) {
+        await this.app.plugins.disablePlugin(this.plugin_id);
+      }
+      await enable_plugin(this.app, this.plugin_id);
+
+      this.env?.events?.emit?.('pro_plugins:install_completed', {
+        level: 'attention',
+        message: `${this.label} installed successfully.`,
+        event_source: 'browse_smart_plugins.list_item',
+      });
+      this.env?.events?.emit?.('pro_plugins:refresh', {
+        event_source: 'browse_smart_plugins.list_item.install',
+      });
+      if (typeof params.on_installed === 'function') {
+        await params.on_installed();
+      }
+    } catch (err) {
+      console.error('[smart-plugins:list] Install error:', err);
+      this.env?.events?.emit?.('pro_plugins:install_failed', {
+        level: 'error',
+        message: `Install failed: ${err.message}`,
+        details: err?.stack || '',
+        event_source: 'browse_smart_plugins.list_item',
+      });
+    }
+  }
+
+  async install_github_release_plugin(params = {}) {
+    const app = params.app || this.app;
+    const env = params.env || null;
+
+    if (!this.repo) {
+      throw new Error(`Missing GitHub repo for "${this.label}".`);
+    }
+    if (!this.plugin_id) {
+      throw new Error(`Missing plugin id for "${this.label}".`);
+    }
+
+    try {
+      env?.events?.emit?.('pro_plugins:install_started', {
+        level: 'info',
+        message: `Installing "${this.label}" ...`,
+        event_source: 'browse_smart_plugins.list_item',
+      });
+
+      const { json: release } = await this.get_latest_github_release();
+
+      const assets = release?.assets || [];
+      const main_asset = assets.find((asset) => asset.name === 'main.js');
+      const manifest_asset = assets.find((asset) => asset.name === 'manifest.json');
+      const styles_asset = assets.find((asset) => asset.name === 'styles.css');
+
+      if (!main_asset || !manifest_asset || !styles_asset) {
+        throw new Error('Failed to find necessary assets in the latest GitHub release.');
+      }
+
+      const plugin_folder = `${app.vault.configDir}/plugins/${this.plugin_id}`;
+      if (!await app.vault.adapter.exists(plugin_folder)) {
+        await app.vault.adapter.mkdir(plugin_folder);
+      }
+
+      await Promise.all([
+        this.download_and_write_release_asset(app, main_asset.browser_download_url, `${plugin_folder}/main.js`),
+        this.download_and_write_release_asset(app, manifest_asset.browser_download_url, `${plugin_folder}/manifest.json`),
+        this.download_and_write_release_asset(app, styles_asset.browser_download_url, `${plugin_folder}/styles.css`),
+      ]);
+
+      await app.plugins.loadManifests();
+      if (app.plugins.enabledPlugins.has(this.plugin_id)) {
+        await app.plugins.disablePlugin(this.plugin_id);
+      }
+      await enable_plugin(app, this.plugin_id);
+
+      env?.events?.emit?.('pro_plugins:install_completed', {
+        level: 'attention',
+        message: `${this.label} installed successfully.`,
+        event_source: 'browse_smart_plugins.list_item',
+      });
+      env?.events?.emit?.('pro_plugins:refresh', {
+        event_source: 'browse_smart_plugins.list_item.install_github_release_plugin',
+      });
+      if (typeof params.on_installed === 'function') {
+        await params.on_installed();
+      }
+    } catch (err) {
+      console.error('[smart-plugins:list] GitHub install error:', err);
+      env?.events?.emit?.('pro_plugins:install_failed', {
+        level: 'error',
+        message: `Install failed: ${err.message}`,
+        details: err?.stack || '',
+        event_source: 'browse_smart_plugins.list_item.install_github_release_plugin',
+      });
+    }
+  }
+
+  async get_latest_github_release() {
+    return await requestUrl({
+      url: `https://api.github.com/repos/${this.repo}/releases/latest`,
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      contentType: 'application/json',
+    });
+  }
+
+  async download_and_write_release_asset(app, download_url, output_path) {
+    const resp = await requestUrl({
+      url: download_url,
+      method: 'GET',
+    });
+    await app.vault.adapter.write(output_path, resp.text);
   }
 }
 
@@ -410,11 +774,11 @@ function resolve_group_state(group_items = []) {
   const pro_item = group_items.find((item) => item.item_type === 'pro');
   if (!core_item || !pro_item) return 'single';
 
-  if (is_installed_group_state(pro_item.item_state)) return 'pro_installed';
-  if (is_installed_group_state(core_item.item_state)) return 'core_installed';
-  if (pro_item.item_state === 'can_install') return 'pro_can_install';
-  if (core_item.item_state === 'can_install') return 'core_can_install';
-  if (pro_item.item_state === 'cant_install') return 'core_can_install';
+  if (is_installed_group_state(pro_item.state)) return 'pro_installed';
+  if (is_installed_group_state(core_item.state)) return 'core_installed';
+  if (pro_item.state === 'can_install') return 'pro_can_install';
+  if (core_item.state === 'can_install') return 'core_can_install';
+  if (pro_item.state === 'cant_install') return 'core_can_install';
   return 'single';
 }
 
@@ -424,4 +788,12 @@ function is_installed_group_state(item_state) {
     'can_enable',
     'update_available',
   ].includes(item_state);
+}
+
+function with_utm_source(url, source) {
+  if (!url) return PRO_PLUGINS_URL;
+  return url.includes('?')
+    ? `${url}&utm_source=${source}`
+    : `${url}?utm_source=${source}`
+  ;
 }
