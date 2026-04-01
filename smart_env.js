@@ -182,6 +182,18 @@ export class SmartEnv extends BaseSmartEnv {
       });
     }
 
+    if (!this._registered_env_status_view_command) {
+      this._registered_env_status_view_command = this.plugin.manifest?.id + ':env-status-view';
+      this.plugin.addCommand({
+        id: 'env-status-view',
+        name: 'Open Environment Status View',
+        callback: () => {
+          this.open_env_status_view();
+        },
+      });
+    }
+
+
     this.mains.forEach((main_key) => {
       const plugin_id = this.smart_env_configs[main_key]?.main?.manifest?.id || 'unknown-plugin';
       this.plugin_states[plugin_id] = 'loaded';
