@@ -221,6 +221,46 @@ export function format_level_label(level) {
  * @param {Array} entries
  * @returns {Record<string, number>}
  */
+
+
+/**
+ * @param {Array} pending_entries
+ * @param {Array} next_entries
+ * @param {object} [params={}]
+ * @param {Array} [params.existing_entries]
+ * @returns {Array}
+ */
+export function queue_live_update_entries(pending_entries, next_entries, params = {}) {
+  const { existing_entries = [] } = params;
+
+  const pending_list = Array.isArray(pending_entries)
+    ? [...pending_entries]
+    : []
+  ;
+  const pending_entry_ids = new Set(pending_list.map((entry) => `${get_entry_event_key(entry)}::${get_entry_timestamp(entry)}`));
+  const existing_entry_ids = new Set((Array.isArray(existing_entries) ? existing_entries : []).map((entry) => `${get_entry_event_key(entry)}::${get_entry_timestamp(entry)}`));
+
+  (Array.isArray(next_entries) ? next_entries : []).forEach((entry) => {
+    const entry_id = `${get_entry_event_key(entry)}::${get_entry_timestamp(entry)}`;
+    if (existing_entry_ids.has(entry_id)) return;
+    if (pending_entry_ids.has(entry_id)) return;
+    pending_list.push(entry);
+    pending_entry_ids.add(entry_id);
+  });
+
+  return pending_list;
+}
+
+/**
+ * @param {Array} pending_entries
+ * @returns {Array}
+ */
+export function consume_live_update_entries(pending_entries) {
+  return get_visible_entries(Array.isArray(pending_entries) ? pending_entries : [], {
+    limit: Array.isArray(pending_entries) ? pending_entries.length : 0,
+  });
+}
+
 export function get_level_counts(entries) {
   const counts = notification_filter_keys.reduce((acc, level) => {
     acc[level] = 0;

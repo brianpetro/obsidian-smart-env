@@ -18,6 +18,7 @@ import {
   get_next_visible_count,
   get_visible_count,
   get_visible_entries,
+  queue_live_update_entries,
   is_canonical_notification_entry,
   is_debug_entry,
   load_more_step,
@@ -49,6 +50,7 @@ function build_html() {
       </div>
     </div>
 
+    <div class="smart-env-notifications-live-updates"></div>
     <div class="smart-env-notifications-feed" role="list"></div>
 
     <div class="smart-env-notifications__footer">
@@ -76,6 +78,7 @@ async function post_process(env, container, params = {}) {
   const load_more_btn = container.querySelector('.load-more-notifications-btn');
   const filter_controls = container.querySelector('.smart-env-notifications-filter-controls');
   const summary_el = container.querySelector('.smart-env-notifications__summary');
+  const live_updates_el = container.querySelector('.smart-env-notifications-live-updates');
   const smart_env = this;
   const expanded_entry_keys = state.expanded_entry_keys instanceof Set
     ? state.expanded_entry_keys
@@ -96,9 +99,15 @@ async function post_process(env, container, params = {}) {
     ? state.filtered_count
     : null
   ;
+  let pending_live_entries = Array.isArray(state.pending_live_entries)
+    ? [...state.pending_live_entries]
+    : []
+  ;
+  let rendered_entries_cache = [];
 
   state.active_levels = active_levels;
   state.expanded_entry_keys = expanded_entry_keys;
+  state.pending_live_entries = pending_live_entries;
 
   const get_entries = () => {
     const session_entries = Array.isArray(env?.event_logs?.session_events)
@@ -213,6 +222,7 @@ async function post_process(env, container, params = {}) {
     if (preserve_expanded) capture_expanded_entry_keys();
 
     const entries = get_entries();
+    rendered_entries_cache = entries;
     if (reset_visible_count) {
       const filtered_entries = get_filtered_entries(entries, { active_levels });
       visible_count = get_visible_count(filtered_entries.length);
@@ -230,12 +240,20 @@ async function post_process(env, container, params = {}) {
       set_btn_disabled(copy_btn, true);
       if (load_more_btn) load_more_btn.style.display = 'none';
       update_summary(summary_el, { total_count: 0, filtered_count: 0, visible_count: 0 });
+      render_live_updates_action(live_updates_el, {
+        pending_count: pending_live_entries.length,
+        on_click: handle_show_live_updates,
+      });
       maybe_mark_entries_seen();
       return;
     }
 
     render_filters(entries);
     render_entries(entries);
+    render_live_updates_action(live_updates_el, {
+      pending_count: pending_live_entries.length,
+      on_click: handle_show_live_updates,
+    });
     maybe_mark_entries_seen();
   };
 
@@ -257,6 +275,14 @@ async function post_process(env, container, params = {}) {
       return;
     }
     expanded_entry_keys.delete(entry_key);
+  };
+
+
+  const handle_show_live_updates = () => {
+    if (pending_live_entries.length === 0) return;
+    pending_live_entries = [];
+    state.pending_live_entries = pending_live_entries;
+    render_feed({ preserve_expanded: true });
   };
 
   const reset_filters = () => {
@@ -300,6 +326,22 @@ async function post_process(env, container, params = {}) {
       if (debounce_timeout) clearTimeout(debounce_timeout);
       debounce_timeout = setTimeout(() => {
         debounce_timeout = null;
+
+        const next_entries = get_entries();
+
+        pending_live_entries = queue_live_update_entries(pending_live_entries, next_entries, {
+          existing_entries: rendered_entries_cache,
+        });
+        state.pending_live_entries = pending_live_entries;
+
+        if (pending_live_entries.length > 0) {
+          render_live_updates_action(live_updates_el, {
+            pending_count: pending_live_entries.length,
+            on_click: handle_show_live_updates,
+          });
+          return;
+        }
+
         render_feed({ preserve_expanded: true });
       }, 100);
     });
@@ -451,6 +493,34 @@ function update_load_more_button(button, params = {}) {
     const next_step = Math.min(load_more_step, remaining_count);
     button.textContent = `Load ${next_step.toLocaleString()} more`;
   }
+}
+
+
+
+/**
+ * @param {HTMLElement|null} container
+ * @param {object} [params={}]
+ * @param {number} [params.pending_count]
+ * @param {Function} [params.on_click]
+ */
+function render_live_updates_action(container, params = {}) {
+  if (!container) return;
+
+  const {
+    pending_count = 0,
+    on_click = () => {},
+  } = params;
+
+  container.replaceChildren();
+
+  if (pending_count <= 0) return;
+
+  const button = container.ownerDocument.createElement('button');
+  button.type = 'button';
+  button.className = 'smart-env-btn smart-env-btn--ghost smart-env-notifications-live-updates__btn';
+  button.textContent = `Show ${pending_count.toLocaleString()} new event${pending_count === 1 ? '' : 's'}`;
+  button.addEventListener('click', on_click);
+  container.appendChild(button);
 }
 
 function append_entry(feed_container, entry, params = {}) {

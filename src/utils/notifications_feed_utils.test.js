@@ -12,6 +12,8 @@ import {
   get_next_active_levels,
   is_canonical_notification_entry,
   is_debug_entry,
+  queue_live_update_entries,
+  consume_live_update_entries,
 } from './notifications_feed_utils.js';
 
 test('get_entry_level is payload-first and keeps legacy fallback', (t) => {
@@ -145,4 +147,47 @@ test('get_entry_summary_action returns only valid CTA payloads', (t) => {
   t.is(get_entry_summary_action({
     event: { btn_text: '', btn_callback: 'milestones_modal:open' },
   }), null);
+});
+
+
+test('queue_live_update_entries stores only unseen entries in oldest-first order', (t) => {
+  const existing_entries = [
+    { event_key: 'old:1', event: { at: 1 } },
+    { event_key: 'old:2', event: { at: 2 } },
+  ];
+  const next_entries = [
+    ...existing_entries,
+    { event_key: 'new:1', event: { at: 3 } },
+    { event_key: 'new:2', event: { at: 4 } },
+  ];
+
+  const queued_entries = queue_live_update_entries([], next_entries, {
+    existing_entries,
+  });
+
+  t.deepEqual(queued_entries.map((entry) => entry.event_key), ['new:1', 'new:2']);
+});
+
+test('queue_live_update_entries skips duplicates and consumes queue in newest-first view order', (t) => {
+  const pending_entries = [
+    { event_key: 'new:1', event: { at: 3 } },
+  ];
+  const existing_entries = [
+    { event_key: 'old:1', event: { at: 1 } },
+  ];
+  const next_entries = [
+    ...existing_entries,
+    { event_key: 'new:1', event: { at: 3 } },
+    { event_key: 'new:2', event: { at: 4 } },
+  ];
+
+  const queued_entries = queue_live_update_entries(pending_entries, next_entries, {
+    existing_entries,
+  });
+
+  t.deepEqual(queued_entries.map((entry) => entry.event_key), ['new:1', 'new:2']);
+
+  const consumed_entries = consume_live_update_entries(queued_entries);
+  t.deepEqual(consumed_entries.map((entry) => entry.event_key), ['new:2', 'new:1']);
+  t.deepEqual(queued_entries.map((entry) => entry.event_key), ['new:1', 'new:2']);
 });
