@@ -20,7 +20,6 @@ import { register_first_of_event_notifications } from './src/utils/onboarding_ev
 import { render as render_status_bar_component } from './src/components/status_bar.js';
 import { EnvStatusView } from './src/views/env_status_view.js';
 import { SmartEnvSettingTab } from './src/views/smart_env_settings_tab.js';
-import { compare_versions } from 'smart-environment/utils/compare_versions.js';
 import { deep_clone_config } from 'smart-environment/utils/deep_clone_config.js';
 import { normalize_opts } from 'smart-environment/utils/normalize_opts.js';
 
@@ -62,11 +61,8 @@ export class SmartEnv extends BaseSmartEnv {
         console.warn(`SmartEnv: '${key}' opts missing, skipping`);
         continue;
       }
-      const plugin = rec.main;
-      const plugin_id = plugin.manifest?.id || 'unknown-plugin';
       const this_version_pcs = rec.opts.version.split('.');
       const this_minor = parseInt(this_version_pcs[1] || '0');
-      console.log('get config', {this_minor, plugin_id});
       if ( this_minor < 4 ) {
         // prevent including outdated config
         delete this.smart_env_configs[key]; // this should be handled by unload but here for redundancy during transition period
@@ -87,7 +83,8 @@ export class SmartEnv extends BaseSmartEnv {
    * @param {Object} [env_config] - Required environment configuration object.
    * @returns {Promise<SmartEnv>} The initialized SmartEnv instance.
    */
-  static async create(plugin, env_config) {
+  static create(plugin, env_config) {
+    handle_outdated_plugins();
     if (!plugin) throw new Error("SmartEnv.create: 'plugin' parameter is required.");
     if (!env_config) throw new Error("SmartEnv.create: 'env_config' parameter is required.");
     env_config.version = this.version;
@@ -98,48 +95,34 @@ export class SmartEnv extends BaseSmartEnv {
 
     const opts = merge_env_config(env_config, default_config);
     opts.env_path = ''; // scope handled by Obsidian FS methods
-    const plugin_id = plugin?.manifest?.id || 'unknown-plugin';
-    console.log(plugin_id, 'initializing')
-    if (this.global_env && this.global_env.state === 'init') {
-      // Handle already initiated smart_env with deprecated version
-      const global_version_pcs = this.global_env.constructor.version.split('.');
-      const global_minor = parseInt(global_version_pcs[1] || '0');
-      const existing_is_old = compare_versions(this.global_env.constructor.version, this.version) === -1;
-      console.log({ existing_is_old, global_minor, plugin_id, configs: Object.entries(this.global_env.smart_env_configs || {}).map(([key, config]) => ({ key, version: config.opts.version })) });
-      if (
-        existing_is_old // old existing
-        && global_minor < 4 
-      ) {
-        handle_outdated_plugin(this.global_env);
-      }
-    }
     if (this.global_env && this.global_env.state !== 'init') {
       handle_env_load_attempt_after_loaded(this.global_env);
       this.create_env_getter(plugin);
       return this.global_env;
     }
 
-    const env = await super.create(plugin, opts);
-    clearTimeout(env.load_timeout); // prevent base-level load in favor of using onLayoutReady for better timing with Obsidian's startup process
-    env.load_timeout = null;
+    return super.create(plugin, opts).then((env) => {
+      clearTimeout(env.load_timeout); // prevent base-level load in favor of using onLayoutReady for better timing with Obsidian's startup process
+      env.load_timeout = null;
+  
+      if (!env._startup_load_registration) {
+        env._startup_load_registration = true;
+        plugin.registerEvent(plugin.app.workspace.onLayoutReady(async () => {
+          if (env.state !== 'init') {
+            console.warn(`Skipping SmartEnv (v${env.constructor.version}) load on layout ready; env.state: "${env.state}".`);
+            return;
+          }
+          const continue_load = await env.before_load()
+          if (continue_load === false) {
+            console.warn('SmartEnv before_load returned false, skipping load.');
+            return;
+          }
+          await env.load(); // calls after_load internally and sets state to 'loaded' at the end
+        }));
+      }
+      return env;
+    });
 
-    if (!env._startup_load_registration) {
-      env._startup_load_registration = true;
-      plugin.registerEvent(plugin.app.workspace.onLayoutReady(async () => {
-        if (env.state !== 'init') {
-          console.warn(`Skipping SmartEnv (v${env.constructor.version}) load on layout ready; env.state: "${env.state}".`);
-          return;
-        }
-        const continue_load = await env.before_load()
-        if (continue_load === false) {
-          console.warn('SmartEnv before_load returned false, skipping load.');
-          return;
-        }
-        await env.load(); // calls after_load internally and sets state to 'loaded' at the end
-      }));
-    }
-
-    return env;
   }
 
 
@@ -621,50 +604,50 @@ function handle_env_load_attempt_after_loaded(env) {
   });
 }
 
-function handle_outdated_plugin(env) {
-  console.warn('Detected attempt to load outdated SmartEnv plugin');
-  const outdated_smart_plugins = Object.keys(env.plugin.app.plugins.plugins || {})
+function handle_outdated_plugins() {
+  const smart_plugin_ids = Array.from(app.plugins.enabledPlugins).filter((id) => id.startsWith('smart-'));
+  const all_enabled_initialized = smart_plugin_ids.every((plugin_id) => {
+    return app.plugins.plugins[plugin_id];
+  });
+  if(!all_enabled_initialized) {
+    setTimeout(() => {
+      handle_outdated_plugins();
+    }, 1);
+    return;
+  }
+  const outdated_smart_plugins = smart_plugin_ids
     .reduce((acc, plugin_id) => {
-      if(!plugin_id.startsWith('smart-')) return acc;
-      const plugin_instance = env.plugin.app.plugins.plugins[plugin_id];
+      const plugin_instance = app.plugins.plugins[plugin_id];
       if (
         (
-          !plugin_instance?.SmartEnv.version.startsWith('2.4')
+          plugin_instance?.SmartEnv?.version
+          && !plugin_instance?.SmartEnv.version.startsWith('2.4')
           && !plugin_instance?.SmartEnv.version.startsWith('2.5')
         )
-        && env.plugin_states?.[plugin_id] !== 'loaded'
       ) {
+        plugin_instance.onload = () => {
+          console.warn('prevented onload of outdated plugin', plugin_id);
+        }
         acc[plugin_id] = 'outdated';
       }
       return acc;
     }, {})
   ;
-  env.plugin_states = {
-    ...env.plugin_states,
-    ...outdated_smart_plugins,
-  };
-  console.log('Outdated Smart Plugins detected:', Object.keys(outdated_smart_plugins));
+  if (Object.keys(outdated_smart_plugins).length === 0) return;
+  console.warn('Outdated Smart Plugins detected:', Object.keys(outdated_smart_plugins));
   // TEMP handle older versions that don't support events.emit for notices
   const notice_frag = document.createDocumentFragment();
   notice_frag.createEl('p', { text: `Detected outdated plugins: ${Object.keys(outdated_smart_plugins).join(', ')} in Smart Environment.` });
   notice_frag.createEl('p', { text: `Please update ${Object.keys(outdated_smart_plugins).join(', ')} then restart Obsidian to load all Smart Plugins.` });
   notice_frag.createEl('button', { text: 'Check for Updates' }).addEventListener('click', () => {
-    if(window.smart_env.is_pro) {
-      window.smart_env.events.emit('smart_plugins:browse', {
-        event_source: 'outdated_env_notice_button',
-      });
-    }else {
-      // DECIDED: should always open Browse Smart Plugins?
-      app.plugins.checkForUpdates().then(() => {
-        app.setting.openTabById('community-plugins');
-      });
-      app.setting.open();
-    }
+    window.smart_env?.events.emit('smart_plugins:browse', {
+      event_source: 'outdated_env_notice_button',
+    });
   });
   new Notice(notice_frag, 0); // DEPRECATED: here because no notices shown on events.emit in earlier versions
   // unload deferred plugins to clean-up unloaded artifacts like settings tabs and ribbon icons
   Object.keys(outdated_smart_plugins).forEach((plugin_id) => {
-    const plugin_instance = env.plugin.app.plugins.plugins[plugin_id];
+    const plugin_instance = app.plugins.plugins[plugin_id];
     if (plugin_instance) {
       setTimeout(() => {
         try {

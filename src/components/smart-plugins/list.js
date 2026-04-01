@@ -20,7 +20,7 @@ function default_smart_plugins_list() {
   return [
     {
       item_type: 'core',
-      install_type: 'obsidian',
+      install_method: 'obsidian',
       item_name: 'Smart Connections',
       item_desc: 'See notes related to what you are working on right now.',
       item_repo: 'brianpetro/obsidian-smart-connections',
@@ -36,7 +36,7 @@ function default_smart_plugins_list() {
     },
     {
       item_type: 'core',
-      install_type: 'obsidian',
+      install_method: 'obsidian',
       item_name: 'Smart Context',
       item_desc: 'Assemble notes into AI-ready context with selectors, links, and templates.',
       item_repo: 'brianpetro/smart-context-obsidian',
@@ -52,7 +52,7 @@ function default_smart_plugins_list() {
     },
     {
       item_type: 'core',
-      install_type: 'obsidian',
+      install_method: 'obsidian',
       item_name: 'Smart Chat',
       item_desc: 'Run chat workflows in Obsidian with Smart Environment context.',
       plugin_id: 'smart-chatgpt',
@@ -73,11 +73,11 @@ function default_smart_plugins_list() {
       item_repo: 'brianpetro/smart-lookup-obsidian',
       plugin_id: 'smart-lookup',
       url: 'https://smartconnections.app/smart-lookup/',
-      install_type: 'github',
+      install_method: 'github',
     },
     {
       item_type: 'core',
-      install_type: 'obsidian',
+      install_method: 'obsidian',
       item_name: 'Smart Templates',
       item_desc: 'Create structured templates designed for Smart Plugins workflows.',
       item_repo: 'brianpetro/smart-templates-obsidian',
@@ -341,6 +341,7 @@ export class PluginListItem {
 
   get installed_type() {
     if (!this.data.manifest) return null;
+    if (['smart-file-nav'].includes(this.plugin_id)) return 'pro'; // TEMP special case for plugins that don't follow standard naming conventions
     return this.data.manifest.name.includes('Pro') ? 'pro' : 'core';
   }
 
@@ -366,8 +367,8 @@ export class PluginListItem {
     return 'cant_install';
   }
 
-  get install_type() {
-    return this.data.install_type || 'server';
+  get install_method() {
+    return this.data.install_method || 'server';
   }
 
   get repo() {
@@ -400,7 +401,11 @@ export class PluginListItem {
   }
 
   get is_loaded() {
-    return this.is_enabled && this.env.plugin_states?.[this.plugin_id] === 'loaded';
+    if (this.installed_type !== this.item_type) return false;
+    return this.is_enabled && (
+      this.env.plugin_states?.[this.plugin_id] === 'loaded'
+      || ['smart-file-nav'].includes(this.plugin_id) // TEMP special case for plugins that don't use SmartEnv
+    );
   }
 
   get row_control_state() {
@@ -525,7 +530,7 @@ export class PluginListItem {
 
   async install(params = {}) {
     if (this.item_type === 'core') {
-      if (this.install_type === 'github') {
+      if (this.install_method === 'github') {
         await this.install_github_release_plugin(params);
         return;
       }
