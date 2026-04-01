@@ -100,7 +100,6 @@ export function build_html(env, params = {}) {
     <div class="pro-plugins-container setting-item-heading">
       <div class="setting-group">
         <div class="setting-item setting-item-heading">
-          <div class="setting-item-name pro-heading">Smart Plugins</div>
           <div class="setting-item-control">
             <div class="smart-plugins-login"></div>
           </div>
@@ -152,8 +151,6 @@ export async function post_process(env, container, params = {}) {
   };
 
   const render_smart_plugins = async () => {
-    this.empty(official_list_el);
-
     const token = localStorage.getItem(oauth_storage_prefix + 'token') || '';
     await render_login();
     await render_referrals(token);
@@ -171,6 +168,7 @@ export async function post_process(env, container, params = {}) {
       const plugin_groups = annotate_plugin_groups(SMART_PLUGINS_LIST);
       console.log('Plugin groups:', plugin_groups);
 
+      this.empty(official_list_el);
       for (const plugin_group of plugin_groups) {
         const group_frag = this.create_doc_fragment(`<div class="setting-group smart-plugins-item-group" data-group-size="${plugin_group.items.length}" data-group-state="${plugin_group.group_state}"><div class="setting-items"></div></div>`);
         const group_el = group_frag.firstElementChild;
@@ -299,6 +297,16 @@ export class PluginListItem {
     return this.app.plugins.enabledPlugins.has(this.plugin_id);
   }
 
+  get env_plugin_state() {
+    return this.env?.plugin_states?.[this.plugin_id] || null;
+  }
+
+  get is_deferred() {
+    return this.env_plugin_state === 'deferred'
+      && this.installed_type === this.item_type
+    ;
+  }
+
   get can_install() {
     if (this.data.item_type === 'core') return true;
     if (this.data.item_type === 'pro') return this.sub_active;
@@ -383,6 +391,8 @@ export class PluginListItem {
   }
 
   get row_control_state() {
+    if (this.is_deferred) return 'deferred';
+
     if (this.group_size > 1) {
       if (this.group_state === 'pro_can_install') {
         if (this.item_type === 'core' && this.state === 'can_install') {
@@ -409,6 +419,11 @@ export class PluginListItem {
 
   get control_specs() {
     switch (this.row_control_state) {
+      case 'deferred':
+        return [
+          { type: 'status', text: 'Installed & enabled. Requires reloading Obsidian to activate.' },
+          { type: 'button', action: 'restart_obsidian', text: 'Reload', variant: 'primary' },
+        ];
       case 'update_available':
         return [
           { type: 'button', action: 'install', text: 'Update', variant: 'primary' },
@@ -478,6 +493,9 @@ export class PluginListItem {
       case 'enable':
         await this.enable(params);
         return;
+      case 'restart_obsidian':
+        this.restart_obsidian();
+        return;
       case 'open_settings':
         this.open_settings();
         return;
@@ -526,6 +544,14 @@ export class PluginListItem {
         event_source: 'browse_smart_plugins.list_item',
       });
     }
+  }
+
+  restart_obsidian() {
+    if (typeof this.app?.commands?.executeCommandById === 'function') {
+      this.app.commands.executeCommandById('app:reload');
+      return;
+    }
+    window.location.reload();
   }
 
   open_settings() {
