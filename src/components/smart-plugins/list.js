@@ -80,7 +80,7 @@ function default_smart_plugins_list() {
       install_method: 'obsidian',
       item_name: 'Smart Templates',
       item_desc: 'Create structured templates designed for Smart Plugins workflows.',
-      item_repo: 'brianpetro/smart-templates-obsidian',
+      item_repo: 'brianpetro/obsidian-smart-templates',
       plugin_id: 'smart-templates',
       url: 'https://smartconnections.app/smart-templates/',
     },
