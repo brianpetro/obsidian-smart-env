@@ -424,6 +424,10 @@ details.smart-env-notification > .smart-env-notification__summary:focus-visible 
   gap: var(--size-4-3);
 }
 
+details[open] .smart-env-notification__event-key {
+  white-space: normal;
+}
+
 .smart-env-notification__event-key {
   color: var(--text-normal);
   font-weight: var(--font-semibold);
