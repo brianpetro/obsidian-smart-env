@@ -499,9 +499,9 @@ export class SmartEnv extends BaseSmartEnv {
     return this.plugin?.app ?? window.app;
   }
 
-  open_notifications_feed_modal() {
+  open_notifications_feed_modal(params = {}) {
     const NotificationsModalClass = this.config.modals.notifications_feed_modal.class;
-    const modal = new NotificationsModalClass(this.obsidian_app, this);
+    const modal = new NotificationsModalClass(this.obsidian_app, this, params);
     modal.open();
   }
 

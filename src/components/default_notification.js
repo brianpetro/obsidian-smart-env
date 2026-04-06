@@ -104,15 +104,26 @@ ${details}`;
  * @param {any} env
  * @param {object} [params={}]
  * @param {Function|null} [params.on_open_feed=null]
+ * @param {string} [params.event_key='']
+ * @param {Record<string, unknown>} [params.event={}]
  * @returns {boolean}
  */
 function open_notifications_feed(env, params = {}) {
-  const { on_open_feed = null } = params;
+  const {
+    on_open_feed = null,
+    event_key = '',
+    event = {},
+  } = params;
+  const open_params = {
+    event_key,
+    event,
+  };
+
   if (typeof on_open_feed === 'function') {
-    return on_open_feed() !== false;
+    return on_open_feed(open_params) !== false;
   }
   if (typeof env?.open_notifications_feed_modal === 'function') {
-    env.open_notifications_feed_modal();
+    env.open_notifications_feed_modal(open_params);
     return true;
   }
   return false;
@@ -169,6 +180,7 @@ export function render(env, params = {}) {
   const can_open_feed = typeof on_open_feed === 'function'
     || typeof env?.open_notifications_feed_modal === 'function'
   ;
+  const can_view_more = can_open_feed && Boolean(event_key);
 
   const frag = document.createDocumentFragment();
   const wrapper = document.createElement('div');
@@ -189,7 +201,11 @@ export function render(env, params = {}) {
     icon_el.addEventListener('click', (event_obj) => {
       event_obj.preventDefault();
       event_obj.stopPropagation();
-      open_notifications_feed(env, { on_open_feed });
+      open_notifications_feed(env, {
+        on_open_feed,
+        event_key,
+        event,
+      });
     });
   }
 
@@ -233,6 +249,22 @@ export function render(env, params = {}) {
         run_action(btn_callback);
       });
       actions_el.appendChild(button_el);
+    }
+
+    if (can_view_more) {
+      const view_more_btn_el = document.createElement('button');
+      view_more_btn_el.type = 'button';
+      view_more_btn_el.className = 'smart-env-default-notice__button';
+      view_more_btn_el.textContent = 'View more';
+      view_more_btn_el.setAttribute('aria-label', 'Open this event in the notifications feed');
+      view_more_btn_el.addEventListener('click', () => {
+        open_notifications_feed(env, {
+          on_open_feed,
+          event_key,
+          event,
+        });
+      });
+      actions_el.appendChild(view_more_btn_el);
     }
 
     if (help_link) {

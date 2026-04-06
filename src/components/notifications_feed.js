@@ -84,6 +84,11 @@ async function post_process(env, container, params = {}) {
     ? state.expanded_entry_keys
     : new Set()
   ;
+  let target_entry_key = typeof state?.target_entry_key === 'string'
+    ? state.target_entry_key.trim()
+    : ''
+  ;
+  let has_revealed_target_entry = false;
 
   this.empty(feed_container);
 
@@ -105,9 +110,14 @@ async function post_process(env, container, params = {}) {
   ;
   let rendered_entries_cache = [];
 
+  if (target_entry_key) {
+    expanded_entry_keys.add(target_entry_key);
+  }
+
   state.active_levels = active_levels;
   state.expanded_entry_keys = expanded_entry_keys;
   state.pending_live_entries = pending_live_entries;
+  state.target_entry_key = target_entry_key;
 
   const get_entries = () => {
     const session_entries = Array.isArray(env?.event_logs?.session_events)
@@ -130,6 +140,9 @@ async function post_process(env, container, params = {}) {
       if (!entry_key) return;
       expanded_entry_keys.add(entry_key);
     });
+    if (target_entry_key) {
+      expanded_entry_keys.add(target_entry_key);
+    }
   };
 
   const set_active_levels = (next_active_levels) => {
@@ -174,6 +187,11 @@ async function post_process(env, container, params = {}) {
       visible_count = Math.min(visible_count, filtered_entries.length);
     }
 
+    const target_visible_count = get_required_visible_count_for_entry(filtered_entries, target_entry_key);
+    if (typeof target_visible_count === 'number' && target_visible_count > visible_count) {
+      visible_count = target_visible_count;
+    }
+
     filtered_count = filtered_entries.length;
     state.visible_count = visible_count;
     state.filtered_count = filtered_count;
@@ -212,6 +230,14 @@ async function post_process(env, container, params = {}) {
       entries_length: filtered_entries.length,
       visible_count,
     });
+
+    if (!has_revealed_target_entry && target_entry_key) {
+      has_revealed_target_entry = reveal_target_entry(feed_container, target_entry_key);
+      if (has_revealed_target_entry) {
+        state.target_entry_key = '';
+        target_entry_key = '';
+      }
+    }
   };
 
   const render_feed = (opts = {}) => {
@@ -833,6 +859,34 @@ async function write_text_to_clipboard(text = '') {
  */
 function get_entry_row_key(entry) {
   return `${get_entry_event_key(entry)}:${get_entry_timestamp(entry)}`;
+}
+
+/**
+ * @param {Array} entries
+ * @param {string} target_entry_key
+ * @returns {number|null}
+ */
+function get_required_visible_count_for_entry(entries = [], target_entry_key = '') {
+  if (!Array.isArray(entries) || !target_entry_key) return null;
+  const target_index = entries.findIndex((entry) => get_entry_row_key(entry) === target_entry_key);
+  if (target_index === -1) return null;
+  return entries.length - target_index;
+}
+
+/**
+ * @param {HTMLElement} feed_container
+ * @param {string} target_entry_key
+ * @returns {boolean}
+ */
+function reveal_target_entry(feed_container, target_entry_key = '') {
+  if (!feed_container || !target_entry_key) return false;
+  const target_entry_el = Array.from(feed_container.querySelectorAll('.smart-env-notification'))
+    .find((details_el) => details_el.dataset.entryKey === target_entry_key)
+  ;
+  if (!target_entry_el) return false;
+  target_entry_el.open = true;
+  target_entry_el.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+  return true;
 }
 
 /**
