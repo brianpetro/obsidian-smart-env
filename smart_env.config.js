@@ -55,12 +55,6 @@ export const smart_env_config = {
     smart_blocks,
     smart_contexts
   },
-  item_types: {
-    EmbeddingModel,
-    LookupList,
-    SmartBlock,
-    SmartContext
-  },
   items: {
     embedding_model: { class: EmbeddingModel },
     lookup_list: { class: LookupList },
