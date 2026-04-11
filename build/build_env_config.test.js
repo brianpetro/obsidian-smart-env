@@ -6,7 +6,11 @@ import os from 'os';
 import path from 'path';
 import { pathToFileURL } from 'url';
 import test from 'ava';
-import { ACTION_EXPORT_PROPS, COMPONENT_EXPORT_PROPS } from 'smart-environment/loaders/index.js';
+import {
+  ACTION_EXPORT_PROPS,
+  COMPONENT_EXPORT_PROPS,
+  ITEM_EXPORT_PROPS
+} from 'smart-environment/loaders/index.js';
 import { build_smart_env_config } from './build_env_config.js';
 
 /** -------------------------------------------------------------------
@@ -35,7 +39,12 @@ test.before(() => {
   write_file('src/collections/ZetaConnections.js', 'export default class ZetaConnections {}');
 
   /* items */
-  write_file('src/items/awesome_block.js', 'export function AwesomeBlock(){}');
+  write_file(
+    'src/items/awesome_block.js',
+    `export function AwesomeBlock(){}
+export const version = '1.0.0';
+export const debug_meta = { source: 'awesome_block' };`
+  );
   write_file('src/items/awesome_block.test.js', 'export function AwesomeBlock(){}');
   write_file('src/items/betaBlock.js', 'export function BetaBlock(){}');
 
@@ -143,12 +152,41 @@ test('collections are gathered', t => {
 
 test('items are imported with PascalCase vars', t => {
   const file = read_generated_config();
-  t.regex(file, /import { AwesomeBlock } from/);
+  t.regex(file, /import { AwesomeBlock(?:, version as AwesomeBlock_version)? } from/);
   t.regex(file, /item_types:[\s\S]*AwesomeBlock/);
 });
 test('should skip .test.js files', t => {
   const file = read_generated_config();
   t.false(file.includes('AwesomeBlock.test.js'));
+});
+
+test('items config includes version when exported and whitelisted', async t => {
+  const mod_path = path.join(tmp_root, 'smart_env.config.js');
+  const cfg = await import(pathToFileURL(mod_path).href);
+  const { items } = cfg.smart_env_config;
+  t.is(items.awesome_block.version, '1.0.0');
+  t.false(Object.prototype.hasOwnProperty.call(items.beta_block, 'version'));
+});
+
+test('items extras are limited to ITEM_EXPORT_PROPS', async t => {
+  const mod_path = path.join(tmp_root, 'smart_env.config.js');
+  const cfg = await import(pathToFileURL(mod_path).href);
+  const { items } = cfg.smart_env_config;
+
+  const awesome_block = items.awesome_block;
+  const extra_keys = Object.keys(awesome_block).filter(k => k !== 'class');
+
+  extra_keys.forEach(k => {
+    t.true(
+      ITEM_EXPORT_PROPS.includes(k),
+      `awesome_block extra key ${k} should be listed in ITEM_EXPORT_PROPS`
+    );
+  });
+
+  t.false(
+    Object.prototype.hasOwnProperty.call(awesome_block, 'debug_meta'),
+    'awesome_block.debug_meta should not be exposed because it is not whitelisted'
+  );
 });
 
 test('root-level component appears in config', t => {
