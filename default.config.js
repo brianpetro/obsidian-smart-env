@@ -141,10 +141,6 @@ const smart_env_config = {
     //   },
     // },
   },
-  // item_types: {
-  //   SmartSource,
-  //   // SmartBlock,
-  // },
   items: {
     smart_source,
     // smart_block,

@@ -205,7 +205,7 @@ The `obsidian-smart-env/build/build_env_config.js` script embraces a "convention
 | Folder segment | Config path | Expected exports |
 | --- | --- | --- |
 | `collections/<KEY>.js` | `smart_env_config.collections.<key>` | default export `{ class, collection_key, item_type }` |
-| `items/<item_key>.js` | `smart_env_config.items.<item_key>.class` and `item_types.PascalCase` | named export (class or factory) |
+| `items/<item_key>.js` | `smart_env_config.items.<item_key>.class` | named export (class or factory) |
 | `modules/<module_key>.js` | `smart_env_config.modules.<module_key>` | default export describing Smart Module |
 | `components/<scope>/component.js` | `smart_env_config.components.<scope>.component.render` | named `render` (+ optional `settings_config`) |
 | `actions/<scope>/<action>.js` | `smart_env_config.actions.<scope>.<action>.{action,settings_config?,display_*?,pre_process?}` | named export matching filename |
@@ -277,7 +277,6 @@ The Smart Environment internally normalizes the options provided in `main_env_op
 	- Each collection should have:
 		- **`class`**: The constructor function or class for the collection.
 		- **`data_adapter`**: Adapter for handling data persistence.
-		- **`item_types`**: Definitions of item classes within the collection.
 		- **`modules`**: Specifies additional functionalities or services.
 	- Each module should have:
 		- **`class`**: The constructor function or class for the module.
@@ -299,12 +298,6 @@ export const smart_env_config = {
 			// Collection-specific options...
 		},
 		// Other collections...
-	},
-
-	// Available item types
-	item_types: {
-		SmartSource,
-		SmartBlock,
 	},
 
 	// Module configurations
@@ -370,7 +363,6 @@ At minimum, your configuration should specify:
 
 - **collections**: The collection classes to initialize
 - **modules**: Core modules like smart_fs, smart_view
-- **item_types**: Available item types for collections
 - **env_path**: Base path for the environment (if not using default)
 
 Example of minimal configuration:
@@ -389,9 +381,6 @@ const minimal_config = {
 			adapter: FsAdapter
 		}
 	},
-	item_types: {
-		SmartSource
-	}
 };
 ```
 

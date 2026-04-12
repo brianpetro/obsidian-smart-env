@@ -14,9 +14,10 @@ import {
 import { build_smart_env_config } from './build_env_config.js';
 
 /** -------------------------------------------------------------------
- * helpers – snake_case, two-space indent, no extra deps
+ * helpers - snake_case, two-space indent, no extra deps
  * ------------------------------------------------------------------*/
 const tmp_root = fs.mkdtempSync(path.join(os.tmpdir(), 'smart-env-test-'));
+const GENERATED_VERSION = '9.9.9';
 
 function write_file(rel, contents = '') {
   const abs = path.join(tmp_root, rel);
@@ -47,8 +48,14 @@ export const debug_meta = { source: 'awesome_block' };`
   );
   write_file('src/items/awesome_block.test.js', 'export function AwesomeBlock(){}');
   write_file('src/items/betaBlock.js', 'export function BetaBlock(){}');
+  write_file(
+    'src/items/gamma_item.js',
+    `export class GammaItem {
+  static version = '3.2.1';
+}`
+  );
 
-  /* components – root level */
+  /* components - root level */
   write_file(
     'src/components/env_settings.js',
     `export function render(){}
@@ -57,7 +64,7 @@ export const debug_meta = { source: 'env_settings' };
 export const version = '1.0.0';`
   );
 
-  /* components – one level */
+  /* components - one level */
   write_file('src/components/smart-sources/settings.js', 'export function render(){}');
   write_file(
     'src/components/ConnectionsListItem/V2Settings.js',
@@ -67,8 +74,13 @@ export const version = '1.0.0';`
     'src/components/connections-list-item/v3.js',
     'export function render(){}'
   );
+  write_file(
+    'src/components/versioned_render.js',
+    `export function render(){}
+render.version = '4.5.6';`
+  );
 
-  /* components – extra metadata (to prove COMPONENT_EXPORT_PROPS drives exposure) */
+  /* components - extra metadata (to prove COMPONENT_EXPORT_PROPS drives exposure) */
   write_file(
     'src/components/debug/dashboard.js',
     `export function render(){}
@@ -96,8 +108,13 @@ export const version = '1.0.0';
     `export function PreProcess(){}
 export const pre_process = () => 'prep';`
   );
+  write_file(
+    'src/actions/assigned_action.js',
+    `export function assigned_action(){}
+assigned_action.version = '7.8.9';`
+  );
 
-  /* actions – extra metadata (to prove ACTION_EXPORT_PROPS drives exposure) */
+  /* actions - extra metadata (to prove ACTION_EXPORT_PROPS drives exposure) */
   write_file(
     'src/actions/track.js',
     `export function track(){}
@@ -134,7 +151,7 @@ export const internal_flag = true;`
  * build config once for all tests
  * ------------------------------------------------------------------*/
 test.before(async () => {
-  build_smart_env_config(tmp_root, [path.join(tmp_root, 'src')]);
+  build_smart_env_config(tmp_root, [path.join(tmp_root, 'src')], GENERATED_VERSION);
 });
 
 /** -------------------------------------------------------------------
@@ -153,19 +170,20 @@ test('collections are gathered', t => {
 test('items are imported with PascalCase vars', t => {
   const file = read_generated_config();
   t.regex(file, /import { AwesomeBlock(?:, version as AwesomeBlock_version)? } from/);
-  t.regex(file, /item_types:[\s\S]*AwesomeBlock/);
+  t.regex(file, /items:[\s\S]*AwesomeBlock/);
 });
 test('should skip .test.js files', t => {
   const file = read_generated_config();
   t.false(file.includes('AwesomeBlock.test.js'));
 });
 
-test('items config includes version when exported and whitelisted', async t => {
+test('items config includes exported, class, and fallback versions', async t => {
   const mod_path = path.join(tmp_root, 'smart_env.config.js');
   const cfg = await import(pathToFileURL(mod_path).href);
   const { items } = cfg.smart_env_config;
   t.is(items.awesome_block.version, '1.0.0');
-  t.false(Object.prototype.hasOwnProperty.call(items.beta_block, 'version'));
+  t.is(items.beta_block.version, GENERATED_VERSION);
+  t.is(items.gamma_item.version, '3.2.1');
 });
 
 test('items extras are limited to ITEM_EXPORT_PROPS', async t => {
@@ -240,17 +258,13 @@ test('components config includes settings_config when exported', async t => {
   );
 });
 
-test('components config includes version when exported and whitelisted', async t => {
+test('components config includes exported, assigned, and fallback versions', async t => {
   const mod_path = path.join(tmp_root, 'smart_env.config.js');
   const cfg = await import(pathToFileURL(mod_path).href);
   const { components } = cfg.smart_env_config;
   t.is(components.env_settings.version, '1.0.0');
-  t.false(
-    Object.prototype.hasOwnProperty.call(
-      components.smart_sources_settings,
-      'version'
-    )
-  );
+  t.is(components.smart_sources_settings.version, GENERATED_VERSION);
+  t.is(components.versioned_render.version, '4.5.6');
 });
 
 test('components extras are limited to COMPONENT_EXPORT_PROPS', async t => {
@@ -306,12 +320,13 @@ test('actions config includes display metadata when exported', async t => {
   t.false(Object.prototype.hasOwnProperty.call(log, 'display_description'));
 });
 
-test('actions config includes version when exported and whitelisted', async t => {
+test('actions config includes exported, assigned, and fallback versions', async t => {
   const mod_path = path.join(tmp_root, 'smart_env.config.js');
   const cfg = await import(pathToFileURL(mod_path).href);
-  const { publish, log } = cfg.smart_env_config.actions;
-  t.is(publish.version, '1.0.0');
-  t.false(Object.prototype.hasOwnProperty.call(log, 'version'));
+  const { actions } = cfg.smart_env_config;
+  t.is(actions.publish.version, '1.0.0');
+  t.is(actions.log.version, GENERATED_VERSION);
+  t.is(actions.assigned_action.version, '7.8.9');
 });
 
 test('actions extras are limited to ACTION_EXPORT_PROPS', async t => {
@@ -329,7 +344,7 @@ test('actions extras are limited to ACTION_EXPORT_PROPS', async t => {
     );
   });
 
-  // debug_flag is exported from the file but should not appear on config
+  // debug_flag is exported from the action file but should not appear on config
   t.false(
     Object.prototype.hasOwnProperty.call(publish, 'debug_flag'),
     'publish.debug_flag should not be exposed because it is not whitelisted'
