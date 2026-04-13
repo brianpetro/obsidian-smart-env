@@ -44,7 +44,7 @@ export class LookupLists extends Collection {
     if (this.items[key]) return this.items[key];
 
     // Create
-    const list = new LookupList(this.env, {
+    const list = new this.item_type(this.env, {
       key,
       query,
       filter,
