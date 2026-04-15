@@ -2,7 +2,7 @@
   "name": "obsidian-smart-env",
   "author": "Brian Joseph Petro (🌴 Brian)",
   "license": "SEE LICENSE IN LICENSE",
-  "version": "2.4.0",
+  "version": "2.4.1",
   "type": "module",
   "description": "Implements Smart Environment best practices for Obsidian.",
   "main": "index.js",
