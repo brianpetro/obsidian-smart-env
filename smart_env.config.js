@@ -52,7 +52,6 @@ import { source_open as source_open_action } from './src/actions/source/open.js'
 
 
 export const smart_env_config = {
-  version: "2.4.2",
   collections: {
     embedding_models,
     event_logs,
@@ -61,53 +60,53 @@ export const smart_env_config = {
     smart_contexts
   },
   items: {
-    embedding_model: { class: EmbeddingModel, version: "2.4.2" },
-    lookup_list: { class: LookupList, version: "2.4.2" },
-    smart_block: { class: SmartBlock, version: "2.4.2" },
-    smart_context: { class: SmartContext, version: "2.4.2" }
+    embedding_model: { class: EmbeddingModel, version: "1.0.0" },
+    lookup_list: { class: LookupList, version: "1.0.0" },
+    smart_block: { class: SmartBlock, version: "1.0.0" },
+    smart_context: { class: SmartContext, version: "1.0.0" }
   },
   modules: {
 
   },
   components: {
-    collection_settings: { render: collection_settings_component, version: "2.4.2" },
-    context_item_leaf: { render: context_item_leaf_component, version: "2.4.2" },
-    default_notification: { render: default_notification_component, version: "2.4.2" },
-    env_stats: { render: env_stats_component, version: "2.4.2" },
-    env_status: { render: env_status_component, version: "2.4.2" },
-    lean_coffee_callout: { render: lean_coffee_callout_component, version: "2.4.2" },
-    milestone_notification: { render: milestone_notification_component, version: "2.4.2" },
-    milestones: { render: milestones_component, version: "2.4.2" },
-    notifications_feed: { render: notifications_feed_component, version: "2.4.2" },
-    settings_env_model: { render: settings_env_model_component, version: "2.4.2" },
-    settings_env_model_type: { render: settings_env_model_type_component, version: "2.4.2" },
-    settings_env_models: { render: settings_env_models_component, version: "2.4.2" },
-    settings_env_sources: { render: settings_env_sources_component, version: "2.4.2" },
-    settings_model_actions: { render: settings_model_actions_component, version: "2.4.2" },
-    settings_smart_env: { render: settings_smart_env_component, version: "2.4.2" },
-    smart_context_actions: { render: smart_context_actions_component, version: "2.4.2" },
-    smart_context_item: { render: smart_context_item_component, version: "2.4.2" },
-    smart_context_meta: { render: smart_context_meta_component, version: "2.4.2" },
-    smart_context_tree: { render: smart_context_tree_component, version: "2.4.2" },
-    smart_plugins_list: { render: smart_plugins_list_component, version: "2.4.2" },
-    smart_plugins_list_item: { render: smart_plugins_list_item_component, version: "2.4.2" },
-    smart_plugins_login: { render: smart_plugins_login_component, version: "2.4.2" },
-    smart_plugins_referral: { render: smart_plugins_referral_component, version: "2.4.2" },
-    source_inspector: { render: source_inspector_component, version: "2.4.2" },
-    status_bar: { render: status_bar_component, version: "2.4.2" },
-    suggest_display_right: { render: suggest_display_right_component, version: "2.4.2" },
-    supporter_callout: { render: supporter_callout_component, version: "2.4.2" },
-    user_agreement_callout: { render: user_agreement_callout_component, version: "2.4.2" }
+    collection_settings: { render: collection_settings_component, version: "1.0.0" },
+    context_item_leaf: { render: context_item_leaf_component, version: "1.0.0" },
+    default_notification: { render: default_notification_component, version: "1.0.0" },
+    env_stats: { render: env_stats_component, version: "1.0.0" },
+    env_status: { render: env_status_component, version: "1.0.0" },
+    lean_coffee_callout: { render: lean_coffee_callout_component, version: "1.0.0" },
+    milestone_notification: { render: milestone_notification_component, version: "1.0.0" },
+    milestones: { render: milestones_component, version: "1.0.0" },
+    notifications_feed: { render: notifications_feed_component, version: "1.0.0" },
+    settings_env_model: { render: settings_env_model_component, version: "1.0.0" },
+    settings_env_model_type: { render: settings_env_model_type_component, version: "1.0.0" },
+    settings_env_models: { render: settings_env_models_component, version: "1.0.0" },
+    settings_env_sources: { render: settings_env_sources_component, version: "1.0.0" },
+    settings_model_actions: { render: settings_model_actions_component, version: "1.0.0" },
+    settings_smart_env: { render: settings_smart_env_component, version: "1.0.0" },
+    smart_context_actions: { render: smart_context_actions_component, version: "1.0.0" },
+    smart_context_item: { render: smart_context_item_component, version: "1.0.0" },
+    smart_context_meta: { render: smart_context_meta_component, version: "1.0.0" },
+    smart_context_tree: { render: smart_context_tree_component, version: "1.0.0" },
+    smart_plugins_list: { render: smart_plugins_list_component, version: "1.0.0" },
+    smart_plugins_list_item: { render: smart_plugins_list_item_component, version: "1.0.0" },
+    smart_plugins_login: { render: smart_plugins_login_component, version: "1.0.0" },
+    smart_plugins_referral: { render: smart_plugins_referral_component, version: "1.0.0" },
+    source_inspector: { render: source_inspector_component, version: "1.0.0" },
+    status_bar: { render: status_bar_component, version: "1.0.0" },
+    suggest_display_right: { render: suggest_display_right_component, version: "1.0.0" },
+    supporter_callout: { render: supporter_callout_component, version: "1.0.0" },
+    user_agreement_callout: { render: user_agreement_callout_component, version: "1.0.0" }
   },
   actions: {
-    context_copy_to_clipboard: { action: context_copy_to_clipboard_action, version: "2.4.2" },
-    context_item_merge_template: { action: context_item_merge_template_action, settings_config: context_item_merge_template_action_settings_config, default_settings: context_item_merge_template_action_default_settings, version: "2.4.2" },
-    context_merge_template: { action: context_merge_template_action, settings_config: context_merge_template_action_settings_config, default_settings: context_merge_template_action_default_settings, version: "2.4.2" },
-    context_suggest_blocks: { action: context_suggest_blocks_action, display_name: context_suggest_blocks_action_display_name, version: "2.4.2" },
-    context_suggest_contexts: { action: context_suggest_contexts_action, display_name: context_suggest_contexts_action_display_name, version: "2.4.2" },
-    context_suggest_sources: { action: context_suggest_sources_action, display_name: context_suggest_sources_action_display_name, version: "2.4.2" },
-    lookup_list_pre_process: { action: lookup_list_pre_process_action, pre_process: lookup_list_pre_process_action_pre_process, version: "2.4.2" },
-    similarity: { action: similarity_action, settings_config: similarity_action_settings_config, display_name: similarity_action_display_name, display_description: similarity_action_display_description, version: "2.4.2" },
-    source_open: { action: source_open_action, version: "2.4.2" }
+    context_copy_to_clipboard: { action: context_copy_to_clipboard_action, version: "1.0.0" },
+    context_item_merge_template: { action: context_item_merge_template_action, settings_config: context_item_merge_template_action_settings_config, default_settings: context_item_merge_template_action_default_settings, version: "1.0.0" },
+    context_merge_template: { action: context_merge_template_action, settings_config: context_merge_template_action_settings_config, default_settings: context_merge_template_action_default_settings, version: "1.0.0" },
+    context_suggest_blocks: { action: context_suggest_blocks_action, display_name: context_suggest_blocks_action_display_name, version: "1.0.0" },
+    context_suggest_contexts: { action: context_suggest_contexts_action, display_name: context_suggest_contexts_action_display_name, version: "1.0.0" },
+    context_suggest_sources: { action: context_suggest_sources_action, display_name: context_suggest_sources_action_display_name, version: "1.0.0" },
+    lookup_list_pre_process: { action: lookup_list_pre_process_action, pre_process: lookup_list_pre_process_action_pre_process, version: "1.0.0" },
+    similarity: { action: similarity_action, settings_config: similarity_action_settings_config, display_name: similarity_action_display_name, display_description: similarity_action_display_description, version: "1.0.0" },
+    source_open: { action: source_open_action, version: "1.0.0" }
   }
 };

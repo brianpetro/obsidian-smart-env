@@ -24,9 +24,15 @@ import {
   ComponentsLoader,
   ActionsLoader
 } from 'smart-environment/loaders/index.js';
-import pkg from 'smart-environment/package.json' with { type: 'json' };
+import pkg from '../package.json' with { type: 'json' };
 
-export function build_smart_env_config(dist_dir, roots, version=pkg.version) {
+/**
+ * DEFAULT_VERSION is used in plugins importing this build_env_config.js as the version for all unversioned config entries
+ * should be higher than the BASE version
+ * BASE version is set in the build script and is used for modules in this repo
+ */
+const DEFAULT_VERSION = pkg.version;
+export function build_smart_env_config(dist_dir, roots, version=DEFAULT_VERSION) {
   if (!fs.existsSync(dist_dir)) {
     fs.mkdirSync(dist_dir, { recursive: true });
   }
@@ -66,7 +72,6 @@ export function build_smart_env_config(dist_dir, roots, version=pkg.version) {
     action_imports,
     `
 export const smart_env_config = {
-  version: ${JSON.stringify(version)},
   collections: {
 ${collections_config}
   },

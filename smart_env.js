@@ -22,8 +22,10 @@ import { EnvStatusView } from './src/views/env_status_view.js';
 import { SmartEnvSettingTab } from './src/views/smart_env_settings_tab.js';
 import { deep_clone_config } from 'smart-environment/utils/deep_clone_config.js';
 import { normalize_opts } from 'smart-environment/utils/normalize_opts.js';
+import pkg from './package.json' with { type: 'json' };
 
 export class SmartEnv extends BaseSmartEnv {
+  static version = pkg.version;
   constructor(opts = {}) {
     super(opts);
     this.plugin_states = {};
