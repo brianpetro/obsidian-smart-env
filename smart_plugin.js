@@ -17,13 +17,7 @@ export class SmartPlugin extends Plugin {
    * use property key to override commands in further subclasses.
    */
   get commands() {
-    return {
-      show_release_notes: {
-        id: 'show-release-notes',
-        name: 'Show release notes',
-        callback: () => this.show_release_notes()
-      }
-    };
+    return {};
   }
   register_commands() {
     Object.values(this.commands).forEach((cmd) => {
