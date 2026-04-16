@@ -98,8 +98,8 @@ export async function post_process(env, container, params = {}) {
 
   if (sub_exp && sub_exp < Date.now()) {
     const setting = new Setting(container)
-      .setName('Subscription expired')
-      .setDesc('Your Smart Connections Pro subscription has expired. Please update your subscription to retain access to Pro plugins.')
+      .setName('All-access subscription expired')
+      .setDesc('Your Smart Plugins all-access subscription has expired. Please update your subscription to retain access to Pro plugins.')
     ;
 
     setting.addButton((btn) => {
@@ -131,7 +131,7 @@ export async function post_process(env, container, params = {}) {
   const setting = new Setting(container);
   const subscription_text = subscription_status(sub_exp);
   setting.setDesc(subscription_text
-    ? `Signed in to Smart Plugins Pro account. ${subscription_text}`
+    ? `Signed in to Smart Plugins account. ${subscription_text}`
     : 'Signed in to Smart Plugins account.'
   );
   setting.addButton((btn) => {
@@ -165,8 +165,8 @@ function subscription_status(sub_exp) {
   }
 
   if (normalized_sub_exp < Date.now()) {
-    return `Subscription expired ${convert_to_time_ago(normalized_sub_exp)}.`;
+    return `All-access subscription expired ${convert_to_time_ago(normalized_sub_exp)}.`;
   }
 
-  return `Subscription active, renews ${convert_to_time_until(normalized_sub_exp)}.`;
+  return `All-access subscription active, expires ${convert_to_time_until(normalized_sub_exp)}.`;
 }

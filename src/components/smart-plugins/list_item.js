@@ -2,10 +2,16 @@
  * @param {import('./list').PluginListItem} item
  */
 export function build_html(item, params = {}) {
+  const subscription_state_html = item.subscription_status_text
+    ? `<div class="smart-plugins-item-subscription-state">${item.subscription_status_text}</div>`
+    : ''
+  ;
+
   return `<div class="setting-item pro-plugins-list-item" data-item-type="${item.item_type}" data-item-state="${item.state || ''}" data-row-control-state="${item.row_control_state}">
     <div class="setting-item-info">
       <div class="setting-item-name ${item.item_type === 'core' ? 'smart-badge core-badge' : 'smart-badge pro-badge'}">${item.formatted_name}</div>
       <div class="setting-item-description">${item.formatted_description}</div>
+      ${subscription_state_html}
     </div>
     <div class="setting-item-control"></div>
   </div>`;

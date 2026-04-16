@@ -26,6 +26,16 @@
   font-weight: var(--font-semibold);
 }
 
+.smart-plugins-server-message {
+  margin: var(--size-4-3) 0;
+  padding: var(--size-4-3) var(--size-4-4);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background-color: var(--background-secondary);
+  color: var(--text-normal);
+  white-space: pre-wrap;
+}
+
 .pro-plugins-list-item {
   display: flex;
   align-items: center;
@@ -40,6 +50,12 @@
   .setting-item-name {
     position: relative;
   }
+}
+
+.smart-plugins-item-subscription-state {
+  margin-top: var(--size-2-2);
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
 }
 
 .smart-plugins-list-item-controls {

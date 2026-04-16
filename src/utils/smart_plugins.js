@@ -188,22 +188,23 @@ export function validate_zip_buffer(zip_buffer, source_label = 'Response') {
 
 /**
  * Writes {fileName, data} to vault's baseFolder. Creates subfolders as needed.
+ * Applies accessed_at timestamp to file creation and modification times
  * @param {import('obsidian').DataAdapter} adapter
  * @param {string} baseFolder
- * @param {{fileName:string, data:Uint8Array}[]} files
+ * @param {{fileName:string, data:Uint8Array, accessed_at:number}[]} files
  */
 export async function write_files_with_adapter(adapter, baseFolder, files) {
   const hasWriteBinary = typeof adapter.writeBinary === 'function';
   if (!(await adapter.exists(baseFolder))) {
     await adapter.mkdir(baseFolder);
   }
-  for (const { fileName, data } of files) {
+  for (const { fileName, data, accessed_at } of files) {
     const fullPath = baseFolder + '/' + fileName;
     if (hasWriteBinary) {
-      await adapter.writeBinary(fullPath, data);
+      await adapter.writeBinary(fullPath, data, {ctime: accessed_at, mtime: accessed_at});
     } else {
       const base64 = btoa(String.fromCharCode(...data));
-      await adapter.write(fullPath, base64);
+      await adapter.write(fullPath, base64, {ctime: accessed_at, mtime: accessed_at});
     }
   }
 }
@@ -253,6 +254,87 @@ export async function fetch_plugin_zip(repoName, token) {
   }
 
   return validate_zip_buffer(resp.arrayBuffer, 'Smart Plugins server');
+}
+
+/**
+ * Calls server /plugin_download to get an individual plugin file.
+ *
+ * @param {string} repo_name
+ * @param {string} token
+ * @param {object} [params]
+ * @param {string} [params.file]
+ * @param {string} [params.version]
+ * @returns {Promise<any>}
+ */
+export async function fetch_plugin_file(repo_name, token, params = {}) {
+  const file = String(params.file || '').trim();
+  if (!file) {
+    throw new Error('file required');
+  }
+
+  const body = {
+    repo: repo_name,
+    file,
+  };
+  const version = String(params.version || '').trim();
+  if (version) {
+    body.version = version;
+  }
+
+  const resp = await requestUrl({
+    url: `${get_smart_server_url()}/plugin_download`,
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (resp.status !== 200) {
+    throw new Error(`plugin_download error ${resp.status}: ${resp.text}`);
+  }
+
+  return resp;
+}
+
+/**
+ * Read a response header value regardless of header container shape.
+ *
+ * @param {any} response
+ * @param {string} header_name
+ * @returns {string}
+ */
+export function get_response_header_value(response, header_name) {
+  const normalized_header_name = String(header_name || '').trim().toLowerCase();
+  if (!normalized_header_name) return '';
+
+  const headers = response?.headers;
+  if (!headers) return '';
+
+  if (typeof headers.get === 'function') {
+    return String(
+      headers.get(header_name) ||
+      headers.get(normalized_header_name) ||
+      ''
+    ).trim();
+  }
+
+  if (Array.isArray(headers)) {
+    const match = headers.find(([key]) => {
+      return String(key || '').trim().toLowerCase() === normalized_header_name;
+    });
+    return String(match?.[1] || '').trim();
+  }
+
+  if (typeof headers === 'object') {
+    const key = Object.keys(headers).find((candidate_key) => {
+      return String(candidate_key || '').trim().toLowerCase() === normalized_header_name;
+    });
+    return String((key && headers[key]) || '').trim();
+  }
+
+  return '';
 }
 
 /**

@@ -1,20 +1,22 @@
 import { requestUrl } from 'obsidian';
 import {
   enable_plugin,
-  fetch_plugin_zip,
-  fetch_zip_from_url,
+  fetch_plugin_file,
   get_oauth_storage_prefix,
+  get_response_header_value,
   get_smart_server_url,
-  parse_zip_into_files,
   write_files_with_adapter,
 } from '../../utils/smart_plugins.js';
 import styles from './style.css';
 import { compare_versions } from 'smart-environment/utils/compare_versions.js';
+import { convert_to_time_ago } from 'smart-utils/convert_to_time_ago.js';
+import { convert_to_time_until } from 'smart-utils/convert_to_time_until.js';
 
 const SMART_PLUGINS_DESC = `<a href="https://smartconnections.app/core-plugins/?utm_source=plugin-store" target="_external">Core plugins</a> provide essential functionality and a "just works" experience. Pro plugins enable advanced configuration and features for Obsidian AI experts. <a href="https://smartconnections.app/smart-plugins/?utm_source=plugin-store" target="_external">Learn more</a> about Smart Plugins.`;
 const PRO_PLUGINS_FOOTER = `All Pro plugins include advanced configurations and additional model providers. Pro users get priority support via email. <a href="https://smartconnections.app/pro-plugins/?utm_source=plugin-store" target="_external">Learn more</a> about Pro Plugins.`;
 const PRO_PLUGINS_URL = 'https://smartconnections.app/pro-plugins/';
 const OBSIDIAN_PLUGIN_URL = 'https://obsidian.md/plugins?id=';
+const install_file_names = ['manifest.json', 'main.js', 'styles.css'];
 
 function default_smart_plugins_list() {
   return [
@@ -105,12 +107,9 @@ export function build_html(env, params = {}) {
           </div>
         </div>
         <p>${SMART_PLUGINS_DESC}</p>
+        <div class="smart-plugins-server-message" style="display:none;"></div>
         <div class="smart-plugins-section">
           <div class="smart-plugins-official-list">Loading...</div>
-        </div>
-        <div class="smart-plugins-section">
-          <div class="smart-plugins-section-title">Community plugins</div>
-          <div class="setting-items smart-plugins-community-list">Coming soon...</div>
         </div>
         <p>${PRO_PLUGINS_FOOTER}</p>
         <div class="smart-plugins-referral"></div>
@@ -136,7 +135,7 @@ export async function post_process(env, container, params = {}) {
   const login_container = container.querySelector('.smart-plugins-login');
   const referral_container = container.querySelector('.smart-plugins-referral');
   const official_list_el = container.querySelector('.smart-plugins-official-list');
-  const community_list_el = container.querySelector('.smart-plugins-community-list');
+  const server_message_el = container.querySelector('.smart-plugins-server-message');
 
   const render_component = env.smart_components.render_component.bind(env.smart_components);
   const render_login = async (sub_exp = null) => {
@@ -149,21 +148,38 @@ export async function post_process(env, container, params = {}) {
     this.empty(referral_container);
     if (referral_el) referral_container.appendChild(referral_el);
   };
+  const render_server_message = (message = '') => {
+    const safe_message = String(message || '').trim();
+    this.empty(server_message_el);
+    if (!safe_message) {
+      server_message_el.style.display = 'none';
+      return;
+    }
+    server_message_el.style.display = '';
+    server_message_el.textContent = safe_message;
+  };
 
   const render_smart_plugins = async () => {
     const token = localStorage.getItem(oauth_storage_prefix + 'token') || '';
     await render_login();
     await render_referrals(token);
+    render_server_message('');
 
     try {
       await app.plugins.loadManifests();
       const resp = await fetch_server_plugin_list(token);
-      const { sub_exp = null } = resp || {};
+      const {
+        sub_exp = null,
+        message = '',
+      } = resp || {};
 
       await render_login(sub_exp);
       await render_referrals(token, sub_exp);
+      render_server_message(message);
 
-      hydrate_plugins_list(resp, env);
+      hydrate_plugins_list(resp, env, {
+        root_sub_exp: sub_exp,
+      });
       console.log('Hydrated plugin list:', SMART_PLUGINS_LIST);
       const plugin_groups = annotate_plugin_groups(SMART_PLUGINS_LIST);
       console.log('Plugin groups:', plugin_groups);
@@ -194,6 +210,7 @@ export async function post_process(env, container, params = {}) {
     } catch (err) {
       console.error('[smart-plugins:list] Failed to fetch plugin list:', err);
       this.empty(official_list_el);
+      render_server_message('');
       official_list_el.appendChild(this.create_doc_fragment('<div class="error"><p>Failed to load plugin information.</p><button class="retry">Retry</button></div>'));
       SMART_PLUGINS_LIST = default_smart_plugins_list();
       const retry_button = official_list_el.querySelector('.retry');
@@ -232,11 +249,44 @@ async function fetch_server_plugin_list(token) {
   return resp.json;
 }
 
-function hydrate_plugins_list(server_resp, env) {
+function normalize_positive_epoch_ms(value) {
+  const numeric_value = Number(value);
+  if (!Number.isFinite(numeric_value) || numeric_value <= 0) {
+    return null;
+  }
+  return Math.round(numeric_value);
+}
+
+function get_plugin_file_text(response, file_name) {
+  if (typeof response?.text === 'string' && response.text.length) {
+    return response.text;
+  }
+
+  if (response?.arrayBuffer instanceof ArrayBuffer) {
+    return new TextDecoder('utf-8').decode(response.arrayBuffer);
+  }
+
+  if (file_name === 'manifest.json' && response?.json) {
+    return JSON.stringify(response.json, null, 2);
+  }
+
+  return '';
+}
+
+function build_plugin_file_record(file_name, response) {
+  return {
+    fileName: file_name,
+    data: new TextEncoder().encode(get_plugin_file_text(response, file_name)),
+    accessed_at: normalize_positive_epoch_ms(
+      get_response_header_value(response, 'accessed_at')
+    ),
+  };
+}
+
+function hydrate_plugins_list(server_resp, env, params = {}) {
   SMART_PLUGINS_LIST = default_smart_plugins_list();
 
-  const { list = [], sub_exp } = server_resp || {};
-  const sub_active = Boolean(sub_exp && sub_exp > Date.now());
+  const { list = [] } = server_resp || {};
 
   for (const server_item of list) {
     const server_item_type = server_item.item_type || 'pro';
@@ -269,16 +319,18 @@ function hydrate_plugins_list(server_resp, env) {
   }
 
   for (let i = 0; i < SMART_PLUGINS_LIST.length; i += 1) {
-    SMART_PLUGINS_LIST[i] = new PluginListItem(env, SMART_PLUGINS_LIST[i], sub_active);
+    SMART_PLUGINS_LIST[i] = new PluginListItem(env, SMART_PLUGINS_LIST[i], {
+      root_sub_exp: params.root_sub_exp,
+    });
   }
 }
 
 export class PluginListItem {
-  constructor(env, item, sub_active) {
+  constructor(env, item, params = {}) {
     this.env = env;
     this.app = env.obsidian_app;
     this.data = item;
-    this.sub_active = sub_active;
+    this.root_sub_exp = normalize_positive_epoch_ms(params.root_sub_exp);
     this.group_size = 1;
     this.group_index = 0;
     this.group_state = 'single';
@@ -314,9 +366,32 @@ export class PluginListItem {
     return this.data.entitled === true;
   }
 
+  get item_sub_exp() {
+    return normalize_positive_epoch_ms(this.data.sub_exp);
+  }
+
+  get should_show_item_subscription_state() {
+    return this.item_type === 'pro'
+      && this.root_sub_exp === null
+      && this.item_sub_exp !== null
+    ;
+  }
+
+  get subscription_status_text() {
+    if (!this.should_show_item_subscription_state) {
+      return '';
+    }
+
+    if (this.item_sub_exp < Date.now()) {
+      return `Subscription expired ${convert_to_time_ago(this.item_sub_exp)}.`;
+    }
+
+    return `Subscription active, renews ${convert_to_time_until(this.item_sub_exp)}.`;
+  }
+
   get can_install() {
     if (this.data.item_type === 'core') return true;
-    if (this.data.item_type === 'pro') return this.is_entitled || this.sub_active;
+    if (this.data.item_type === 'pro') return this.is_entitled;
     return false;
   }
 
@@ -325,7 +400,7 @@ export class PluginListItem {
     if (this.can_install && this.is_enabled && !this.is_loaded && !this.is_deferred) {
       // check if outdated SmartEnv version
       const env_version = this.app.plugins.plugins[this.plugin_id]?.SmartEnv.version;
-      if(env_version) {
+      if (env_version) {
         const env_version_minor = parseInt(env_version.split('.')[1] || '0');
         if (env_version_minor < 4) return true; // incompatible smart env version, requires update
       }
@@ -627,25 +702,26 @@ export class PluginListItem {
     }
   }
 
-  async download_plugin_zip() {
-    const resolved_download_url = typeof this.data.resolve_download_url === 'function'
-      ? await this.data.resolve_download_url()
-      : this.data.download_url
-    ;
-
-    if (resolved_download_url) {
-      return fetch_zip_from_url(resolved_download_url);
-    }
-
+  async download_plugin_files() {
     if (!this.auth_token) {
       throw new Error('Login required to install this plugin.');
     }
 
-    return fetch_plugin_zip(this.repo, this.auth_token);
+    const version = String(this.data?.version || '').trim() || null;
+    const files = [];
+
+    for (const file_name of install_file_names) {
+      const response = await fetch_plugin_file(this.repo, this.auth_token, {
+        file: file_name,
+        version,
+      });
+      files.push(build_plugin_file_record(file_name, response));
+    }
+
+    return files;
   }
 
   async install_plugin(params = {}) {
-
     try {
       this.env?.events?.emit?.('pro_plugins:install_started', {
         level: 'info',
@@ -653,9 +729,8 @@ export class PluginListItem {
         event_source: 'browse_smart_plugins.list_item',
       });
 
-      const zip_data = await this.download_plugin_zip();
-      const { files, pluginManifest } = await parse_zip_into_files(zip_data);
-      const folder_name = (this.plugin_id || pluginManifest?.id || '').trim();
+      const files = await this.download_plugin_files();
+      const folder_name = String(this.plugin_id || '').trim();
       if (!folder_name) {
         throw new Error(`Missing plugin id for "${this.label}".`);
       }
