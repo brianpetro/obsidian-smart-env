@@ -310,9 +310,13 @@ export class PluginListItem {
       );
   }
 
+  get is_entitled() {
+    return this.data.entitled === true;
+  }
+
   get can_install() {
     if (this.data.item_type === 'core') return true;
-    if (this.data.item_type === 'pro') return this.sub_active;
+    if (this.data.item_type === 'pro') return this.is_entitled || this.sub_active;
     return false;
   }
 

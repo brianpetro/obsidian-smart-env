@@ -129,7 +129,11 @@ export async function post_process(env, container, params = {}) {
   }
 
   const setting = new Setting(container);
-  setting.setDesc(`Signed in to Smart Plugins Pro account. ${subscription_status(sub_exp)}`);
+  const subscription_text = subscription_status(sub_exp);
+  setting.setDesc(subscription_text
+    ? `Signed in to Smart Plugins Pro account. ${subscription_text}`
+    : 'Signed in to Smart Plugins account.'
+  );
   setting.addButton((btn) => {
     btn.setButtonText('Logout');
     btn.onClick(() => {
@@ -155,10 +159,14 @@ function initiate_smart_plugins_oauth() {
 }
 
 function subscription_status(sub_exp) {
-  if (typeof sub_exp !== 'number') return '';
-  if (sub_exp < Date.now()) {
-    return `Subscription expired ${convert_to_time_ago(sub_exp)}.`;
-  } else {
-    return `Subscription active, renews ${convert_to_time_until(sub_exp)}.`;
+  const normalized_sub_exp = Number(sub_exp || 0);
+  if (!Number.isFinite(normalized_sub_exp) || normalized_sub_exp <= 0) {
+    return '';
   }
+
+  if (normalized_sub_exp < Date.now()) {
+    return `Subscription expired ${convert_to_time_ago(normalized_sub_exp)}.`;
+  }
+
+  return `Subscription active, renews ${convert_to_time_until(normalized_sub_exp)}.`;
 }
