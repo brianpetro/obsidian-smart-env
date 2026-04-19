@@ -1,46 +1,46 @@
 /**
  * @file sc_oauth.js
- * @description Reusable OAuth logic for SC OP. We store tokens in localStorage under:
+ * @description Reusable OAuth logic for Smart Plugins in Obsidian.
+ * We store tokens in localStorage under:
  *   - smart_plugins_oauth_token
  *   - smart_plugins_oauth_refresh
  *
  * Handles:
  *   1) Exchanging code for tokens
- *   2) Installing "smart-plugins" from the server via plugin_download
- *   3) Importing and using parse_zip_into_files from ../smart-plugins-obsidian/utils.js
+ *   2) Installing the legacy "smart-plugins" plugin from the server using
+ *      the same file-based contract as the Plugin Store
  */
 
 import { requestUrl } from 'obsidian';
-
-// Use the same utilities from smart-plugins-obsidian:
 import {
-  get_smart_server_url,
-  fetch_plugin_zip,
-  parse_zip_into_files,
-  write_files_with_adapter,
   enable_plugin,
-} from 'smart-plugins-obsidian/utils.js';
+  fetch_plugin_file,
+  get_response_header_value,
+  get_smart_server_url,
+  write_files_with_adapter,
+} from '../src/utils/smart_plugins.js';
 export { get_smart_server_url, enable_plugin };
 
 const CLIENT_ID = 'smart-plugins-op';
 const CLIENT_SECRET = 'smart-plugins-op-secret';
+const install_file_names = ['manifest.json', 'main.js', 'styles.css'];
 
 export function get_local_storage_token(oauth_storage_prefix) {
   return {
-    token: localStorage.getItem(oauth_storage_prefix+'token') || '',
-    refresh: localStorage.getItem(oauth_storage_prefix+'refresh') || ''
+    token: localStorage.getItem(oauth_storage_prefix + 'token') || '',
+    refresh: localStorage.getItem(oauth_storage_prefix + 'refresh') || ''
   };
 }
 
 export function set_local_storage_token({ access_token, refresh_token }, oauth_storage_prefix) {
-  localStorage.setItem(oauth_storage_prefix+'token', access_token);
+  localStorage.setItem(oauth_storage_prefix + 'token', access_token);
   if (refresh_token) {
-    localStorage.setItem(oauth_storage_prefix+'refresh', refresh_token);
+    localStorage.setItem(oauth_storage_prefix + 'refresh', refresh_token);
   }
 }
 
 /**
- * Exchange code for tokens => store them
+ * Exchange code for tokens => store them.
  */
 export async function exchange_code_for_tokens(code, plugin) {
   const oauth_storage_prefix = build_oauth_storage_prefix(plugin.app.vault.getName());
@@ -66,39 +66,7 @@ export async function exchange_code_for_tokens(code, plugin) {
 }
 
 /**
- * Install the "smart-plugins" plugin from the server using the stored token.
- * This method downloads the plugin ZIP, parses all contained files,
- * and writes them to the local .obsidian/plugins/<folderName>.
- */
-export async function install_smart_plugins_plugin(plugin) {
-  const oauth_storage_prefix = build_oauth_storage_prefix(plugin.app.vault.getName());
-  const { token } = get_local_storage_token(oauth_storage_prefix);
-  if (!token) throw new Error('No token found to install "smart-plugins"');
-  const repo = 'brianpetro/smart-plugins-obsidian';
-
-  // Use the same approach as 'smart-plugins' to parse the entire ZIP
-  const zipData = await fetch_plugin_zip(repo, token);
-  const { files, pluginManifest } = await parse_zip_into_files(zipData);
-
-  let folder_name = (pluginManifest?.id || 'smart-plugins').trim();
-  folder_name = folder_name.replace(/[^\w-]/g, '_');
-
-  const base_folder = '.obsidian/plugins/' + folder_name;
-
-  // Write all extracted files
-  await write_files_with_adapter(plugin.app.vault.adapter, base_folder, files);
-
-  // Force Obsidian to reload plugin manifests
-  await plugin.app.plugins.loadManifests();
-
-  // If the manifest ID is recognized by Obsidian, enable the plugin
-  if (plugin.app.plugins.manifests[folder_name]) {
-    await enable_plugin(plugin.app, folder_name);
-  }
-}
-
-/**
- * (Optional) Example: refresh tokens
+ * Refresh tokens using refresh_token when available.
  */
 export async function refresh_tokens_if_needed(plugin) {
   const oauth_storage_prefix = build_oauth_storage_prefix(plugin.app.vault.getName());
@@ -137,4 +105,38 @@ export function build_oauth_storage_prefix(vault_name) {
     .toLowerCase()
     .replace(/[^a-z0-9]/g, '_');
   return `${safe_name}${OAUTH_SUFFIX}`;
+}
+
+function normalize_positive_epoch_ms(value) {
+  const numeric_value = Number(value);
+  if (!Number.isFinite(numeric_value) || numeric_value <= 0) {
+    return null;
+  }
+  return Math.round(numeric_value);
+}
+
+function get_plugin_file_text(response, file_name) {
+  if (typeof response?.text === 'string' && response.text.length) {
+    return response.text;
+  }
+
+  if (response?.arrayBuffer instanceof ArrayBuffer) {
+    return new TextDecoder('utf-8').decode(response.arrayBuffer);
+  }
+
+  if (file_name === 'manifest.json' && response?.json) {
+    return JSON.stringify(response.json, null, 2);
+  }
+
+  return '';
+}
+
+function build_plugin_file_record(file_name, response) {
+  return {
+    fileName: file_name,
+    data: new TextEncoder().encode(get_plugin_file_text(response, file_name)),
+    accessed_at: normalize_positive_epoch_ms(
+      get_response_header_value(response, 'accessed_at')
+    ) || Date.now(),
+  };
 }

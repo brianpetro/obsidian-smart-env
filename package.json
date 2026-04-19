@@ -33,7 +33,6 @@
     "smart-model": "file:../jsbrains/smart-model",
     "smart-models": "file:../jsbrains/smart-models",
     "smart-notices": "file:../jsbrains/smart-notices",
-    "smart-plugins-obsidian": "file:../smart-plugins-obsidian",
     "smart-settings": "file:../jsbrains/smart-settings",
     "smart-sources": "file:../jsbrains/smart-sources",
     "smart-types": "file:../jsbrains/smart-types",
@@ -50,7 +49,6 @@
     "readline": "^1.3.0"
   },
   "workspaces": [
-    "../smart-plugins-obsidian",
     "../jsbrains/*"
   ]
 }

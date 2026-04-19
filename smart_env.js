@@ -13,7 +13,7 @@ import {
   add_smart_lookup_icon,
 } from './utils/add_icons.js';
 import { SmartNotices } from 'smart-notices/smart_notices.js';
-import { exchange_code_for_tokens, install_smart_plugins_plugin, get_smart_server_url, enable_plugin } from './utils/sc_oauth.js';
+import { exchange_code_for_tokens } from './utils/sc_oauth.js';
 import { register_completion_variable_adapter_replacements } from './utils/register_completion_variable_adapter_replacements.js';
 import { remove_smart_plugins_plugin } from './migrations/remove_smart_plugins_plugin.js';
 import { register_first_of_event_notifications } from './src/utils/onboarding_events.js';

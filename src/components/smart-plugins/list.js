@@ -7,6 +7,10 @@ import {
   get_smart_server_url,
   write_files_with_adapter,
 } from '../../utils/smart_plugins.js';
+import {
+  should_block_pro_install,
+  should_offer_plugin_update,
+} from '../../utils/smart_plugins_state.js';
 import styles from './style.css';
 import { compare_versions } from 'smart-environment/utils/compare_versions.js';
 import { convert_to_time_ago } from 'smart-utils/convert_to_time_ago.js';
@@ -159,8 +163,18 @@ export async function post_process(env, container, params = {}) {
     server_message_el.textContent = safe_message;
   };
 
+  let viewed_event_emitted = false;
   const render_smart_plugins = async () => {
     const token = localStorage.getItem(oauth_storage_prefix + 'token') || '';
+
+    if (!viewed_event_emitted) {
+      viewed_event_emitted = true;
+      emit_store_event(env, 'pro_plugins:viewed', params, {
+        event_source: 'smart_plugins_list',
+        recommended_track: 'pro',
+      });
+    }
+
     await render_login();
     await render_referrals(token);
     render_server_message('');
@@ -168,6 +182,17 @@ export async function post_process(env, container, params = {}) {
     try {
       await app.plugins.loadManifests();
       const resp = await fetch_server_plugin_list(token);
+      if (resp?.unauthorized) {
+        clear_stored_oauth_tokens(app);
+        emit_store_event(env, 'pro_plugins:oauth_token_rejected', params, {
+          level: 'warning',
+          message: 'Session expired. Please log in again.',
+          event_source: 'smart_plugins_list',
+          recommended_track: 'pro',
+        });
+        return await render_smart_plugins();
+      }
+
       const {
         sub_exp = null,
         message = '',
@@ -231,22 +256,32 @@ export async function post_process(env, container, params = {}) {
 }
 
 async function fetch_server_plugin_list(token) {
+  const headers = {
+    'Content-Type': 'application/json',
+  };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
   const resp = await requestUrl({
     url: `${get_smart_server_url()}/plugin_list`,
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
+    headers,
     body: JSON.stringify({}),
     throw: false,
   });
   console.log('Plugin list server response:', resp);
 
-  if (resp.status !== 200) {
-    return { list: [], sub_exp: null };
+  if (resp.status === 401) {
+    return { list: [], sub_exp: null, unauthorized: true, status: resp.status };
   }
-  return resp.json;
+  if (resp.status !== 200) {
+    return { list: [], sub_exp: null, status: resp.status };
+  }
+  return {
+    ...resp.json,
+    status: resp.status,
+  };
 }
 
 function normalize_positive_epoch_ms(value) {
@@ -279,8 +314,37 @@ function build_plugin_file_record(file_name, response) {
     data: new TextEncoder().encode(get_plugin_file_text(response, file_name)),
     accessed_at: normalize_positive_epoch_ms(
       get_response_header_value(response, 'accessed_at')
-    ),
+    ) || Date.now(),
   };
+}
+
+function clear_stored_oauth_tokens(app) {
+  const oauth_storage_prefix = get_oauth_storage_prefix(app);
+  localStorage.removeItem(oauth_storage_prefix + 'token');
+  localStorage.removeItem(oauth_storage_prefix + 'refresh');
+}
+
+function get_source_surface(params = {}) {
+  const source_surface = String(
+    params.source_surface ||
+    params.event_source ||
+    'plugin_store'
+  ).trim();
+  return source_surface || 'plugin_store';
+}
+
+function build_store_event_payload(params = {}, extra = {}) {
+  return {
+    plugin_key: null,
+    feature_key: null,
+    source_surface: get_source_surface(params),
+    recommended_track: null,
+    ...extra,
+  };
+}
+
+function emit_store_event(env, event_key, params = {}, extra = {}) {
+  env?.events?.emit?.(event_key, build_store_event_payload(params, extra));
 }
 
 function hydrate_plugins_list(server_resp, env, params = {}) {
@@ -396,21 +460,18 @@ export class PluginListItem {
   }
 
   get should_update() {
-    if (this.item_type !== this.installed_type) return false;
-    if (this.can_install && this.is_enabled && !this.is_loaded && !this.is_deferred) {
-      // check if outdated SmartEnv version
-      const env_version = this.app.plugins.plugins[this.plugin_id]?.SmartEnv.version;
-      if (env_version) {
-        const env_version_minor = parseInt(env_version.split('.')[1] || '0');
-        if (env_version_minor < 4) return true; // incompatible smart env version, requires update
-      }
-    }
-    return Boolean(
-      this.item_type === this.installed_type
-      && typeof this.data.version === 'string'
-      && this.data.version
-      && compare_versions(this.data.version, this.installed_version) > 0
-    );
+    return should_offer_plugin_update({
+      item_type: this.item_type,
+      installed_type: this.installed_type,
+      is_entitled: this.is_entitled,
+      is_enabled: this.is_enabled,
+      is_loaded: this.is_loaded,
+      is_deferred: this.is_deferred,
+      loaded_env_version: this.app.plugins.plugins[this.plugin_id]?.SmartEnv?.version || '',
+      server_version: this.data.version,
+      installed_version: this.installed_version,
+      compare_versions,
+    });
   }
 
   get is_installed() {
@@ -597,6 +658,19 @@ export class PluginListItem {
   async handle_action(action, params = {}) {
     switch (action) {
       case 'install':
+        if (should_block_pro_install({
+          item_type: this.item_type,
+          is_entitled: this.is_entitled,
+        })) {
+          emit_store_event(this.env, 'pro_plugins:install_blocked', params, {
+            plugin_key: this.plugin_id,
+            recommended_track: 'pro',
+            level: 'warning',
+            message: `${this.label} requires an active Pro entitlement.`,
+            event_source: 'browse_smart_plugins.list_item.install',
+          });
+          return;
+        }
         await this.install(params);
         return;
       case 'enable':
@@ -609,7 +683,7 @@ export class PluginListItem {
         this.open_settings();
         return;
       case 'learn_more':
-        this.open_plugin_url();
+        this.open_plugin_url(params);
         return;
       default:
         return;
@@ -627,6 +701,11 @@ export class PluginListItem {
       return;
     }
 
+    emit_store_event(this.env, 'pro_plugin_install_clicked', params, {
+      plugin_key: this.plugin_id,
+      recommended_track: 'pro',
+      event_source: 'browse_smart_plugins.list_item.install',
+    });
     await this.install_plugin(params);
   }
 
@@ -665,7 +744,14 @@ export class PluginListItem {
     this.app.setting.openTabById(this.plugin_id);
   }
 
-  open_plugin_url() {
+  open_plugin_url(params = {}) {
+    if (this.item_type === 'pro' && !this.is_entitled) {
+      emit_store_event(this.env, 'pro_trial_cta_clicked', params, {
+        plugin_key: this.plugin_id,
+        recommended_track: 'pro',
+        event_source: 'browse_smart_plugins.list_item.learn_more',
+      });
+    }
     const url = with_utm_source(this.data.url || PRO_PLUGINS_URL, 'plugin-store');
     window.open(url, '_external');
   }
@@ -749,6 +835,11 @@ export class PluginListItem {
         level: 'attention',
         message: `${this.label} installed successfully.`,
         event_source: 'browse_smart_plugins.list_item',
+      });
+      emit_store_event(this.env, 'pro_plugin_installed', params, {
+        plugin_key: this.plugin_id,
+        recommended_track: 'pro',
+        event_source: 'browse_smart_plugins.list_item.install',
       });
       this.env?.events?.emit?.('pro_plugins:refresh', {
         event_source: 'browse_smart_plugins.list_item.install',
