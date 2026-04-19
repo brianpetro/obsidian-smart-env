@@ -151,7 +151,49 @@ export function add_smart_named_contexts_icon() {
 `);
 }
 
+const smart_graph_svg = `
+  <path d="M28,22 L24,3.92" stroke="currentColor" stroke-width="1.95" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M28,22 L3.92,28" stroke="currentColor" stroke-width="1.95" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M28,22 L43,19" stroke="currentColor" stroke-width="1.95" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M28,22 L18,41" stroke="currentColor" stroke-width="1.95" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M72,29 L76,3.92" stroke="currentColor" stroke-width="1.95" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M72,29 L56,19" stroke="currentColor" stroke-width="1.95" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M72,29 L96.08,23" stroke="currentColor" stroke-width="1.95" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M72,29 L68,47" stroke="currentColor" stroke-width="1.95" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M71,72 L84,60" stroke="currentColor" stroke-width="1.95" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M71,72 L55,59" stroke="currentColor" stroke-width="1.95" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M71,72 L96.08,77" stroke="currentColor" stroke-width="1.95" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M71,72 L71,96.08" stroke="currentColor" stroke-width="1.95" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M43,19 L56,19" stroke="currentColor" stroke-width="1.95" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M68,47 L55,59" stroke="currentColor" stroke-width="1.95" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="28" cy="22" r="5.6" fill="currentColor"/>
+  <circle cx="24" cy="3.92" r="3.92" fill="currentColor"/>
+  <circle cx="3.92" cy="28" r="3.92" fill="currentColor"/>
+  <circle cx="43" cy="19" r="3.92" fill="currentColor"/>
+  <circle cx="18" cy="41" r="3.92" fill="currentColor"/>
+  <circle cx="35" cy="34" r="3.92" fill="currentColor"/>
+  <circle cx="72" cy="29" r="5.6" fill="currentColor"/>
+  <circle cx="76" cy="3.92" r="3.92" fill="currentColor"/>
+  <circle cx="56" cy="19" r="3.92" fill="currentColor"/>
+  <circle cx="96.08" cy="23" r="3.92" fill="currentColor"/>
+  <circle cx="68" cy="47" r="3.92" fill="currentColor"/>
+  <circle cx="86" cy="37" r="3.92" fill="currentColor"/>
+  <circle cx="63" cy="33" r="3.92" fill="currentColor"/>
+  <circle cx="71" cy="72" r="5.6" fill="currentColor"/>
+  <circle cx="84" cy="60" r="3.92" fill="currentColor"/>
+  <circle cx="55" cy="59" r="3.92" fill="currentColor"/>
+  <circle cx="96.08" cy="77" r="3.92" fill="currentColor"/>
+  <circle cx="71" cy="96.08" r="3.92" fill="currentColor"/>
+  <circle cx="58" cy="87" r="3.92" fill="currentColor"/>
+`;
 
+/**
+ * Registers the Smart Graph icon.
+ * Uses the default 0-100 addIcon coordinate space, like smart-connections.
+ */
+export function add_smart_graph_icon() {
+  addIcon("smart-graph", smart_graph_svg);
+}
 
 /**
  * Convenience: register all "sc-*" icons in this module.
@@ -163,4 +205,5 @@ export function add_smart_icons() {
   add_footer_connections_icon();
   add_smart_dupe_detector_icon();
   add_smart_named_contexts_icon();
+  add_smart_graph_icon();
 }
