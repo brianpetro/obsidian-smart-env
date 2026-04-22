@@ -28,7 +28,8 @@ export function dist_text_plugin() {
           platform: build.initialOptions.platform ?? 'neutral',
           target: build.initialOptions.target,
           define: build.initialOptions.define,
-          minify: build.initialOptions.minify ?? false,
+          minify: false,
+          keepNames: true,
           sourcemap: false,
           write: false,
           logLevel: 'silent',
@@ -38,6 +39,7 @@ export function dist_text_plugin() {
           result.outputFiles.find((file) => file.path.endsWith('.js')) ??
           result.outputFiles[0];
 
+          console.log(js_output.text);
         return {
           contents: js_output.text,
           loader: 'text',
