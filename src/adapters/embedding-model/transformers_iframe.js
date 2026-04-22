@@ -1,3 +1,4 @@
+// NO LONGER USED - SEE transformers_v4_iframe.js FOR THE NEW VERSION WITH FALLBACK TO 3.8.0 connector
 import {
   SmartEmbedTransformersIframeAdapter,
   settings_config
