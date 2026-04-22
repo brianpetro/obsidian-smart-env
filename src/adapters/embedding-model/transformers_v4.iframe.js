@@ -1,7 +1,7 @@
 import { SmartEmbedAdapter } from "smart-embed-model/adapters/_adapter.js";
 
 /**
- * Default configuration for Transformers v2 adapter.
+ * Default configuration for Transformers v4 adapter.
  * Exposes only model_key; device, quantization and threading are auto-managed.
  */
 export const transformers_defaults = {
@@ -11,59 +11,69 @@ export const transformers_defaults = {
   models: transformers_models,
 };
 
-export const DEVICE_CONFIGS = {
-  // // WebGPU: high quality first
-  webgpu_fp16: {
+export const DEVICE_CONFIGS = Object.freeze({
+  webgpu: Object.freeze({
     device: 'webgpu',
-    dtype: 'fp16',
-    quantized: false,
-  },
-  webgpu_fp32: {
-    device: 'webgpu',
-    dtype: 'fp32',
-    quantized: false,
-  },
+    preferred_dtypes: ['fp32', 'fp16', 'q8', 'q4'],
+  }),
+  cpu: Object.freeze({
+    preferred_dtypes: ['q8', 'q4', 'fp32', 'fp16'],
+  }),
+});
 
-  // WebGPU: quantized tiers
-  webgpu_q8: {
-    device: 'webgpu',
-    dtype: 'q8',
-    quantized: true,
-  },
-  webgpu_q4: {
-    device: 'webgpu',
-    dtype: 'q4',
-    quantized: true,
-  },
-  // Optional, if you use it
-  webgpu_q4f16: {
-    device: 'webgpu',
-    dtype: 'q4f16',
-    quantized: true,
-  },
-  webgpu_bnb4: {
-    device: 'webgpu',
-    dtype: 'bnb4',
-    quantized: true,
-  },
+function build_device_configs(available_dtypes = [], params = {}) {
+  const {
+    use_gpu = false,
+  } = params;
 
-  // WASM: quantized CPU
-  wasm_q8: {
-    dtype: 'q8',
-    quantized: true,
-  },
-  wasm_q4: {
-    dtype: 'q4',
-    quantized: true,
-  },
+  const normalized_available_dtypes = new Set(
+    Array.isArray(available_dtypes)
+      ? available_dtypes
+      : []
+  );
+  const configs = [];
 
-  // Final universal fallback: WASM CPU, dtype = auto
-  wasm_auto: {
-    // NOTE: leaving out device to avoid Linux issues with 'wasm'
-    // transformers.js will pick CPU/WASM backend itself
-    quantized: false,
-  },
-};
+  const push_scope_configs = (scope_key) => {
+    const scope_config = DEVICE_CONFIGS[scope_key];
+    if (!scope_config) return;
+
+    scope_config.preferred_dtypes.forEach((dtype) => {
+      if (normalized_available_dtypes.size && !normalized_available_dtypes.has(dtype)) return;
+
+      configs.push({
+        config_key: `${scope_key}_${dtype}`,
+        ...(scope_config.device ? { device: scope_config.device } : {}),
+        dtype,
+      });
+    });
+  };
+
+  if (use_gpu) {
+    push_scope_configs('webgpu');
+  }
+  push_scope_configs('cpu');
+
+  if (!configs.length) {
+    if (use_gpu) {
+      configs.push({
+        config_key: 'webgpu_auto',
+        device: 'webgpu',
+      });
+    }
+    configs.push({
+      config_key: 'cpu_auto',
+    });
+    return configs;
+  }
+
+  if (!configs.some(({ config_key }) => config_key === 'cpu_auto')) {
+    configs.push({
+      config_key: 'cpu_auto',
+    });
+  }
+
+  return configs;
+}
 
 const retryable_webgpu_error_code = 'WEBGPU_RETRYABLE_ERROR';
 const retryable_webgpu_error_patterns = [
@@ -119,7 +129,7 @@ const is_webgpu_available = async () => {
 
 
 /**
- * Transformers v2 embedding adapter.
+ * Transformers v4 embedding adapter.
  *
  * - Tries WebGPU first, then falls back to CPU/WASM with 4 threads.
  * - Automatically truncates long inputs to model max_tokens.
@@ -150,7 +160,7 @@ export class SmartEmbedTransformersAdapter extends SmartEmbedAdapter {
     this.has_gpu = await is_webgpu_available();
     try{
       if(this.loading) {
-        console.warn('[Transformers v2] load already in progress, waiting...');
+        console.warn('[Transformers v4] load already in progress, waiting...');
         while(this.loading) {
           await new Promise(resolve => setTimeout(resolve, 100));
         }
@@ -165,12 +175,12 @@ export class SmartEmbedTransformersAdapter extends SmartEmbedAdapter {
         await this.load_transformers_with_fallback();
         this.loading = false;
         this.loaded = true;
-        console.log(`[Transformers v2] model loaded using ${this.active_config_key}`, this);
+        console.log(`[Transformers v4] model loaded using ${this.active_config_key}`, this);
       }
     }catch(e){
       this.loading = false;
       this.loaded = false;
-      console.error('[Transformers v2] load failed', e);
+      console.error('[Transformers v4] load failed', e);
       throw e;
     }
   }
@@ -189,7 +199,7 @@ export class SmartEmbedTransformersAdapter extends SmartEmbedAdapter {
         }
       }
     } catch (err) {
-      console.warn('[Transformers v2] error while disposing pipeline', err);
+      console.warn('[Transformers v4] error while disposing pipeline', err);
     }
     this.pipeline = null;
     this.tokenizer = null;
@@ -242,8 +252,13 @@ export class SmartEmbedTransformersAdapter extends SmartEmbedAdapter {
     const { pipeline, env, AutoTokenizer, ModelRegistry, LogLevel } = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.1.0');
     env.logLevel = LogLevel.ERROR; // Reduce logging noise during loading
 
-    const dtypes = await ModelRegistry.get_available_dtypes(this.model_key);
-    console.log({dtypes}); // ['fp32', 'fp16', 'int8', 'uint8', 'q8', 'q4']
+    let available_dtypes = [];
+    try {
+      available_dtypes = await ModelRegistry.get_available_dtypes(this.model_key);
+      console.log({ available_dtypes });
+    } catch (error) {
+      console.warn('[Transformers v4] failed to probe available dtypes, falling back to runtime defaults', error);
+    }
 
     env.allowLocalModels = false;
     if (typeof env.useBrowserCache !== 'undefined') {
@@ -252,39 +267,41 @@ export class SmartEmbedTransformersAdapter extends SmartEmbedAdapter {
 
     let last_error = null;
 
-    const CONFIG_LIST_ORDER = Object.keys(DEVICE_CONFIGS);
-    const try_create = async (config_key) => {
-      // throw new Error('Simulated load failure for testing fallback');
-      const pipe = await pipeline('feature-extraction', this.model_key, DEVICE_CONFIGS[config_key]);
+    const config_list = build_device_configs(available_dtypes, {
+      use_gpu: this.gpu_enabled,
+    });
+    const try_create = async (device_config) => {
+      const pipeline_params = {};
+      if (device_config.device) {
+        pipeline_params.device = device_config.device;
+      }
+      if (device_config.dtype) {
+        pipeline_params.dtype = device_config.dtype;
+      }
+
+      const pipe = await pipeline('feature-extraction', this.model_key, pipeline_params);
       return pipe;
     };
 
-    for (const config of CONFIG_LIST_ORDER) {
+    for (const device_config of config_list) {
+      const config_key = device_config.config_key;
       if (this.pipeline) break;
-      if (config.includes("gpu") && !this.gpu_enabled) {
-        console.warn(`[Transformers v2: ${config}] skipping ${config} as GPU is disabled`);
-        continue;
-      }
       try {
-        const config_dtype = DEVICE_CONFIGS[config].dtype;
-        if (config_dtype && !dtypes.includes(config_dtype)) {
-          console.warn(`[Transformers v2: ${config}] skipping ${config} as dtype ${config_dtype} is not available for this model`);
-          continue;
-        }
-        console.log(`[Transformers v2] trying to load pipeline on ${config}`);
-        this.pipeline = await try_create(config);
-        this.active_config_key = config;
+        console.log(`[Transformers v4] trying to load pipeline on ${config_key}`);
+        // if(this.gpu_enabled) throw new Error('Simulated GPU load failure for testing fallback (no available backend found)'); // TESTING
+        this.pipeline = await try_create(device_config);
+        this.active_config_key = config_key;
         break;
       } catch (err) {
-        console.warn(`[Transformers v2: ${config}] failed to load pipeline on ${config}`, err);
-        if (config.includes("gpu") && is_retryable_webgpu_error(err)) {
+        console.warn(`[Transformers v4: ${config_key}] failed to load pipeline on ${config_key}`, err);
+        if (device_config.device === 'webgpu' && is_retryable_webgpu_error(err)) {
           throw create_retryable_webgpu_error(err);
         }
         last_error = err;
       }
     }
     if (this.pipeline) {
-      console.log(`[Transformers v2: ${this.active_config_key}] pipeline initialized using ${this.active_config_key}`);
+      console.log(`[Transformers v4: ${this.active_config_key}] pipeline initialized using ${this.active_config_key}`);
     }else{
       throw last_error || new Error('Failed to initialize transformers pipeline');
     }
@@ -352,7 +369,7 @@ export class SmartEmbedTransformersAdapter extends SmartEmbedAdapter {
       if (should_bubble_webgpu_error(this.active_config_key, err)) {
         throw create_retryable_webgpu_error(err);
       }
-      console.error('[Transformers v2] batch embed failed – retrying items individually', err);
+      console.error('[Transformers v4] batch embed failed – retrying items individually', err);
       return await this._retry_items_individually(batch_inputs);
     }
   }
@@ -407,7 +424,7 @@ export class SmartEmbedTransformersAdapter extends SmartEmbedAdapter {
         if (should_bubble_webgpu_error(this.active_config_key, single_err)) {
           throw create_retryable_webgpu_error(single_err);
         }
-        console.error('[Transformers v2] single item embed failed – skipping', single_err);
+        console.error('[Transformers v4] single item embed failed – skipping', single_err);
         results.push({
           ...item,
           vec: [],
@@ -434,7 +451,7 @@ export class SmartEmbedTransformersAdapter extends SmartEmbedAdapter {
         }
       }
     } catch (err) {
-      console.warn('[Transformers v2] error while resetting pipeline', err);
+      console.warn('[Transformers v4] error while resetting pipeline', err);
     }
     this.pipeline = null;
 
@@ -634,7 +651,7 @@ async function process_message(data) {
         break;
       case 'count_tokens':
         if (!model) throw new Error('Model not loaded');
-        result = await model.count_tokens(params);
+        result = await model.count_tokens(params.input);
         break;
       default:
         throw new Error(`Unknown method: ${method}`);
