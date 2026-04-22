@@ -202,14 +202,8 @@ export class SmartEmbedTransformersAdapter extends SmartEmbedAdapter {
    * @returns {Promise<void>}
    */
   async load_transformers_with_fallback() {
-    const { pipeline, env, AutoTokenizer, ModelRegistry } = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.1.0');
-
-    // // always allow cors on fetch
-    // env.fetch = ((orig) => (input, init = {}) => {
-    //   console.log('fetch called', { input, init });
-    //   init.mode = 'cors';
-    //   return orig(input, init);
-    // })(env.fetch);
+    const { pipeline, env, AutoTokenizer, ModelRegistry, LogLevel } = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.1.0');
+    env.logLevel = LogLevel.ERROR; // Reduce logging noise during loading
 
     const dtypes = await ModelRegistry.get_available_dtypes(this.model_key);
     console.log({dtypes}); // ['fp32', 'fp16', 'int8', 'uint8', 'q8', 'q4']
@@ -569,14 +563,11 @@ export default {
   settings_config,
 };
 
-// import { SmartEmbedModel } from 'smart-embed-model/smart_embed_model.js';
-// import { SmartEmbedTransformersAdapter } from 'smart-embed-model/adapters/transformers.js';
 
 let model = null;
 
 async function process_message(data) {
   const { method, params, id, iframe_id } = data;
-  // console.log('iframe message', JSON.stringify(data, null, 2));
   try {
     let result;
     switch (method) {
@@ -586,13 +577,6 @@ async function process_message(data) {
       case 'load':
         const model_params = {data: params, ...params};
         console.log('load', {model_params});
-        // model = new SmartEmbedModel({
-        //   ...params,
-        //   adapters: { transformers: SmartEmbedTransformersAdapter },
-        //   adapter: 'transformers',
-        //   settings: {}
-        // });
-        // await model.load();
         model = new SmartEmbedTransformersAdapter(model_params);
         await model.load();
         result = { model_loaded: true, model_config_key: model.active_config_key };

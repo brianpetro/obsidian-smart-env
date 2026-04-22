@@ -53,7 +53,6 @@ export class TransformersIframeEmbeddingModelAdapter extends SmartEmbedTransform
    * @param {Error} [error] - Response error
    */
   _handle_message_result(id, result, error) {
-    console.log('Received message from iframe', { id, result, error });
     if (!id.startsWith(this.message_prefix)) return;
 
     if (result?.model_loaded) {
