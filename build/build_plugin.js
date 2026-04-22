@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { dist_text_plugin } from './dist_js_text.js';
 
 /**
  * Check whether argv includes a CLI flag.
@@ -228,6 +229,7 @@ async function build_plugin(options = {}) {
     },
     plugins: [
       create_markdown_plugin(),
+      dist_text_plugin(),
       ...(options.plugins || []),
     ],
     banner: copyright_banner ? { js: copyright_banner } : undefined,
