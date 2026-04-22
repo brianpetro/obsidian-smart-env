@@ -39,7 +39,6 @@ export function dist_text_plugin() {
           result.outputFiles.find((file) => file.path.endsWith('.js')) ??
           result.outputFiles[0];
 
-          console.log(js_output.text);
         return {
           contents: js_output.text,
           loader: 'text',
