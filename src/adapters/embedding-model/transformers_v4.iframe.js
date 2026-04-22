@@ -65,6 +65,43 @@ export const DEVICE_CONFIGS = {
   },
 };
 
+const retryable_webgpu_error_code = 'WEBGPU_RETRYABLE_ERROR';
+const retryable_webgpu_error_patterns = [
+  /no available backend found/i,
+  /webgpuinit is not a function/i,
+  /subgroupminsize/i,
+];
+
+function get_error_message(error) {
+  return error?.message || String(error || '');
+}
+
+function is_retryable_webgpu_error(error) {
+  const error_message = get_error_message(error);
+  return retryable_webgpu_error_patterns.some((pattern) => pattern.test(error_message));
+}
+
+function create_retryable_webgpu_error(error) {
+  const error_message = get_error_message(error);
+  if (error_message.includes(retryable_webgpu_error_code)) {
+    return error instanceof Error
+      ? error
+      : new Error(error_message)
+    ;
+  }
+
+  const wrapped_error = new Error(`${retryable_webgpu_error_code}: ${error_message}`);
+  try {
+    wrapped_error.cause = error;
+  } catch (_error) {}
+  return wrapped_error;
+}
+
+function should_bubble_webgpu_error(active_config_key, error) {
+  return String(active_config_key || '').includes('webgpu')
+    && is_retryable_webgpu_error(error)
+  ;
+}
 
 const is_webgpu_available = async () => {
   // API exposed?
@@ -76,7 +113,7 @@ const is_webgpu_available = async () => {
 
   // Optionally check required features
   // return adapter.features.has('shader-f16');
-  
+
   return true;
 };
 
@@ -117,7 +154,7 @@ export class SmartEmbedTransformersAdapter extends SmartEmbedAdapter {
         while(this.loading) {
           await new Promise(resolve => setTimeout(resolve, 100));
         }
-  
+
       }else{
         this.loading = true;
         if (this.pipeline) {
@@ -212,9 +249,9 @@ export class SmartEmbedTransformersAdapter extends SmartEmbedAdapter {
     if (typeof env.useBrowserCache !== 'undefined') {
       env.useBrowserCache = true;
     }
-    
+
     let last_error = null;
-    
+
     const CONFIG_LIST_ORDER = Object.keys(DEVICE_CONFIGS);
     const try_create = async (config_key) => {
       // throw new Error('Simulated load failure for testing fallback');
@@ -229,8 +266,9 @@ export class SmartEmbedTransformersAdapter extends SmartEmbedAdapter {
         continue;
       }
       try {
-        if (!dtypes.includes(DEVICE_CONFIGS[config].dtype)) {
-          console.warn(`[Transformers v2: ${config}] skipping ${config} as dtype ${DEVICE_CONFIGS[config].dtype} is not available for this model`);
+        const config_dtype = DEVICE_CONFIGS[config].dtype;
+        if (config_dtype && !dtypes.includes(config_dtype)) {
+          console.warn(`[Transformers v2: ${config}] skipping ${config} as dtype ${config_dtype} is not available for this model`);
           continue;
         }
         console.log(`[Transformers v2] trying to load pipeline on ${config}`);
@@ -239,6 +277,9 @@ export class SmartEmbedTransformersAdapter extends SmartEmbedAdapter {
         break;
       } catch (err) {
         console.warn(`[Transformers v2: ${config}] failed to load pipeline on ${config}`, err);
+        if (config.includes("gpu") && is_retryable_webgpu_error(err)) {
+          throw create_retryable_webgpu_error(err);
+        }
         last_error = err;
       }
     }
@@ -248,7 +289,7 @@ export class SmartEmbedTransformersAdapter extends SmartEmbedAdapter {
       throw last_error || new Error('Failed to initialize transformers pipeline');
     }
     this.tokenizer = await AutoTokenizer.from_pretrained(this.model_key);
-    
+
   }
 
 
@@ -308,6 +349,9 @@ export class SmartEmbedTransformersAdapter extends SmartEmbedAdapter {
         return item;
       });
     } catch (err) {
+      if (should_bubble_webgpu_error(this.active_config_key, err)) {
+        throw create_retryable_webgpu_error(err);
+      }
       console.error('[Transformers v2] batch embed failed – retrying items individually', err);
       return await this._retry_items_individually(batch_inputs);
     }
@@ -360,6 +404,9 @@ export class SmartEmbedTransformersAdapter extends SmartEmbedAdapter {
           tokens: prepared.tokens,
         });
       } catch (single_err) {
+        if (should_bubble_webgpu_error(this.active_config_key, single_err)) {
+          throw create_retryable_webgpu_error(single_err);
+        }
         console.error('[Transformers v2] single item embed failed – skipping', single_err);
         results.push({
           ...item,
@@ -595,7 +642,7 @@ async function process_message(data) {
     return { id, result, iframe_id };
   } catch (error) {
     console.error('Error processing message:', error);
-    return { id, error: error.message, iframe_id };
+    return { id, error: get_error_message(error), iframe_id };
   }
 }
 process_message({ method: 'init' });
