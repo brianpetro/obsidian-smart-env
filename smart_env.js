@@ -420,6 +420,24 @@ export class SmartEnv extends BaseSmartEnv {
     ;
   }
 
+  register_menu_action(menu_key, fn) {
+    if (!this._registered_menu_actions) {
+      this._registered_menu_actions = {};
+    }
+    if (!this._registered_menu_actions[menu_key]) {
+      this._registered_menu_actions[menu_key] = new Set();
+    }
+    if (this._registered_menu_actions[menu_key].has(fn)) return;
+    this._registered_menu_actions[menu_key].add(fn);
+  }
+
+  build_menu(menu_key, menu, scope) {
+    const registered_actions = this._registered_menu_actions?.[menu_key] ?? new Set();
+    registered_actions.forEach(menu_action => {
+      menu_action(menu, scope);
+    });
+  }
+
   /**
    * @deprecated 2026-03-17 remove by next major release (keeping for backward compatibility during migration period)
    */
