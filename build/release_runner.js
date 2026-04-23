@@ -9,12 +9,8 @@ import {
   log_github_error,
   remove_existing_release_and_tag,
 } from './github_release_utils.js';
-import {
-  build_combined_notes,
-  latest_release_file,
-  parse_cli_options,
-  write_plugin_release_notes,
-} from './release_notes.js';
+import { compile_latest_release } from './compile_latest_release.js';
+import { parse_cli_options } from './release_notes.js';
 
 const sleep = (duration_ms) => new Promise((resolve) => setTimeout(resolve, duration_ms));
 
@@ -96,61 +92,24 @@ const build_release_body_from_md = async ({ rl, release_notes_path, version }) =
 };
 
 const prepare_release_notes_dir = async ({
-  rl,
   confirmed_version,
   releases_dir,
   release_notes_output_path,
+  plugin_name,
 }) => {
   fs.mkdirSync(releases_dir, { recursive: true });
 
-  const release_file = path.join(releases_dir, `${confirmed_version}.md`);
-  let version_notes = '';
-
-  if (fs.existsSync(release_file)) {
-    version_notes = fs.readFileSync(release_file, 'utf8').trim();
-  } else {
-    const prior_file = latest_release_file(releases_dir, confirmed_version);
-    let prior_notes = prior_file ? fs.readFileSync(prior_file, 'utf8').trim() : '';
-
-    if (prior_notes.includes('## next patch')) {
-      prior_notes = prior_notes.replace(
-        '## next patch',
-        `## patch \`v${confirmed_version}\`\n`,
-      );
-      version_notes = prior_notes;
-    } else {
-      const user_desc = await prompt_value({
-        rl,
-        prompt: 'Enter additional release description (optional): ',
-      });
-      version_notes = build_combined_notes(confirmed_version, prior_notes, user_desc);
-    }
-
-    if (prior_file) {
-      fs.writeFileSync(prior_file, version_notes);
-    } else {
-      fs.writeFileSync(release_file, version_notes);
-    }
-  }
-
-  const target_file = fs.existsSync(release_file)
-    ? release_file
-    : latest_release_file(releases_dir, confirmed_version);
-
-  if (target_file) {
-    write_plugin_release_notes({
-      release_path: target_file,
-      output_path: release_notes_output_path,
-      version: confirmed_version,
-    });
-  } else {
-    console.warn('No release notes file found to format into latest_release.md');
-  }
+  const result = compile_latest_release({
+    version: confirmed_version,
+    plugin_name,
+    releases_dir,
+    output_path: release_notes_output_path,
+  });
 
   return {
-    release_body: version_notes,
-    version_notes,
-    target_file,
+    release_body: result.release_body,
+    version_notes: result.current_patch_md,
+    target_file: result.canonical_release_path,
   };
 };
 
@@ -292,10 +251,10 @@ export const run_core_release = async (params = {}) => {
     release_body = notes_result.release_body;
   } else {
     const notes_result = await prepare_release_notes_dir({
-      rl,
       confirmed_version,
       releases_dir,
       release_notes_output_path,
+      plugin_name: manifest_json.name,
     });
     release_body = notes_result.release_body;
   }
