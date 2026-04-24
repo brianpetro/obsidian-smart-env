@@ -96,12 +96,14 @@ const prepare_release_notes_dir = async ({
   releases_dir,
   release_notes_output_path,
   plugin_name,
+  plugin_id,
 }) => {
   fs.mkdirSync(releases_dir, { recursive: true });
 
   const result = compile_latest_release({
     version: confirmed_version,
     plugin_name,
+    plugin_id,
     releases_dir,
     output_path: release_notes_output_path,
   });
@@ -255,6 +257,7 @@ export const run_core_release = async (params = {}) => {
       releases_dir,
       release_notes_output_path,
       plugin_name: manifest_json.name,
+      plugin_id: manifest_json.id,
     });
     release_body = notes_result.release_body;
   }
