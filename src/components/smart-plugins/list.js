@@ -1,15 +1,21 @@
-import { requestUrl } from 'obsidian';
+import { requestUrl, setIcon } from 'obsidian';
 import {
+  build_plugin_file_record,
   enable_plugin,
   fetch_plugin_file,
+  fetch_server_plugin_list,
   get_oauth_storage_prefix,
-  get_response_header_value,
-  get_smart_server_url,
+  install_file_names,
+  normalize_positive_epoch_ms,
   write_files_with_adapter,
 } from '../../utils/smart_plugins.js';
 import {
+  compute_plugin_list_item_state,
+  get_install_enable_behavior,
+  infer_installed_plugin_type,
   should_block_pro_install,
   should_offer_plugin_update,
+  should_signal_outdated_env_compatibility,
 } from '../../utils/smart_plugins_state.js';
 import styles from './style.css';
 import { compare_versions } from 'smart-environment/utils/compare_versions.js';
@@ -19,8 +25,6 @@ import { convert_to_time_until } from 'smart-utils/convert_to_time_until.js';
 const SMART_PLUGINS_DESC = `<a href="https://smartconnections.app/core-plugins/?utm_source=plugin-store" target="_external">Core plugins</a> provide essential functionality and a "just works" experience. Pro plugins enable advanced configuration and features for Obsidian AI experts. <a href="https://smartconnections.app/smart-plugins/?utm_source=plugin-store" target="_external">Learn more</a> about Smart Plugins.`;
 const PRO_PLUGINS_FOOTER = `All Pro plugins include advanced configurations and additional model providers. Pro users get priority support via email. <a href="https://smartconnections.app/pro-plugins/?utm_source=plugin-store" target="_external">Learn more</a> about Pro Plugins.`;
 const PRO_PLUGINS_URL = 'https://smartconnections.app/pro-plugins/';
-const OBSIDIAN_PLUGIN_URL = 'https://obsidian.md/plugins?id=';
-const install_file_names = ['manifest.json', 'main.js', 'styles.css'];
 
 function default_smart_plugins_list() {
   return [
@@ -85,9 +89,9 @@ function default_smart_plugins_list() {
       item_type: 'core',
       install_method: 'obsidian',
       item_name: 'Smart Templates',
-      item_desc: 'Create structured templates designed for Smart Plugins workflows.',
       item_repo: 'brianpetro/obsidian-smart-templates',
       plugin_id: 'smart-templates',
+      item_desc: 'Create structured templates designed for Smart Plugins workflows.',
       url: 'https://smartconnections.app/smart-templates/',
     },
     {
@@ -111,9 +115,22 @@ export function build_html(env, params = {}) {
           </div>
         </div>
         <p>${SMART_PLUGINS_DESC}</p>
-        <div class="smart-plugins-server-message" style="display:none;"></div>
+        <div class="smart-plugins-server-message callout" data-callout="note" style="display:none;">
+          <div class="callout-title">
+            <div class="callout-icon"></div>
+            <div class="callout-title-inner">Store message</div>
+          </div>
+          <div class="callout-content"></div>
+        </div>
         <div class="smart-plugins-section">
           <div class="smart-plugins-official-list">Loading...</div>
+        </div>
+        <div class="smart-plugins-section smart-plugins-experimental-section" style="display:none;">
+          <div class="smart-plugins-section-title">Experimental</div>
+          <div class="smart-plugins-section-description">
+            Available to Pro subscribers. These plugins may change quickly.
+          </div>
+          <div class="smart-plugins-experimental-list"></div>
         </div>
         <p>${PRO_PLUGINS_FOOTER}</p>
         <div class="smart-plugins-referral"></div>
@@ -139,33 +156,80 @@ export async function post_process(env, container, params = {}) {
   const login_container = container.querySelector('.smart-plugins-login');
   const referral_container = container.querySelector('.smart-plugins-referral');
   const official_list_el = container.querySelector('.smart-plugins-official-list');
+  const experimental_section_el = container.querySelector('.smart-plugins-experimental-section');
+  const experimental_list_el = container.querySelector('.smart-plugins-experimental-list');
   const server_message_el = container.querySelector('.smart-plugins-server-message');
+  const server_message_icon_el = server_message_el?.querySelector('.callout-icon');
+  const server_message_title_el = server_message_el?.querySelector('.callout-title-inner');
+  const server_message_content_el = server_message_el?.querySelector('.callout-content');
 
   const render_component = env.smart_components.render_component.bind(env.smart_components);
-  const render_login = async (sub_exp = null) => {
-    const login_el = await render_component('smart_plugins_login', env, { ...params, sub_exp });
+  const render_login = async (login_params = {}) => {
+    const login_el = await render_component('smart_plugins_login', env, {
+      ...params,
+      ...login_params,
+    });
     this.empty(login_container);
     if (login_el) login_container.appendChild(login_el);
   };
-  const render_referrals = async (token, sub_exp = null) => {
-    const referral_el = await render_component('smart_plugins_referral', env, { ...params, token, sub_exp });
+  const render_referrals = async (referral_params = {}) => {
+    const referral_el = await render_component('smart_plugins_referral', env, {
+      ...params,
+      ...referral_params,
+    });
     this.empty(referral_container);
     if (referral_el) referral_container.appendChild(referral_el);
   };
-  const render_server_message = (message = '') => {
+  const render_server_message = (message = '', opts = {}) => {
     const safe_message = String(message || '').trim();
-    this.empty(server_message_el);
     if (!safe_message) {
-      server_message_el.style.display = 'none';
+      if (server_message_el?.style) server_message_el.style.display = 'none';
+      if (server_message_content_el) server_message_content_el.textContent = '';
       return;
     }
-    server_message_el.style.display = '';
-    server_message_el.textContent = safe_message;
+
+    const safe_title = String(opts.title || 'Store message').trim() || 'Store message';
+    const callout_type = String(opts.callout_type || 'note').trim() || 'note';
+
+    if (server_message_el?.style) server_message_el.style.display = '';
+    server_message_el?.setAttribute?.('data-callout', callout_type);
+    if (server_message_title_el) server_message_title_el.textContent = safe_title;
+    if (server_message_content_el) server_message_content_el.textContent = safe_message;
+    if (server_message_icon_el) {
+      setIcon(server_message_icon_el, callout_type === 'warning' ? 'alert-triangle' : 'info');
+    }
+  };
+  const render_plugin_items = async (list_container, plugin_items = []) => {
+    this.empty(list_container);
+
+    for (const item of plugin_items) {
+      const row = await render_component('smart_plugins_list_item', item, {
+        ...params,
+        app,
+        env,
+        token: item.auth_token,
+        sub_exp: item.root_sub_exp,
+      });
+      if (!row) continue;
+
+      if (item.has_group_ui) {
+        list_container.appendChild(row);
+        continue;
+      }
+
+      const group_frag = this.create_doc_fragment('<div class="setting-group smart-plugins-item-group"><div class="setting-items"></div></div>');
+      const group_el = group_frag.firstElementChild;
+      const group_items_el = group_el.querySelector('.setting-items');
+      group_items_el.appendChild(row);
+      list_container.appendChild(group_el);
+    }
   };
 
   let viewed_event_emitted = false;
+  let handled_token_rejection = false;
   const render_smart_plugins = async () => {
     const token = localStorage.getItem(oauth_storage_prefix + 'token') || '';
+    const has_token = Boolean(token);
 
     if (!viewed_event_emitted) {
       viewed_event_emitted = true;
@@ -175,67 +239,100 @@ export async function post_process(env, container, params = {}) {
       });
     }
 
-    await render_login();
-    await render_referrals(token);
-    render_server_message('');
+    await render_login({
+      auth_state: has_token ? 'checking' : 'signed_out',
+      sub_exp: null,
+    });
+    this.empty(referral_container);
+    render_server_message();
+    experimental_section_el.style.display = 'none';
+    this.empty(experimental_list_el);
 
     try {
       await app.plugins.loadManifests();
-      const resp = await fetch_server_plugin_list(token);
-      if (resp?.unauthorized) {
-        clear_stored_oauth_tokens(app);
-        emit_store_event(env, 'pro_plugins:oauth_token_rejected', params, {
-          level: 'warning',
-          message: 'Session expired. Please log in again.',
-          event_source: 'smart_plugins_list',
-          recommended_track: 'pro',
-        });
-        return await render_smart_plugins();
+
+      let resp = await fetch_server_plugin_list(token);
+      let auth_state = has_token ? 'signed_in' : 'signed_out';
+      let server_message = String(resp?.message || '').trim();
+
+      if (resp?.status === 401 && has_token) {
+        auth_state = 'invalid';
+
+        if (!handled_token_rejection) {
+          handled_token_rejection = true;
+          emit_store_event(env, 'pro_plugins:oauth_token_rejected', params, {
+            level: 'warning',
+            message: 'Session expired. Please log in again.',
+            event_source: 'smart_plugins_list',
+            recommended_track: 'pro',
+          });
+        }
+
+        server_message = build_invalid_credentials_message(server_message);
+
+        const guest_resp = await fetch_server_plugin_list('');
+        if (guest_resp?.status === 200) {
+          resp = {
+            ...guest_resp,
+            status: resp.status,
+          };
+        } else {
+          resp = {
+            list: [],
+            sub_exp: null,
+            status: resp.status,
+          };
+        }
+      } else {
+        handled_token_rejection = false;
       }
 
-      const {
-        sub_exp = null,
-        message = '',
-      } = resp || {};
+      if (resp?.status && ![200, 401].includes(resp.status)) {
+        throw new Error(`plugin_list error ${resp.status}: ${resp?.message || 'Unknown error'}`);
+      }
 
-      await render_login(sub_exp);
-      await render_referrals(token, sub_exp);
-      render_server_message(message);
+      const sub_exp = resp?.sub_exp ?? null;
 
-      hydrate_plugins_list(resp, env, {
+      await render_login({
+        auth_state,
+        sub_exp,
+      });
+      await render_referrals({
+        token: auth_state === 'signed_in' ? token : '',
+        sub_exp,
+        auth_state,
+      });
+      render_server_message(server_message, {
+        callout_type: auth_state === 'invalid' ? 'warning' : 'note',
+        title: auth_state === 'invalid' ? 'Account message' : 'Store message',
+      });
+
+      SMART_PLUGINS_LIST = await hydrate_plugins_list(resp, env, {
         root_sub_exp: sub_exp,
       });
-      console.log('Hydrated plugin list:', SMART_PLUGINS_LIST);
-      const plugin_groups = annotate_plugin_groups(SMART_PLUGINS_LIST);
-      console.log('Plugin groups:', plugin_groups);
 
-      this.empty(official_list_el);
-      for (const plugin_group of plugin_groups) {
-        const group_frag = this.create_doc_fragment(`<div class="setting-group smart-plugins-item-group" data-group-size="${plugin_group.items.length}" data-group-state="${plugin_group.group_state}"><div class="setting-items"></div></div>`);
-        const group_el = group_frag.firstElementChild;
-        const group_items_el = group_el.querySelector('.setting-items');
-        official_list_el.appendChild(group_el);
+      const {
+        official_items,
+        experimental_items,
+      } = partition_plugin_items(SMART_PLUGINS_LIST);
 
-        for (const item of plugin_group.items) {
-          const row = await render_component('smart_plugins_list_item', item, {
-            ...params,
-            app,
-            env,
-            token,
-            sub_exp,
-            group_items: plugin_group.items,
-            group_state: plugin_group.group_state,
-          });
-          if (row) group_items_el.appendChild(row);
-        }
+      await render_plugin_items(official_list_el, official_items);
+
+      const can_view_experimental = experimental_items.some((item) => item.is_entitled);
+      if (experimental_items.length && can_view_experimental) {
+        experimental_section_el.style.display = '';
+        await render_plugin_items(experimental_list_el, experimental_items);
+      } else {
+        experimental_section_el.style.display = 'none';
+        this.empty(experimental_list_el);
       }
-
-      // TODO: added Evan's visualizer plugins in community section
 
     } catch (err) {
       console.error('[smart-plugins:list] Failed to fetch plugin list:', err);
       this.empty(official_list_el);
-      render_server_message('');
+      this.empty(experimental_list_el);
+      experimental_section_el.style.display = 'none';
+      render_server_message();
       official_list_el.appendChild(this.create_doc_fragment('<div class="error"><p>Failed to load plugin information.</p><button class="retry">Retry</button></div>'));
       SMART_PLUGINS_LIST = default_smart_plugins_list();
       const retry_button = official_list_el.querySelector('.retry');
@@ -255,73 +352,12 @@ export async function post_process(env, container, params = {}) {
   return container;
 }
 
-async function fetch_server_plugin_list(token) {
-  const headers = {
-    'Content-Type': 'application/json',
-  };
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
+function normalize_release_version(value) {
+  const normalized_value = String(value || '').trim();
+  if (!normalized_value) {
+    return '';
   }
-
-  const resp = await requestUrl({
-    url: `${get_smart_server_url()}/plugin_list`,
-    method: 'POST',
-    headers,
-    body: JSON.stringify({}),
-    throw: false,
-  });
-  console.log('Plugin list server response:', resp);
-
-  if (resp.status === 401) {
-    return { list: [], sub_exp: null, unauthorized: true, status: resp.status };
-  }
-  if (resp.status !== 200) {
-    return { list: [], sub_exp: null, status: resp.status };
-  }
-  return {
-    ...resp.json,
-    status: resp.status,
-  };
-}
-
-function normalize_positive_epoch_ms(value) {
-  const numeric_value = Number(value);
-  if (!Number.isFinite(numeric_value) || numeric_value <= 0) {
-    return null;
-  }
-  return Math.round(numeric_value);
-}
-
-function get_plugin_file_text(response, file_name) {
-  if (typeof response?.text === 'string' && response.text.length) {
-    return response.text;
-  }
-
-  if (response?.arrayBuffer instanceof ArrayBuffer) {
-    return new TextDecoder('utf-8').decode(response.arrayBuffer);
-  }
-
-  if (file_name === 'manifest.json' && response?.json) {
-    return JSON.stringify(response.json, null, 2);
-  }
-
-  return '';
-}
-
-function build_plugin_file_record(file_name, response) {
-  return {
-    fileName: file_name,
-    data: new TextEncoder().encode(get_plugin_file_text(response, file_name)),
-    accessed_at: normalize_positive_epoch_ms(
-      get_response_header_value(response, 'accessed_at')
-    ) || Date.now(),
-  };
-}
-
-function clear_stored_oauth_tokens(app) {
-  const oauth_storage_prefix = get_oauth_storage_prefix(app);
-  localStorage.removeItem(oauth_storage_prefix + 'token');
-  localStorage.removeItem(oauth_storage_prefix + 'refresh');
+  return normalized_value.replace(/^v/i, '');
 }
 
 function get_source_surface(params = {}) {
@@ -347,21 +383,21 @@ function emit_store_event(env, event_key, params = {}, extra = {}) {
   env?.events?.emit?.(event_key, build_store_event_payload(params, extra));
 }
 
-function hydrate_plugins_list(server_resp, env, params = {}) {
-  SMART_PLUGINS_LIST = default_smart_plugins_list();
+async function hydrate_plugins_list(server_resp, env, params = {}) {
+  const smart_plugins_list = default_smart_plugins_list();
 
   const { list = [] } = server_resp || {};
 
   for (const server_item of list) {
-    const server_item_type = server_item.item_type || 'pro';
-    const local_item = SMART_PLUGINS_LIST.find((item) => {
+    const server_item_type = get_plugin_item_type(server_item) || 'pro';
+    const local_item = smart_plugins_list.find((item) => {
       return item.plugin_id === server_item.plugin_id
-        && item.item_type === server_item_type
+        && get_plugin_item_type(item) === server_item_type
       ;
     });
 
     if (!local_item) {
-      SMART_PLUGINS_LIST.push({
+      smart_plugins_list.push({
         item_type: server_item_type,
         ...server_item,
       });
@@ -373,31 +409,71 @@ function hydrate_plugins_list(server_resp, env, params = {}) {
     });
   }
 
-  const installed_plugins = Object.values(env.obsidian_app.plugins.manifests || {});
-  for (const installed_item of installed_plugins) {
-    const matches = SMART_PLUGINS_LIST.filter((item) => item.plugin_id === installed_item.id);
+  await hydrate_core_plugin_versions(smart_plugins_list);
 
-    for (const match of matches) {
-      match.manifest = installed_item;
+  return build_plugin_list_items(smart_plugins_list, env, params);
+}
+
+async function hydrate_core_plugin_versions(smart_plugins_list = []) {
+  for (const item of smart_plugins_list) {
+    if (get_plugin_item_type(item) !== 'core') continue;
+
+    const repo = get_plugin_repo(item);
+    if (!repo) continue;
+
+    try {
+      const { json: release } = await requestUrl({
+        url: `https://api.github.com/repos/${repo}/releases/latest`,
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        contentType: 'application/json',
+      });
+      const version = normalize_release_version(
+        release?.tag_name ||
+        release?.name ||
+        item?.version ||
+        ''
+      );
+      if (version) {
+        item.version = version;
+      }
+    } catch (error) {
+      console.warn(`[smart-plugins:list] Failed to hydrate latest core release for ${repo}`, error);
     }
-  }
-
-  for (let i = 0; i < SMART_PLUGINS_LIST.length; i += 1) {
-    SMART_PLUGINS_LIST[i] = new PluginListItem(env, SMART_PLUGINS_LIST[i], {
-      root_sub_exp: params.root_sub_exp,
-    });
   }
 }
 
+function build_plugin_list_items(smart_plugins_list = [], env, params = {}) {
+  const plugin_map = new Map();
+
+  for (const plugin of smart_plugins_list) {
+    const group_key = get_plugin_group_key(plugin);
+    if (!plugin_map.has(group_key)) {
+      plugin_map.set(group_key, { core: null, pro: null });
+    }
+
+    const plugin_group = plugin_map.get(group_key);
+    if (get_plugin_item_type(plugin) === 'core') {
+      plugin_group.core = plugin;
+    } else {
+      plugin_group.pro = plugin;
+    }
+  }
+
+  return Array.from(plugin_map.values()).map((plugin_group) => {
+    return new PluginListItem(env, plugin_group, params);
+  });
+}
+
 export class PluginListItem {
-  constructor(env, item, params = {}) {
+  constructor(env, plugins = {}, params = {}) {
     this.env = env;
     this.app = env.obsidian_app;
-    this.data = item;
+    this.core_plugin = plugins.core || null;
+    this.pro_plugin = plugins.pro || null;
     this.root_sub_exp = normalize_positive_epoch_ms(params.root_sub_exp);
-    this.group_size = 1;
-    this.group_index = 0;
-    this.group_state = 'single';
   }
 
   get auth_token() {
@@ -406,7 +482,36 @@ export class PluginListItem {
   }
 
   get plugin_id() {
-    return this.data.plugin_id;
+    return String(
+      this.core_plugin?.plugin_id ||
+      this.pro_plugin?.plugin_id ||
+      ''
+    ).trim();
+  }
+
+  get has_core_plugin() {
+    return Boolean(this.core_plugin);
+  }
+
+  get has_pro_plugin() {
+    return Boolean(this.pro_plugin);
+  }
+
+  get has_group_ui() {
+    return this.has_core_plugin && this.has_pro_plugin;
+  }
+
+  get display_item_type() {
+    if (this.has_group_ui) return 'group';
+    return get_plugin_item_type(this.primary_plugin) || 'pro';
+  }
+
+  get primary_plugin() {
+    return this.core_plugin || this.pro_plugin || null;
+  }
+
+  get installed_manifest() {
+    return this.app.plugins?.manifests?.[this.plugin_id] || null;
   }
 
   get is_enabled() {
@@ -417,25 +522,58 @@ export class PluginListItem {
     return this.env?.plugin_states?.[this.plugin_id] || null;
   }
 
-  get is_deferred() {
-    return this.installed_type === this.item_type
-      && this.is_enabled
-      && (
-        this.env_plugin_state === 'deferred'
-        || this.loaded_version !== this.installed_version
-      );
+  get installed_type() {
+    if (!this.installed_manifest) return null;
+    return infer_installed_plugin_type({
+      plugin_id: this.plugin_id,
+      manifest_name: this.installed_manifest.name,
+    });
+  }
+
+  get installed_plugin() {
+    return this.get_track_plugin(this.installed_type);
+  }
+
+  get loaded_version() {
+    return this.app.plugins.plugins[this.plugin_id]?.manifest?.version || null;
+  }
+
+  get loaded_env_version() {
+    return this.app.plugins.plugins[this.plugin_id]?.SmartEnv?.version || '';
+  }
+
+  get installed_version() {
+    return this.installed_manifest?.version || null;
   }
 
   get is_entitled() {
-    return this.data.entitled === true;
+    return this.pro_plugin?.entitled === true;
+  }
+
+  get tags() {
+    return [...new Set([
+      ...get_plugin_tags(this.core_plugin),
+      ...get_plugin_tags(this.pro_plugin),
+    ])];
+  }
+
+  get is_experimental() {
+    return this.tags.includes('experimental');
+  }
+
+  get details_url() {
+    return get_plugin_details_url(this.pro_plugin) ||
+      get_plugin_details_url(this.core_plugin) ||
+      ''
+    ;
   }
 
   get item_sub_exp() {
-    return normalize_positive_epoch_ms(this.data.sub_exp);
+    return normalize_positive_epoch_ms(this.pro_plugin?.sub_exp);
   }
 
   get should_show_item_subscription_state() {
-    return this.item_type === 'pro'
+    return this.has_pro_plugin
       && this.root_sub_exp === null
       && this.item_sub_exp !== null
     ;
@@ -453,148 +591,136 @@ export class PluginListItem {
     return `Subscription active, renews ${convert_to_time_until(this.item_sub_exp)}.`;
   }
 
-  get can_install() {
-    if (this.data.item_type === 'core') return true;
-    if (this.data.item_type === 'pro') return this.is_entitled;
-    return false;
+  get formatted_name() {
+    if (this.has_group_ui) {
+      return format_plugin_name(get_plugin_name(this.core_plugin))
+        || format_plugin_name(get_plugin_name(this.pro_plugin))
+        || this.plugin_id
+      ;
+    }
+
+    return format_plugin_name(get_plugin_name(this.primary_plugin))
+      || this.plugin_id
+    ;
+  }
+
+  get label() {
+    return get_plugin_label(this.primary_plugin) || this.plugin_id || 'plugin';
+  }
+
+  get formatted_description() {
+    return get_plugin_description(this.primary_plugin);
+  }
+
+  get is_loaded() {
+    if (!this.installed_type) return false;
+    return this.is_enabled && this.env_plugin_state === 'loaded';
+  }
+
+  get is_deferred() {
+    if (!this.installed_type) return false;
+    return this.is_enabled && (
+      this.env_plugin_state === 'deferred'
+      || (
+        this.loaded_version
+        && this.installed_version
+        && this.loaded_version !== this.installed_version
+      )
+    );
   }
 
   get should_update() {
+    const installed_type = this.installed_type;
+    if (!installed_type) return false;
+
+    const installed_plugin = this.get_track_plugin(installed_type);
     return should_offer_plugin_update({
-      item_type: this.item_type,
-      installed_type: this.installed_type,
-      is_entitled: this.is_entitled,
-      is_enabled: this.is_enabled,
-      is_loaded: this.is_loaded,
-      is_deferred: this.is_deferred,
-      loaded_env_version: this.app.plugins.plugins[this.plugin_id]?.SmartEnv?.version || '',
-      server_version: this.data.version,
+      item_type: installed_type,
+      installed_type,
+      is_entitled: installed_type === 'pro' ? this.is_entitled : true,
+      server_version: normalize_release_version(installed_plugin?.version),
       installed_version: this.installed_version,
       compare_versions,
     });
   }
 
+  get has_outdated_env_compatibility() {
+    const installed_type = this.installed_type;
+    if (!installed_type) return false;
+
+    return should_signal_outdated_env_compatibility({
+      item_type: installed_type,
+      installed_type,
+      is_entitled: installed_type === 'pro' ? this.is_entitled : true,
+      is_enabled: this.is_enabled,
+      is_loaded: this.is_loaded,
+      is_deferred: this.is_deferred,
+      loaded_env_version: this.loaded_env_version,
+    });
+  }
+
   get is_installed() {
-    return this.installed_type === this.item_type;
+    return Boolean(this.installed_type);
   }
 
-  get item_type() {
-    return this.data.item_type || 'pro';
-  }
+  get computed_state() {
+    const computed_state = compute_plugin_list_item_state({
+      has_core_plugin: this.has_core_plugin,
+      has_pro_plugin: this.has_pro_plugin,
+      display_item_type: this.display_item_type,
+      installed_type: this.installed_type,
+      is_entitled: this.is_entitled,
+      should_update: this.should_update,
+      has_outdated_env_compatibility: this.has_outdated_env_compatibility,
+      is_deferred: this.is_deferred,
+      is_loaded: this.is_loaded,
+      is_enabled: this.is_enabled,
+    });
 
-  get installed_type() {
-    if (!this.data.manifest) return null;
-    if (['smart-file-nav'].includes(this.plugin_id)) return 'pro'; // TEMP special case for plugins that don't follow standard naming conventions
-    return this.data.manifest.name.includes('Pro') ? 'pro' : 'core';
-  }
+    const hydrate_track_state = (track_state) => {
+      if (!track_state) return null;
 
-  get loaded_version() {
-    return this.app.plugins.plugins[this.plugin_id]?.manifest?.version;
-  }
+      return {
+        ...track_state,
+        plugin: this.get_track_plugin(track_state.item_type),
+        control_specs: this.get_control_specs_for_state(track_state.control_state),
+      };
+    };
 
-  get installed_version() {
-    if (!this.data.manifest) return null;
-    return this.data.manifest.version || null;
-  }
-
-  get state() {
-    if (this.should_update) return 'update_available';
-    if (this.installed_type === this.item_type) {
-      if (!this.is_enabled) return 'can_enable';
-      return 'installed';
-    }
-
-    if (this.item_type === 'core') {
-      if (this.installed_type === 'pro') return 'pro_installed';
-      return 'can_install';
-    }
-
-    if (this.installed_type === 'core') return 'core_installed';
-    if (this.can_install) return 'can_install';
-    return 'cant_install';
-  }
-
-  get install_method() {
-    return this.data.install_method || 'server';
-  }
-
-  get repo() {
-    return this.data.item_repo || this.data.repo;
-  }
-
-  get label() {
-    return this.data.item_name || this.data.name || this.data.plugin_id || this.data.repo || 'plugin';
-  }
-
-  get name() {
-    return this.data.item_name || this.data.name || this.data.plugin_id || '';
-  }
-
-  get formatted_name() {
-    return this.name
-      .replace(/\bSmart\s+/g, '')
-      .replace(/\bPro\b/g, '')
-      .replace(/\s{2,}/g, ' ')
-      .trim()
-    ;
-  }
-
-  get description() {
-    return this.data.item_desc || this.data.description || '';
-  }
-
-  get formatted_description() {
-    return this.description;
-  }
-
-  get is_loaded() {
-    if (this.installed_type !== this.item_type) return false;
-    return this.is_enabled && (
-      this.env.plugin_states?.[this.plugin_id] === 'loaded'
-      || ['smart-file-nav'].includes(this.plugin_id) // TEMP special case for plugins that don't use SmartEnv
-    );
-  }
-
-  get row_control_state() {
-    if (this.should_update) return 'update_available';
-    if (this.is_deferred) return 'deferred';
-    if (this.is_loaded) return 'loaded';
-
-    if (this.group_size > 1) {
-      if (this.group_state === 'pro_can_install') {
-        if (this.item_type === 'core' && this.state === 'can_install') {
-          return 'included_in_pro';
-        }
-        if (this.item_type === 'pro' && this.state === 'can_install') {
-          return 'can_install_pro';
-        }
-      }
-
-      if (this.group_state === 'core_can_install') {
-        if (this.item_type === 'core' && this.state === 'can_install') {
-          return 'can_install_core_only';
-        }
-      }
-    }
-
-    if (this.item_type === 'pro' && this.state === 'can_install') {
-      return 'can_install_pro';
-    }
-
-    return this.state || 'can_install';
+    return {
+      row: hydrate_track_state(computed_state.row),
+      track_states: {
+        core: hydrate_track_state(computed_state.track_states.core),
+        pro: hydrate_track_state(computed_state.track_states.pro),
+      },
+    };
   }
 
   get control_specs() {
-    switch (this.row_control_state) {
-      case 'deferred':
+    return this.computed_state.row?.control_specs || [];
+  }
+
+  get_track_state(item_type) {
+    return this.computed_state.track_states?.[item_type] || null;
+  }
+
+  get_control_specs_for_state(control_state) {
+    switch (control_state) {
+      case 'deferred': {
         const is_updated = this.loaded_version && this.loaded_version !== this.installed_version;
         return [
           { type: 'status', text: `${is_updated ? 'Update ready.' : 'Installed & enabled.'} Reload to activate` },
           { type: 'button', action: 'restart_obsidian', text: 'Reload', variant: 'primary' },
         ];
+      }
       case 'update_available':
         return [
           { type: 'status', text: 'Update available' },
+          { type: 'button', action: 'install', text: 'Update', variant: 'primary' },
+        ];
+      case 'outdated_env':
+        return [
+          { type: 'status', text: 'Outdated Smart Environment loaded' },
           { type: 'button', action: 'install', text: 'Update', variant: 'primary' },
         ];
       case 'loaded':
@@ -602,13 +728,13 @@ export class PluginListItem {
           { type: 'status', text: 'Active' },
           { type: 'button', action: 'open_settings', text: 'Open settings', variant: 'secondary' },
         ];
+      case 'installed':
+        return [
+          { type: 'status', text: 'Installed' },
+        ];
       case 'can_enable':
         return [
           { type: 'button', action: 'enable', text: 'Enable', variant: 'primary' },
-        ];
-      case 'pro_installed':
-        return [
-          { type: 'status', text: 'Pro installed' },
         ];
       case 'included_in_pro':
         return [
@@ -617,7 +743,7 @@ export class PluginListItem {
       case 'core_installed':
         return [
           { type: 'status', text: 'Core installed' },
-          ...(this.can_install
+          ...(this.is_entitled
             ? [{ type: 'button', action: 'install', text: 'Install Pro', variant: 'primary' }]
             : []),
           { type: 'button', action: 'learn_more', text: 'Learn more', variant: 'secondary' },
@@ -644,10 +770,19 @@ export class PluginListItem {
     }
   }
 
+  get_track_control_specs(item_type) {
+    return this.get_track_state(item_type)?.control_specs || [];
+  }
+
   get_busy_text(action) {
+    const control_state = this.computed_state.row?.control_state || '';
+
     switch (action) {
       case 'install':
-        return this.should_update ? 'Updating…' : 'Installing…';
+        return ['update_available', 'outdated_env'].includes(control_state)
+          ? 'Updating…'
+          : 'Installing…'
+        ;
       case 'enable':
         return 'Enabling…';
       default:
@@ -655,18 +790,97 @@ export class PluginListItem {
     }
   }
 
+  get_busy_text_for_track(item_type, action) {
+    const control_state = this.get_track_state(item_type)?.control_state || '';
+
+    switch (action) {
+      case 'install':
+        return ['update_available', 'outdated_env'].includes(control_state)
+          ? 'Updating…'
+          : 'Installing…'
+        ;
+      case 'enable':
+        return 'Enabling…';
+      default:
+        return this.get_busy_text(action);
+    }
+  }
+
+  get install_target_plugin() {
+    const control_state = this.computed_state.row?.control_state || 'can_install';
+
+    if (['update_available', 'outdated_env'].includes(control_state)) {
+      return this.installed_plugin;
+    }
+
+    if (control_state === 'can_install_pro' || control_state === 'core_installed') {
+      return this.pro_plugin;
+    }
+
+    if (control_state === 'can_install_core_only') {
+      return this.core_plugin;
+    }
+
+    if (control_state === 'can_install') {
+      return this.core_plugin || this.pro_plugin;
+    }
+
+    return this.installed_plugin || this.core_plugin || this.pro_plugin;
+  }
+
+  get install_target_item_type() {
+    return get_plugin_item_type(this.install_target_plugin);
+  }
+
+  get install_target_label() {
+    return get_plugin_label(this.install_target_plugin)
+      || this.label
+      || this.plugin_id
+      || 'plugin'
+    ;
+  }
+
+  get_track_plugin(item_type) {
+    if (item_type === 'core') return this.core_plugin;
+    if (item_type === 'pro') return this.pro_plugin;
+    return null;
+  }
+
+  get_track_name(item_type) {
+    return format_plugin_name(get_plugin_name(this.get_track_plugin(item_type)))
+      || this.formatted_name
+      || this.plugin_id
+    ;
+  }
+
+  get_track_description(item_type) {
+    return get_plugin_description(this.get_track_plugin(item_type));
+  }
+
+  get_track_details_url(item_type) {
+    return get_plugin_details_url(this.get_track_plugin(item_type))
+      || this.details_url
+      || ''
+    ;
+  }
+
+  get_track_subscription_status_text(item_type) {
+    if (item_type !== 'pro') return '';
+    return this.subscription_status_text;
+  }
+
   async handle_action(action, params = {}) {
     switch (action) {
       case 'install':
         if (should_block_pro_install({
-          item_type: this.item_type,
+          item_type: this.install_target_item_type,
           is_entitled: this.is_entitled,
         })) {
           emit_store_event(this.env, 'pro_plugins:install_blocked', params, {
             plugin_key: this.plugin_id,
             recommended_track: 'pro',
             level: 'warning',
-            message: `${this.label} requires an active Pro entitlement.`,
+            message: `${this.install_target_label} requires an active Pro entitlement.`,
             event_source: 'browse_smart_plugins.list_item.install',
           });
           return;
@@ -685,19 +899,61 @@ export class PluginListItem {
       case 'learn_more':
         this.open_plugin_url(params);
         return;
+      case 'open_details':
+        this.open_details_url();
+        return;
       default:
         return;
     }
   }
 
-  async install(params = {}) {
-    if (this.item_type === 'core') {
-      if (this.install_method === 'github') {
-        await this.install_github_release_plugin(params);
+  async handle_track_action(item_type, action, params = {}) {
+    if (action === 'install') {
+      const plugin = this.get_track_plugin(item_type);
+      const track_item_type = get_plugin_item_type(plugin);
+      const track_label = get_plugin_label(plugin) || this.install_target_label || this.label;
+
+      if (should_block_pro_install({
+        item_type: track_item_type,
+        is_entitled: this.is_entitled,
+      })) {
+        emit_store_event(this.env, 'pro_plugins:install_blocked', params, {
+          plugin_key: this.plugin_id,
+          recommended_track: 'pro',
+          level: 'warning',
+          message: `${track_label} requires an active Pro entitlement.`,
+          event_source: 'browse_smart_plugins.list_item.install',
+        });
         return;
       }
 
-      this.install_core_plugin();
+      await this.install(params, plugin);
+      return;
+    }
+
+    if (action === 'open_details') {
+      this.open_track_details_url(item_type);
+      return;
+    }
+
+    if (action === 'learn_more') {
+      this.open_track_plugin_url(item_type, params);
+      return;
+    }
+
+    await this.handle_action(action, params);
+  }
+
+  async install(params = {}, plugin = this.install_target_plugin) {
+    if (!plugin) return;
+
+    if (get_plugin_item_type(plugin) === 'core') {
+      if (get_plugin_install_method(plugin) === 'github') {
+        await this.install_github_release_plugin(params, plugin);
+        return;
+      }
+
+      await this.install_core_plugin(plugin);
       return;
     }
 
@@ -706,7 +962,7 @@ export class PluginListItem {
       recommended_track: 'pro',
       event_source: 'browse_smart_plugins.list_item.install',
     });
-    await this.install_plugin(params);
+    await this.install_plugin(params, plugin);
   }
 
   async enable(params = {}) {
@@ -744,34 +1000,61 @@ export class PluginListItem {
     this.app.setting.openTabById(this.plugin_id);
   }
 
+  open_details_url() {
+    const details_url = this.details_url || PRO_PLUGINS_URL;
+    window.open(with_utm_source(details_url, 'plugin-store'), '_external');
+  }
+
+  open_track_details_url(item_type) {
+    const details_url = this.get_track_details_url(item_type) || PRO_PLUGINS_URL;
+    window.open(with_utm_source(details_url, 'plugin-store'), '_external');
+  }
+
   open_plugin_url(params = {}) {
-    if (this.item_type === 'pro' && !this.is_entitled) {
+    if (this.has_pro_plugin && !this.is_entitled) {
       emit_store_event(this.env, 'pro_trial_cta_clicked', params, {
         plugin_key: this.plugin_id,
         recommended_track: 'pro',
         event_source: 'browse_smart_plugins.list_item.learn_more',
       });
     }
-    const url = with_utm_source(this.data.url || PRO_PLUGINS_URL, 'plugin-store');
-    window.open(url, '_external');
+    const url = this.details_url || PRO_PLUGINS_URL;
+    window.open(with_utm_source(url, 'plugin-store'), '_external');
   }
 
-  open_community_index_page() {
-    window.open(`${OBSIDIAN_PLUGIN_URL}${encodeURIComponent(this.plugin_id)}`, '_external');
-  }
-
-  async install_core_plugin() {
-    try {
-      const { json: release } = await this.get_latest_github_release();
-      const version = release?.tag_name;
-      await this.app.plugins.installPlugin(this.repo, version, {
-        id: this.plugin_id,
-        name: this.label,
+  open_track_plugin_url(item_type, params = {}) {
+    if (item_type === 'pro' && this.has_pro_plugin && !this.is_entitled) {
+      emit_store_event(this.env, 'pro_trial_cta_clicked', params, {
+        plugin_key: this.plugin_id,
+        recommended_track: 'pro',
+        event_source: 'browse_smart_plugins.list_item.learn_more',
       });
-      await this.enable();
+    }
+    const url = this.get_track_details_url(item_type) || PRO_PLUGINS_URL;
+    window.open(with_utm_source(url, 'plugin-store'), '_external');
+  }
+
+  async install_core_plugin(plugin) {
+    const was_installed = this.is_installed;
+    const was_enabled = this.is_enabled;
+    const install_enable_behavior = get_install_enable_behavior({
+      was_installed,
+      was_enabled,
+    });
+
+    try {
+      const { json: release } = await this.get_latest_github_release(plugin);
+      const version = release?.tag_name;
+      await this.app.plugins.installPlugin(get_plugin_repo(plugin), version, {
+        id: this.plugin_id,
+        name: this.install_target_label,
+      });
+      if (install_enable_behavior.should_enable_after_install) {
+        await this.enable();
+      }
       this.env?.events?.emit?.('smart_plugins:install_completed', {
         level: 'attention',
-        message: `${this.label} installed successfully.`,
+        message: `${this.install_target_label} installed successfully.`,
         event_source: 'browse_smart_plugins.list_item',
       });
       this.env?.events?.emit?.('pro_plugins:refresh', {
@@ -788,16 +1071,17 @@ export class PluginListItem {
     }
   }
 
-  async download_plugin_files() {
+  async download_plugin_files(plugin) {
     if (!this.auth_token) {
       throw new Error('Login required to install this plugin.');
     }
 
-    const version = String(this.data?.version || '').trim() || null;
+    const version = String(plugin?.version || '').trim() || null;
+    const repo = get_plugin_repo(plugin);
     const files = [];
 
     for (const file_name of install_file_names) {
-      const response = await fetch_plugin_file(this.repo, this.auth_token, {
+      const response = await fetch_plugin_file(repo, this.auth_token, {
         file: file_name,
         version,
       });
@@ -807,18 +1091,25 @@ export class PluginListItem {
     return files;
   }
 
-  async install_plugin(params = {}) {
+  async install_plugin(params = {}, plugin) {
+    const was_installed = this.is_installed;
+    const was_enabled = this.is_enabled;
+    const install_enable_behavior = get_install_enable_behavior({
+      was_installed,
+      was_enabled,
+    });
+
     try {
       this.env?.events?.emit?.('pro_plugins:install_started', {
         level: 'info',
-        message: `Installing "${this.label}" ...`,
+        message: `Installing "${this.install_target_label}" ...`,
         event_source: 'browse_smart_plugins.list_item',
       });
 
-      const files = await this.download_plugin_files();
+      const files = await this.download_plugin_files(plugin);
       const folder_name = String(this.plugin_id || '').trim();
       if (!folder_name) {
-        throw new Error(`Missing plugin id for "${this.label}".`);
+        throw new Error(`Missing plugin id for "${this.install_target_label}".`);
       }
 
       const base_folder = `${this.app.vault.configDir}/plugins/${folder_name}`;
@@ -826,14 +1117,16 @@ export class PluginListItem {
 
       await this.app.plugins.loadManifests();
 
-      if (this.app.plugins.enabledPlugins.has(this.plugin_id)) {
+      if (install_enable_behavior.should_disable_before_install) {
         await this.app.plugins.disablePlugin(this.plugin_id);
       }
-      await enable_plugin(this.app, this.plugin_id);
+      if (install_enable_behavior.should_enable_after_install) {
+        await enable_plugin(this.app, this.plugin_id);
+      }
 
       this.env?.events?.emit?.('pro_plugins:install_completed', {
         level: 'attention',
-        message: `${this.label} installed successfully.`,
+        message: `${this.install_target_label} installed successfully.`,
         event_source: 'browse_smart_plugins.list_item',
       });
       emit_store_event(this.env, 'pro_plugin_installed', params, {
@@ -858,25 +1151,32 @@ export class PluginListItem {
     }
   }
 
-  async install_github_release_plugin(params = {}) {
+  async install_github_release_plugin(params = {}, plugin) {
     const app = params.app || this.app;
     const env = params.env || null;
+    const repo = get_plugin_repo(plugin);
+    const was_installed = this.is_installed;
+    const was_enabled = this.is_enabled;
+    const install_enable_behavior = get_install_enable_behavior({
+      was_installed,
+      was_enabled,
+    });
 
-    if (!this.repo) {
-      throw new Error(`Missing GitHub repo for "${this.label}".`);
+    if (!repo) {
+      throw new Error(`Missing GitHub repo for "${this.install_target_label}".`);
     }
     if (!this.plugin_id) {
-      throw new Error(`Missing plugin id for "${this.label}".`);
+      throw new Error(`Missing plugin id for "${this.install_target_label}".`);
     }
 
     try {
-      env?.events?.emit?.('pro_plugins:install_started', {
+      env?.events?.emit?.('smart_plugins:install_started', {
         level: 'info',
-        message: `Installing "${this.label}" ...`,
+        message: `Installing "${this.install_target_label}" ...`,
         event_source: 'browse_smart_plugins.list_item',
       });
 
-      const { json: release } = await this.get_latest_github_release();
+      const { json: release } = await this.get_latest_github_release(plugin);
 
       const assets = release?.assets || [];
       const main_asset = assets.find((asset) => asset.name === 'main.js');
@@ -899,15 +1199,17 @@ export class PluginListItem {
       ]);
 
       await app.plugins.loadManifests();
-      if (app.plugins.enabledPlugins.has(this.plugin_id)) {
+      if (install_enable_behavior.should_disable_before_install) {
         await app.plugins.disablePlugin(this.plugin_id);
       }
-      await enable_plugin(app, this.plugin_id);
+      if (install_enable_behavior.should_enable_after_install) {
+        await enable_plugin(app, this.plugin_id);
+      }
 
-      env?.events?.emit?.('pro_plugins:install_completed', {
+      env?.events?.emit?.('smart_plugins:install_completed', {
         level: 'attention',
-        message: `${this.label} installed successfully.`,
-        event_source: 'browse_smart_plugins.list_item',
+        message: `${this.install_target_label} installed successfully.`,
+        event_source: 'browse_smart_plugins.list_item.install_github_release_plugin',
       });
       env?.events?.emit?.('pro_plugins:refresh', {
         event_source: 'browse_smart_plugins.list_item.install_github_release_plugin',
@@ -917,7 +1219,7 @@ export class PluginListItem {
       }
     } catch (err) {
       console.error('[smart-plugins:list] GitHub install error:', err);
-      env?.events?.emit?.('pro_plugins:install_failed', {
+      env?.events?.emit?.('smart_plugins:install_failed', {
         level: 'error',
         message: `Install failed: ${err.message}`,
         details: err?.stack || '',
@@ -926,9 +1228,10 @@ export class PluginListItem {
     }
   }
 
-  async get_latest_github_release() {
+  async get_latest_github_release(plugin) {
+    const repo = get_plugin_repo(plugin) || get_plugin_repo(this.install_target_plugin);
     return await requestUrl({
-      url: `https://api.github.com/repos/${this.repo}/releases/latest`,
+      url: `https://api.github.com/repos/${repo}/releases/latest`,
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -946,70 +1249,80 @@ export class PluginListItem {
   }
 }
 
-function annotate_plugin_groups(items = []) {
-  const plugin_groups = build_plugin_groups(items);
+function get_plugin_group_key(plugin) {
+  return plugin?.plugin_id || `${get_plugin_item_type(plugin)}:${get_plugin_name(plugin)}`;
+}
 
-  for (const plugin_group of plugin_groups) {
-    for (let i = 0; i < plugin_group.items.length; i += 1) {
-      const item = plugin_group.items[i];
-      item.group_size = plugin_group.items.length;
-      item.group_index = i;
-      item.group_state = plugin_group.group_state;
+function get_plugin_item_type(plugin = {}) {
+  return String(plugin?.item_type || '').trim();
+}
+
+function get_plugin_repo(plugin = {}) {
+  return String(plugin?.item_repo || plugin?.repo || '').trim();
+}
+
+function get_plugin_name(plugin = {}) {
+  return String(plugin?.item_name || plugin?.name || plugin?.plugin_id || '').trim();
+}
+
+function get_plugin_label(plugin = {}) {
+  return String(
+    plugin?.item_name ||
+    plugin?.name ||
+    plugin?.plugin_id ||
+    plugin?.repo ||
+    'plugin'
+  ).trim();
+}
+
+function get_plugin_description(plugin = {}) {
+  return String(plugin?.item_desc || plugin?.description || '').trim();
+}
+
+function get_plugin_details_url(plugin = {}) {
+  return String(
+    plugin?.details_url ||
+    plugin?.docs_url ||
+    plugin?.info_url ||
+    plugin?.url ||
+    ''
+  ).trim();
+}
+
+function get_plugin_install_method(plugin = {}) {
+  return String(plugin?.install_method || 'server').trim() || 'server';
+}
+
+function get_plugin_tags(plugin = {}) {
+  return Array.isArray(plugin?.tags)
+    ? plugin.tags
+      .map((tag) => String(tag || '').trim().toLowerCase())
+      .filter(Boolean)
+    : []
+  ;
+}
+
+function format_plugin_name(name = '') {
+  return String(name || '')
+    .replace(/\bSmart\s+/g, '')
+    .replace(/\bPro\b/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+  ;
+}
+
+function partition_plugin_items(plugin_items = []) {
+  return plugin_items.reduce((acc, item) => {
+    if (item.is_experimental) {
+      acc.experimental_items.push(item);
+    } else {
+      acc.official_items.push(item);
     }
-  }
-
-  return plugin_groups;
-}
-
-function build_plugin_groups(items = []) {
-  const plugin_groups = [];
-  let current_group = null;
-
-  for (const item of items) {
-    const group_key = get_plugin_group_key(item);
-    if (!current_group || current_group.group_key !== group_key) {
-      current_group = {
-        group_key,
-        items: [],
-        group_state: 'single',
-      };
-      plugin_groups.push(current_group);
-    }
-    current_group.items.push(item);
-  }
-
-  for (const plugin_group of plugin_groups) {
-    plugin_group.group_state = resolve_group_state(plugin_group.items);
-  }
-
-  return plugin_groups;
-}
-
-function get_plugin_group_key(item) {
-  return item.plugin_id || `${item.item_type}:${item.item_name || item.name || ''}`;
-}
-
-function resolve_group_state(group_items = []) {
-  if (!Array.isArray(group_items) || group_items.length < 2) return 'single';
-
-  const core_item = group_items.find((item) => item.item_type === 'core');
-  const pro_item = group_items.find((item) => item.item_type === 'pro');
-  if (!core_item || !pro_item) return 'single';
-
-  if (is_installed_group_state(pro_item.state)) return 'pro_installed';
-  if (is_installed_group_state(core_item.state)) return 'core_installed';
-  if (pro_item.state === 'can_install') return 'pro_can_install';
-  if (core_item.state === 'can_install') return 'core_can_install';
-  if (pro_item.state === 'cant_install') return 'core_can_install';
-  return 'single';
-}
-
-function is_installed_group_state(item_state) {
-  return [
-    'installed',
-    'can_enable',
-    'update_available',
-  ].includes(item_state);
+    return acc;
+  }, {
+    official_items: [],
+    experimental_items: [],
+  });
 }
 
 function with_utm_source(url, source) {
@@ -1019,3 +1332,23 @@ function with_utm_source(url, source) {
     : `${url}?utm_source=${source}`
   ;
 }
+
+function build_invalid_credentials_message(server_message = '') {
+  const default_message = 'Invalid account credentials. Log out and log in again.';
+  const safe_server_message = String(server_message || '').trim();
+
+  if (!safe_server_message) {
+    return default_message;
+  }
+
+  const normalized_safe_message = safe_server_message.toLowerCase();
+  if (
+    normalized_safe_message === 'unauthorized' ||
+    normalized_safe_message === default_message.toLowerCase()
+  ) {
+    return default_message;
+  }
+
+  return `${default_message}\n\n${safe_server_message}`;
+}
+

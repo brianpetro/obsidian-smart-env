@@ -27,6 +27,19 @@ export async function post_process(env, container, params = {}) {
   let last_login_url = '';
   let manual_login_el = null;
 
+  const token = localStorage.getItem(oauth_storage_prefix + 'token') || '';
+  const auth_state = String(params.auth_state || '').trim() || (token ? 'signed_in' : 'signed_out');
+
+  const logout = () => {
+    localStorage.removeItem(oauth_storage_prefix + 'token');
+    localStorage.removeItem(oauth_storage_prefix + 'refresh');
+    env?.events?.emit?.('pro_plugins:logged_out', {
+      level: 'info',
+      message: 'Logged out of Smart Plugins',
+      event_source: 'smart_plugins_login',
+    });
+  };
+
   const render_manual_login_link = (login_url) => {
     if (!login_url) return;
 
@@ -70,8 +83,40 @@ export async function post_process(env, container, params = {}) {
     controls.appendChild(btn);
   };
 
-  const token = localStorage.getItem(oauth_storage_prefix + 'token') || '';
-  if (!token) {
+  if (auth_state === 'checking') {
+    new Setting(container)
+      .setName('Checking session...')
+      .setDesc('Validating your Smart Plugins account session.')
+    ;
+    return container;
+  }
+
+  if (auth_state === 'invalid') {
+    const setting = new Setting(container)
+      .setName('Session needs refresh')
+      .setDesc('Invalid account credentials. Log out and log in again.')
+    ;
+
+    setting.addButton((btn) => {
+      btn.setButtonText('Refresh');
+      btn.onClick(() => {
+        env?.events?.emit?.('pro_plugins:refresh', {
+          event_source: 'smart_plugins_login',
+        });
+      });
+    });
+
+    setting.addButton((btn) => {
+      btn.setButtonText('Logout');
+      btn.onClick(() => {
+        logout();
+      });
+    });
+
+    return container;
+  }
+
+  if (auth_state === 'signed_out' || !token) {
     const setting = new Setting(container)
       .setName('Connect account')
       .setDesc('Log in with the key provided in your Pro welcome email.')
@@ -137,13 +182,7 @@ export async function post_process(env, container, params = {}) {
   setting.addButton((btn) => {
     btn.setButtonText('Logout');
     btn.onClick(() => {
-      localStorage.removeItem(oauth_storage_prefix + 'token');
-      localStorage.removeItem(oauth_storage_prefix + 'refresh');
-      env?.events?.emit?.('pro_plugins:logged_out', {
-        level: 'info',
-        message: 'Logged out of Smart Plugins',
-        event_source: 'smart_plugins_login',
-      });
+      logout();
     });
   });
 

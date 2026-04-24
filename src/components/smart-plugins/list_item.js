@@ -1,16 +1,65 @@
+import { setIcon } from 'obsidian';
+
 /**
  * @param {import('./list').PluginListItem} item
  */
 export function build_html(item, params = {}) {
-  const subscription_state_html = item.subscription_status_text
-    ? `<div class="smart-plugins-item-subscription-state">${item.subscription_status_text}</div>`
+  if (item.has_group_ui) {
+    return build_group_html(item, params);
+  }
+
+  const row_state = item.computed_state.row;
+  return build_row_html(item, {
+    item_type: item.display_item_type,
+    name: item.formatted_name,
+    description: item.formatted_description,
+    subscription_status_text: item.subscription_status_text,
+    control_state: row_state?.control_state || 'can_install',
+  });
+}
+
+function build_group_html(item, params = {}) {
+  const core_state = item.get_track_state('core');
+  const pro_state = item.get_track_state('pro');
+
+  return `<div class="setting-group smart-plugins-item-group smart-plugins-item-group-combined" data-group-size="2">
+    <div class="setting-items">
+      ${build_row_html(item, {
+        item_type: 'core',
+        track_item_type: 'core',
+        name: item.get_track_name('core'),
+        description: item.get_track_description('core'),
+        subscription_status_text: '',
+        control_state: core_state?.control_state || 'cant_install',
+      })}
+      ${build_row_html(item, {
+        item_type: 'pro',
+        track_item_type: 'pro',
+        name: item.get_track_name('pro'),
+        description: item.get_track_description('pro'),
+        subscription_status_text: item.get_track_subscription_status_text('pro'),
+        control_state: pro_state?.control_state || 'cant_install',
+      })}
+    </div>
+  </div>`;
+}
+
+function build_row_html(item, row = {}) {
+  const item_type = row.item_type || item.display_item_type;
+  const control_state = row.control_state || item.computed_state.row?.control_state || 'can_install';
+  const subscription_state_html = row.subscription_status_text
+    ? `<div class="smart-plugins-item-subscription-state">${row.subscription_status_text}</div>`
+    : ''
+  ;
+  const track_item_type_attr = row.track_item_type
+    ? ` data-track-item-type="${row.track_item_type}"`
     : ''
   ;
 
-  return `<div class="setting-item pro-plugins-list-item" data-item-type="${item.item_type}" data-item-state="${item.state || ''}" data-row-control-state="${item.row_control_state}">
+  return `<div class="setting-item pro-plugins-list-item" data-item-type="${item_type}" data-item-state="${control_state}" data-row-control-state="${control_state}"${track_item_type_attr}>
     <div class="setting-item-info">
-      <div class="setting-item-name ${item.item_type === 'core' ? 'smart-badge core-badge' : 'smart-badge pro-badge'}">${item.formatted_name}</div>
-      <div class="setting-item-description">${item.formatted_description}</div>
+      <div class="setting-item-name ${item_type === 'core' ? 'smart-badge core-badge' : 'smart-badge pro-badge'}">${row.name || ''}</div>
+      <div class="setting-item-description">${row.description || ''}</div>
       ${subscription_state_html}
     </div>
     <div class="setting-item-control"></div>
@@ -32,18 +81,45 @@ export async function render(item, params = {}) {
  * @param {import('./list').PluginListItem} item
  */
 export async function post_process(item, container, params = {}) {
-  const control_container = container.querySelector('.setting-item-control');
-  if (!control_container) return container;
+  const rows = item.has_group_ui
+    ? Array.from(container.querySelectorAll('.pro-plugins-list-item[data-track-item-type]'))
+    : [container]
+  ;
 
-  const controls = await render_controls.call(this, item, params);
-  this.empty(control_container);
-  if (controls) control_container.appendChild(controls);
+  for (const row of rows) {
+    const control_container = row.querySelector('.setting-item-control');
+    if (!control_container) continue;
+
+    const track_item_type = row.getAttribute('data-track-item-type') || '';
+    const controls = await render_controls.call(this, item, {
+      ...params,
+      track_item_type,
+    });
+
+    this.empty(control_container);
+    if (controls) control_container.appendChild(controls);
+  }
 
   return container;
 }
 
 function build_controls_html(item, params = {}) {
-  return `<div class="smart-plugins-list-item-controls">${item.control_specs.map(build_control_html).join('')}</div>`;
+  const track_item_type = String(params.track_item_type || '').trim();
+  const details_url = track_item_type
+    ? item.get_track_details_url(track_item_type)
+    : item.details_url
+  ;
+  const control_specs = track_item_type
+    ? item.get_track_control_specs(track_item_type)
+    : item.control_specs
+  ;
+
+  const details_button_html = details_url
+    ? '<button class="smart-plugins-details-button" data-action="open_details" aria-label="Open details" title="Open details"></button>'
+    : ''
+  ;
+
+  return `<div class="smart-plugins-list-item-controls">${details_button_html}${control_specs.map(build_control_html).join('')}</div>`;
 }
 
 async function render_controls(item, params = {}) {
@@ -55,17 +131,36 @@ async function render_controls(item, params = {}) {
 }
 
 async function post_process_controls(item, container, params = {}) {
+  const track_item_type = String(params.track_item_type || '').trim();
+
+  const details_buttons = container.querySelectorAll('.smart-plugins-details-button');
+  for (const details_button of details_buttons) {
+    setIcon(details_button, 'info');
+  }
+
   const buttons = container.querySelectorAll('button[data-action]');
   for (const button of buttons) {
     button.addEventListener('click', async () => {
       const action = button.getAttribute('data-action');
       if (!action) return;
 
-      const busy_text = item.get_busy_text(action);
+      const busy_text = track_item_type
+        ? item.get_busy_text_for_track(track_item_type, action)
+        : item.get_busy_text(action)
+      ;
       if (busy_text) {
         await run_busy_action(button, async () => {
+          if (track_item_type) {
+            await item.handle_track_action(track_item_type, action, params);
+            return;
+          }
           await item.handle_action(action, params);
         }, busy_text);
+        return;
+      }
+
+      if (track_item_type) {
+        await item.handle_track_action(track_item_type, action, params);
         return;
       }
 

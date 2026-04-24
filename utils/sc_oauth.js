@@ -7,23 +7,18 @@
  *
  * Handles:
  *   1) Exchanging code for tokens
- *   2) Installing the legacy "smart-plugins" plugin from the server using
- *      the same file-based contract as the Plugin Store
+ *   2) Refreshing an existing OAuth session
  */
 
 import { requestUrl } from 'obsidian';
 import {
   enable_plugin,
-  fetch_plugin_file,
-  get_response_header_value,
   get_smart_server_url,
-  write_files_with_adapter,
 } from '../src/utils/smart_plugins.js';
 export { get_smart_server_url, enable_plugin };
 
 const CLIENT_ID = 'smart-plugins-op';
 const CLIENT_SECRET = 'smart-plugins-op-secret';
-const install_file_names = ['manifest.json', 'main.js', 'styles.css'];
 
 export function get_local_storage_token(oauth_storage_prefix) {
   return {
@@ -105,38 +100,4 @@ export function build_oauth_storage_prefix(vault_name) {
     .toLowerCase()
     .replace(/[^a-z0-9]/g, '_');
   return `${safe_name}${OAUTH_SUFFIX}`;
-}
-
-function normalize_positive_epoch_ms(value) {
-  const numeric_value = Number(value);
-  if (!Number.isFinite(numeric_value) || numeric_value <= 0) {
-    return null;
-  }
-  return Math.round(numeric_value);
-}
-
-function get_plugin_file_text(response, file_name) {
-  if (typeof response?.text === 'string' && response.text.length) {
-    return response.text;
-  }
-
-  if (response?.arrayBuffer instanceof ArrayBuffer) {
-    return new TextDecoder('utf-8').decode(response.arrayBuffer);
-  }
-
-  if (file_name === 'manifest.json' && response?.json) {
-    return JSON.stringify(response.json, null, 2);
-  }
-
-  return '';
-}
-
-function build_plugin_file_record(file_name, response) {
-  return {
-    fileName: file_name,
-    data: new TextEncoder().encode(get_plugin_file_text(response, file_name)),
-    accessed_at: normalize_positive_epoch_ms(
-      get_response_header_value(response, 'accessed_at')
-    ) || Date.now(),
-  };
 }
