@@ -294,6 +294,7 @@ export function get_install_enable_behavior(params = {}) {
 }
 
 export function has_outdated_smart_env_version(version = '') {
+  if (version === '') return false; // not applicable if no version is loaded
   const version_pcs = String(version || '').trim().split('.');
   const version_minor = Number.parseInt(version_pcs[1] || '0', 10);
   if (!Number.isFinite(version_minor)) {
