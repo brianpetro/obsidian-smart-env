@@ -36,9 +36,11 @@ export async function post_process(ctx, container, params = {}) {
         console.warn(`Smart Context: Could not find tree item for path: ${item.key}`);
         continue;
       }
+      const child_lists = Array.from(li.children).filter((child) => child.tagName === 'UL');
       env.smart_components.render_component('context_item_leaf', item).then((leaf) => {
         this.empty(li);
         li.appendChild(leaf);
+        child_lists.forEach((child_list) => li.appendChild(child_list));
       });
     }
   };
@@ -65,3 +67,4 @@ export async function post_process(ctx, container, params = {}) {
   this.attach_disposer(container, disposers);
   return container;
 }
+

@@ -12,10 +12,10 @@ export function build_tree_html(items) {
  * Convert an array of selected items into a nested directory tree while
  * removing redundant paths (i.e. children of a selected folder).
  *
- * In addition, recognise Obsidian block-key syntax ("##<blockKey>#{n}"). When
- * encountered the block key is treated as a final tree segment *after* the
- * file it belongs to. Any forward-slashes that appear inside the block key
- * must **not** be interpreted as path separators.
+ * In addition, recognise Obsidian block-key syntax. When encountered, the
+ * block path is treated as tree segments after the source file it belongs to.
+ * Any forward-slashes or hashtags that appear inside wikilinks must not be
+ * interpreted as tree separators.
  *
  * @param {Array<import('smart-contexts').ContextItem>} selected_items
  * @returns {Object} root tree node
@@ -26,78 +26,132 @@ export function build_path_tree(selected_items = []) {
    * @returns {string}
    */
   const get_item_key = (item) => item?.key || item?.path || '';
+
+  /**
+   * @param {string} value
+   * @returns {number}
+   */
+  const find_first_block_separator = (value = '') => {
+    let in_wikilink = false;
+    for (let i = 0; i < value.length; i++) {
+      if (!in_wikilink && value.slice(i, i + 2) === '[[') {
+        in_wikilink = true;
+        i++;
+        continue;
+      }
+      if (in_wikilink && value.slice(i, i + 2) === ']]') {
+        in_wikilink = false;
+        i++;
+        continue;
+      }
+      if (!in_wikilink && value[i] === '#') return i;
+    }
+    return -1;
+  };
+
+  /**
+   * @param {string} source_path
+   * @returns {string[]}
+   */
+  const split_source_path_segments = (source_path = '') => {
+    const segments = [];
+    let seg = '';
+    let in_wikilink = false;
+
+    for (let i = 0; i < source_path.length; i++) {
+      if (!in_wikilink && source_path.slice(i, i + 2) === '[[') {
+        in_wikilink = true;
+        seg += '[[';
+        i++;
+        continue;
+      }
+      if (in_wikilink && source_path.slice(i, i + 2) === ']]') {
+        in_wikilink = false;
+        seg += ']]';
+        i++;
+        continue;
+      }
+      if (!in_wikilink && source_path[i] === '/') {
+        if (seg) segments.push(seg);
+        seg = '';
+        continue;
+      }
+      seg += source_path[i];
+    }
+
+    if (seg) segments.push(seg);
+    return segments;
+  };
+
+  /**
+   * @param {string} block_path
+   * @returns {string[]}
+   */
+  const split_block_path_segments = (block_path = '') => {
+    const segments = [];
+    let seg = '';
+    let in_wikilink = false;
+
+    for (let i = 0; i < block_path.length; i++) {
+      if (!in_wikilink && block_path.slice(i, i + 2) === '[[') {
+        in_wikilink = true;
+        seg += '[[';
+        i++;
+        continue;
+      }
+      if (in_wikilink && block_path.slice(i, i + 2) === ']]') {
+        in_wikilink = false;
+        seg += ']]';
+        i++;
+        continue;
+      }
+      if (!in_wikilink && block_path[i] === '#') {
+        if (seg) {
+          segments.push(seg);
+          seg = '';
+        }
+        if (block_path[i + 1] === '#') {
+          seg = '#';
+          while (block_path[i + 1] === '#') {
+            i++;
+            seg += '#';
+          }
+        } else if (block_path[i + 1] === '{') {
+          seg = '#';
+        }
+        continue;
+      }
+      seg += block_path[i];
+    }
+
+    if (seg) segments.push(seg);
+    return segments;
+  };
+
   /**
    * split_path_segments
    * Expand an item path into an ordered list of tree segments, correctly
-   * handling embedded block-key syntax.
-   *
-   * Rules:
-   *   • Keep the leading "##" on the block-key segment (e.g. "##baz / foo").
-   *   • Keep the trailing "#{n}" block-ID segment (e.g. "#{1}").
-   *   • Any forward-slash inside the block key is *data*, not a path break.
+   * handling block-key syntax.
    *
    * @param {string} item_path
-   * @returns {{ segments:string[], has_block:boolean }}
+   * @returns {{ segments:string[], has_block:boolean, source_segments_count:number }}
    */
   const split_path_segments = (item_path) => {
+    const block_idx = find_first_block_separator(item_path);
+    const has_block = block_idx !== -1;
+    const source_path = has_block ? item_path.slice(0, block_idx) : item_path;
+    const block_path = has_block ? item_path.slice(block_idx) : '';
+    const source_segments = split_source_path_segments(source_path);
+    const segments = [...source_segments];
 
-    // ── 1. Extract optional block-ID ( "#{n}" ) ────────────────────────────────
-    const BLOCK_ID_RE = /#\{\d+\}$/u;
-    let remainder = item_path;
-    let block_id_seg = null;
-    let block_key_seg = null;
-    let has_block = false;
-
-    const id_match = remainder.match(BLOCK_ID_RE);
-    if (id_match) {
-      block_id_seg = id_match[0];            // "#{n}"
-      remainder = remainder.slice(0, -block_id_seg.length);
-      has_block = true;
+    if (block_path) {
+      segments.push(...split_block_path_segments(block_path));
     }
 
-    // ── 2. Extract optional block-key ( "##…" ) ───────────────────────────────
-    const key_idx = remainder.indexOf("##");
-    if (key_idx !== -1) {
-      block_key_seg = remainder.slice(key_idx); // keep leading "##"
-      remainder = remainder.slice(0, key_idx);
-      has_block = true;
-    }
-
-    // ── 3. Split the remaining file/folder path on "/" ───────────────────────
-    // Prevent splitting inside wikilinks [[...]]
-    const segments = [];
-    if (remainder) {
-      let seg = '';
-      let in_wikilink = false;
-      for (let i = 0; i < remainder.length; i++) {
-        if (!in_wikilink && remainder.slice(i, i + 2) === '[[') {
-          in_wikilink = true;
-          seg += '[[';
-          i++;
-        } else if (in_wikilink && remainder.slice(i, i + 2) === ']]') {
-          in_wikilink = false;
-          seg += ']]';
-          i++;
-        } else if (!in_wikilink && remainder[i] === '/') {
-          segments.push(seg);
-          seg = '';
-        } else {
-          seg += remainder[i];
-        }
-      }
-      if (seg) segments.push(seg);
-    }
-
-    // ── 4. Append the block-specific segments (if present) ───────────────────
-    if (block_key_seg) segments.push(block_key_seg);
-    if (block_id_seg) segments.push(block_id_seg);
-
-    return { segments, has_block };
+    return { segments, has_block, source_segments_count: source_segments.length };
   };
 
-  // ────────────────────────────────────────────────────────────────────────────
   // Build tree
-  // ────────────────────────────────────────────────────────────────────────────
   const root = { name: '', children: {}, selected: false };
 
   // WARNING: PREVENTS TREE RENDER IF "GROUP"-type ContextItems instances present (skipping group-type instances for now)
@@ -123,20 +177,27 @@ export function build_path_tree(selected_items = []) {
     if (!item_key) continue;
     if (is_redundant(item_key, selected_folders.filter((p) => p !== item_key))) continue;
 
-    const { segments, has_block } = split_path_segments(item_key);
+    const { segments, has_block, source_segments_count } = split_path_segments(item_key);
 
     let node = root;
     let running = '';
 
     segments.forEach((seg, idx) => {
       // Always update the running path, even if skipping as a child
-      running = running ? `${running}/${seg}` : seg;
+      if (!running) {
+        running = seg;
+      } else if (has_block && idx >= source_segments_count) {
+        running = seg.startsWith('#') ? `${running}${seg}` : `${running}#${seg}`;
+      } else {
+        running = `${running}/${seg}`;
+      }
 
       // Skip adding "external:.." as a child node, but keep it in path properties
       if (seg.startsWith('external:..')) return;
 
       const is_last = idx === segments.length - 1;
       const is_block_leaf = is_last && has_block;
+      const is_source_file = has_block && idx === source_segments_count - 1;
 
       if (!node.children[seg]) {
         node.children[seg] = {
@@ -145,7 +206,7 @@ export function build_path_tree(selected_items = []) {
           // For blocks we store an empty *array* so AVA can assert `children.length === 0`
           children: is_block_leaf ? [] : {},
           selected: false,
-          is_file: is_block_leaf || (is_last && seg.includes('.')),
+          is_file: is_block_leaf || is_source_file || (is_last && seg.includes('.')),
         };
       }
 
