@@ -44,4 +44,42 @@ export class SmartContext extends BaseClass {
     this.queue_save();
 
   }
+
+  /**
+   * add_item
+   * this override adds implementation-specific (source/block pattern) logic to remove redundant block items when a parent source is added
+   * @param {string|object} item
+   */
+  add_item(item, params = {}) {
+    const {
+      emit_updated = true,
+    } = params;
+    let key;
+    if (typeof item === 'object') {
+      key = item.key || item.path;
+    } else {
+      key = item;
+    }
+    const existing = this.data.context_items[key];
+    const context_item = {
+      d: 0,
+      at: Date.now(),
+      ...(existing || {}),
+      ...(typeof item === 'object' ? item : {}),
+    };
+    if (!key) return console.error('SmartContext: add_item called with invalid item', item);
+    const emit_payload = { add_item: key };
+    const remove_sub_keys = Object.entries(this.data.context_items)
+      .filter(([existing_key]) => existing_key !== key && existing_key.startsWith(key))
+      .map(([existing_key]) => existing_key)
+    ;
+    if (remove_sub_keys.length) {
+      this.remove_items(remove_sub_keys, { emit_updated: false });
+      emit_payload.removed_keys = remove_sub_keys;
+      emit_payload.message = 'Parent item added, removed redundant sub-items';
+    }
+    this.data.context_items[key] = context_item;
+    this.queue_save();
+    if (emit_updated) this.emit_event('context:updated', emit_payload);
+  }
 }

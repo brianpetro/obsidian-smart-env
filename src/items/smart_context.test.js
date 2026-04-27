@@ -23,9 +23,41 @@ export function create_context(context_items = {}) {
           });
         }
         return acc;
-      }, { items: {} })
+      }, { items: {} }),
+    remove_items(keys, params = {}) {
+      const items = Array.isArray(keys) ? keys : [keys];
+      items.forEach((key) => {
+        delete this.data.context_items[key];
+      });
+    },
   };
 }
+
+test('add_item allows block when parent source is not included', (t) => {
+  const ctx = create_context({});
+
+  SmartContext.prototype.add_item.call(ctx, 'notes/a.md#Heading');
+
+  t.true('notes/a.md#Heading' in ctx.data.context_items);
+  t.false('notes/a.md' in ctx.data.context_items);
+});
+
+test('add_item removes redundant block descendants when parent source is added', (t) => {
+  const ctx = create_context({
+    'notes/a.md#Heading': {},
+    'notes/a.md#Heading#{1}': {},
+    'notes/a.md2#Heading': {},
+    'notes/b.md#Heading': {},
+  });
+
+  SmartContext.prototype.add_item.call(ctx, 'notes/a.md');
+
+  t.true('notes/a.md' in ctx.data.context_items);
+  t.false('notes/a.md#Heading' in ctx.data.context_items);
+  t.false('notes/a.md#Heading#{1}' in ctx.data.context_items);
+  t.false('notes/a.md2#Heading' in ctx.data.context_items);
+  t.true('notes/b.md#Heading' in ctx.data.context_items);
+});
 
 // THIS SCENARIO SHOULD NOT HAPPEN (IF SOURCE IS INCLUDED THEN ALL BLOCKS ARE INCLUDED)
 // HAPPENS WHEN ADDING BLOCKS THEN SUBSEQUENTLY ADDING SOURCE ITEM
@@ -76,3 +108,4 @@ test('remove_by_path promotes remaining items to root level when removed from na
   t.true('notes/b.md' in ctx.data.context_items);
   t.true('other/c.md' in ctx.data.context_items);
 });
+
