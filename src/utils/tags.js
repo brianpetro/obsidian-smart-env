@@ -13,7 +13,7 @@ export function get_files_with_tag(app, tag) {
     const tags = [
       ...(cache?.tags?.map((t) => t.tag) || []),
       ...(cache?.frontmatter?.tags || [])
-    ].map(t => t.startsWith('#') ? t : `#${t}`);
+    ].filter(t => typeof t === 'string').map(t => t.startsWith('#') ? t : `#${t}`);
     if (tags.includes(tag)) result.push(file.path);
   }
   return result;
