@@ -1,12 +1,3 @@
-import { build_tree_item } from './build_tree_item.js';
-
-export function build_tree_html(items) {
-  const tree_root = build_path_tree(items);
-  const selected_set = new Set(items.map((it) => it.key || it.path));
-  const tree_list_html = tree_to_html(tree_root, selected_set);
-  return tree_list_html;
-}
-
 /**
  * build_path_tree
  * Convert an array of selected items into a nested directory tree while
@@ -219,27 +210,4 @@ export function build_path_tree(selected_items = []) {
   }
 
   return root;
-}
-
-/**
- * tree_to_html
- * Recursively convert a tree node into <ul>/<li> HTML.
- * Selected nodes receive a remove button.
- *
- * @param {Object} node
- * @param {Set<string>} selected_paths – quick lookup for removal buttons
- * @returns {string}
- */
-export function tree_to_html(node, selected_paths) {
-  if (!node.children || !Object.keys(node.children).length) return '';
-
-  const child_html = Object.values(node.children)
-    .sort((a, b) => {
-      if (a.is_file !== b.is_file) return a.is_file ? 1 : -1;
-      return a.name.localeCompare(b.name);
-    })
-    .map(child => build_tree_item(child, selected_paths, tree_to_html(child, selected_paths)))
-    .join('');
-
-  return `<ul>${child_html}</ul>`;
 }

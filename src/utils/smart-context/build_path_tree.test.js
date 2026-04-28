@@ -1,5 +1,5 @@
 import test from 'ava';
-import { build_path_tree, build_tree_html } from './build_tree_html.js';
+import { build_path_tree } from './build_path_tree.js';
 
 test('should create nested structure', t => {
   const items = [
@@ -112,13 +112,3 @@ test('should split block paths without splitting slashes/hashtags inside wikilin
   t.truthy(source.children['heading link [[some/path.md#subpath]]']);
   t.is(Object.keys(tree.children.main.children).length, 1);
 });
-
-test('should add missing class when item does not exist', t => {
-  const items = [
-    { path: 'gone.md', exists: false }
-  ];
-  const html = build_tree_html(items);
-  t.regex(html, /missing/, 'Missing items include sc-missing class');
-});
-
-
