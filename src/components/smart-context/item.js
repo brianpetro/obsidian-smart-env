@@ -1,8 +1,7 @@
 import styles from './styles.css';
-import { copy_to_clipboard } from '../../utils/copy_to_clipboard.js';
 import { Menu } from 'obsidian';
-import { context_to_md_tree } from '../../utils/smart-context/to_md_tree.js';
 import { create_render_scheduler } from '../../utils/render_utils.js';
+import { build_context_actions_menu } from '../../utils/smart-context/copy_actions.js';
 
 export function build_html(ctx, opts = {}) {
   return `<div>
@@ -68,12 +67,7 @@ export async function post_process(ctx, container, opts = {}) {
     ev.stopPropagation();
     if (!app) return;
     const menu = new Menu(app);
-    menu.addItem((mi) =>
-      mi.setTitle('Copy link tree').setIcon('copy').onClick(async () => {
-        const md = context_to_md_tree(ctx);
-        await copy_to_clipboard(md);
-      })
-    );
+    build_context_actions_menu(ctx, menu, opts);
     menu.showAtMouseEvent(ev);
   });
 
@@ -82,3 +76,4 @@ export async function post_process(ctx, container, opts = {}) {
   this.attach_disposer(container, disposers);
   return container;
 }
+

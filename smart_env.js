@@ -23,6 +23,7 @@ import { SmartEnvSettingTab } from './src/views/smart_env_settings_tab.js';
 import { deep_clone_config } from 'smart-environment/utils/deep_clone_config.js';
 import { normalize_opts } from 'smart-environment/utils/normalize_opts.js';
 import pkg from './package.json' with { type: 'json' };
+import { register_copy_menu_actions, register_context_menu_actions } from './src/utils/smart-context/copy_actions.js';
 
 export class SmartEnv extends BaseSmartEnv {
   static version = pkg.version;
@@ -200,6 +201,12 @@ export class SmartEnv extends BaseSmartEnv {
       const plugin_id = this.smart_env_configs[main_key]?.main?.manifest?.id || 'unknown-plugin';
       this.plugin_states[plugin_id] = 'loaded';
     });
+
+    if (!this._registered_ctx_menu_actions) {
+      register_copy_menu_actions(this);
+      register_context_menu_actions(this);
+      this._registered_ctx_menu_actions = true;
+    }
 
   }
   handle_env_load_attempt_after_loaded() {

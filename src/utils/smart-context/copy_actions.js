@@ -103,20 +103,6 @@ function create_button(container, params = {}) {
 
 /**
  * @param {import('smart-contexts').SmartContext} ctx
- * @param {object} [params={}]
- * @param {boolean} [params.with_media=false]
- * @returns {boolean}
- */
-function open_copy_depth_modal(ctx, params = {}) {
-  const CopyModalClass = ctx?.env?.config?.modals?.copy_context_modal?.class;
-  if (typeof CopyModalClass !== 'function') return false;
-  const modal = new CopyModalClass(ctx, params);
-  modal.open();
-  return true;
-}
-
-/**
- * @param {import('smart-contexts').SmartContext} ctx
  * @returns {string}
  */
 function get_help_url(ctx) {
@@ -162,108 +148,114 @@ async function copy_link_tree(ctx) {
 }
 
 /**
- * Build the descriptor list used by the Copy menu.
+ * Register copy/export actions for Smart Context menus.
  *
- * Keeping this data-driven lets the menu and tests share one canonical source
- * of truth while also making it easier to add or retire actions later.
- *
- * @param {import('smart-contexts').SmartContext} ctx
- * @param {object} [params={}]
- * @param {boolean} [params.supports_media=false]
- * @returns {Array<{
- *   key: string,
- *   title: string,
- *   icon: string,
- *   run: () => Promise<boolean|void>|boolean|void,
- * }>}
+ * @param {import('../../../smart_env.js').SmartEnv} env
+ * @returns {void}
  */
-export function build_copy_action_descriptors(ctx, params = {}) {
-  if (!has_active_context_items(ctx)) return [];
-
-  const can_choose_depth = has_linked_depth_items(ctx)
-    && typeof ctx?.env?.config?.modals?.copy_context_modal?.class === 'function'
-  ;
-
-  /** @type {Array<{ key: string, title: string, icon: string, run: () => Promise<boolean|void>|boolean|void }>} */
-  const descriptors = [
-    {
-      key: 'copy_text',
-      title: 'Copy text',
-      icon: 'copy',
-      run: async () => {
-        return await ctx.actions.context_copy_to_clipboard({ with_media: false });
-      },
-    },
-  ];
-  // Pro: configurable copy button
-  if (ctx?.env?.is_pro) {
-    descriptors.unshift({
-      is_separator: true,
-    });
-    descriptors.unshift({
-      key: 'smart_copy',
-      title: 'Smart Copy',
-      icon: 'smart-copy-note',
-      run: async () => {
-        // TODO: replace with ctx.actions.context_smart_copy() (implemented in smart-context-obsidian-early)
-        return await ctx.actions.context_copy_to_clipboard();
-      },
-    });
-  }
-
-  if (params.supports_media) {
-    descriptors.push({
-      key: 'copy_media',
-      title: 'Copy media',
-      icon: 'image-file',
-      run: async () => {
-        return await ctx.actions.context_copy_to_clipboard({ with_media: true });
-      },
-    });
-  }
-
-  if (can_choose_depth) {
-    descriptors.push({
-      key: 'copy_depth_text',
-      title: 'Copy text (choose link depth)',
-      icon: 'copy',
-      run: async () => {
-        return open_copy_depth_modal(ctx, { with_media: false });
-      },
-    });
-
-    if (params.supports_media) {
-      descriptors.push({
-        key: 'copy_depth_media',
-        title: 'Copy media (choose link depth)',
-        icon: 'image-file',
+export function register_copy_menu_actions(env) {
+  env.register_menu_action('smart_context:copy_menu', (menu, ctx) => {
+    if (!menu || !ctx || !has_active_context_items(ctx)) return;
+    const descriptors = [
+      {
+        key: 'copy_text',
+        title: 'Copy text',
+        icon: 'copy',
         run: async () => {
-          return open_copy_depth_modal(ctx, { with_media: true });
+          return await ctx.actions.context_copy_to_clipboard({ with_media: false });
         },
-      });
-    }
-  }
-
-  descriptors.push({
-    key: 'copy_link_tree',
-    title: 'Copy link tree',
-    icon: 'list-tree',
-    run: async () => {
-      return await copy_link_tree(ctx);
-    },
+      },
+      {
+        key: 'copy_link_tree',
+        title: 'Copy link tree',
+        icon: 'list-tree',
+        order: 3,
+        run: async () => {
+          return await copy_link_tree(ctx);
+        },
+      },
+    ];
+    descriptors.forEach((descriptor) => {
+      menu_add_from_desc(menu, descriptor);
+    });
   });
-
-  return descriptors;
 }
 
 /**
- * @param {import('smart-contexts').SmartContext} ctx
- * @param {object} [params={}]
- * @param {boolean} [params.supports_media=false]
- * @returns {boolean}
+ * Register non-copy context actions for Smart Context menus.
+ *
+ * @param {import('../../../smart_env.js').SmartEnv} env
+ * @returns {void}
  */
-function should_render_copy_menu(ctx, params = {}) {
-  return build_copy_action_descriptors(ctx, params).length > 1;
+export function register_context_menu_actions(env) {
+  env.register_menu_action('smart_context:actions_menu', (menu, ctx) => {
+    if (!menu || !ctx || !has_any_context_state(ctx)) return;
+    const descriptors = [
+      {
+        key: 'final_separator',
+        separator: true,
+        order: 998,
+      },
+      {
+        key: 'clear_context',
+        title: 'Clear this context',
+        icon: 'rotate-ccw',
+        order: 999,
+        run: async () => {
+          ctx.clear_all?.();
+          return true;
+        },
+      },
+    ];
+    descriptors.forEach((descriptor) => {
+      menu_add_from_desc(menu, descriptor);
+    });
+  });
+}
+
+function menu_add_from_desc(menu, descriptor) {
+  if (descriptor.separator) {
+    menu.addSeparator();
+    menu.items[menu.items.length - 1]._order = descriptor.order || 0;
+    return;
+  }
+  menu.addItem((mi) => {
+    mi.setTitle(descriptor.title)
+      .setIcon(descriptor.icon)
+      .onClick(async () => {
+        await descriptor.run();
+      });
+    mi._order = descriptor.order || 0;
+  });
+}
+
+/**
+ * Add registered Smart Context menu entries.
+ *
+ * Menu action scopes:
+ * - smart_context:copy_menu -> copy/export actions for the current context
+ * - smart_context:actions_menu -> other context-level actions for the current context
+ *
+ * @param {import('smart-contexts').SmartContext} ctx
+ * @param {Menu} menu
+ * @param {object} [params={}]
+ * @returns {Menu}
+ */
+export function build_context_actions_menu(ctx, menu, params = {}) {
+  if (!ctx || !menu) return menu;
+
+  ctx?.env?.build_menu?.('smart_context:copy_menu', menu, ctx);
+  ctx?.env?.build_menu?.('smart_context:actions_menu', menu, ctx);
+
+  if (menu.items?.sort) {
+    menu.items.sort((a, b) => {
+      const order_a = a._order || 0;
+      const order_b = b._order || 0;
+      return order_a - order_b;
+    });
+  }
+
+  return menu;
 }
 
 /**
@@ -300,12 +292,10 @@ export function render_btn_quick_copy(ctx, container, params = {}) { // eslint-d
  * @param {import('smart-contexts').SmartContext} ctx
  * @param {HTMLElement} container
  * @param {object} [params={}]
- * @param {boolean} [params.supports_media=false]
  * @returns {HTMLButtonElement|null}
  */
 export function render_btn_copy_menu(ctx, container, params = {}) {
   if (!has_active_context_items(ctx)) return null;
-  if (!should_render_copy_menu(ctx, params)) return null;
 
   const app = ctx?.env?.plugin?.app || ctx?.env?.obsidian_app || window?.app || globalThis?.app || null;
   if (!app) return null;
@@ -318,34 +308,7 @@ export function render_btn_copy_menu(ctx, container, params = {}) {
 
   const open_menu = (event) => {
     const menu = new Menu(app);
-    const descriptors = build_copy_action_descriptors(ctx, params);
-
-    descriptors.forEach((descriptor) => {
-      if (descriptor.is_separator) {
-        menu.addSeparator();
-        return;
-      }
-      menu.addItem((mi) => {
-        mi.setTitle(descriptor.title)
-          .setIcon(descriptor.icon)
-          .onClick(async () => {
-            await descriptor.run();
-          })
-        ;
-      });
-    });
-
-    menu.addSeparator();
-
-    menu.addItem((mi) => {
-      mi.setTitle('Clear this context')
-        .setIcon('rotate-ccw')
-        .onClick(() => {
-          ctx.clear_all?.();
-        })
-      ;
-    });
-
+    build_context_actions_menu(ctx, menu, params);
     show_menu_at_button(button, event, menu);
   };
 
@@ -412,3 +375,4 @@ export function render_btn_help(ctx, container) {
   });
   return button;
 }
+
