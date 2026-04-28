@@ -13,7 +13,10 @@ function merge_tags(fm_tags, cache_tags = []) {
     fm_tags = fm_tags.replace(/[\[\]]/g, '').split(',').map(t => t.trim()).filter(Boolean);
   }
   if (Array.isArray(fm_tags)) {
-    fm_tags.forEach(tag => tag_set.add(tag.startsWith('#') ? tag : `#${tag}`));
+    fm_tags
+      .filter(t => typeof t === 'string')
+      .forEach(tag => tag_set.add(tag.startsWith('#') ? tag : `#${tag}`))
+    ;
   }
   cache_tags.forEach(({ tag }) => tag_set.add(tag));
   return [...tag_set];
