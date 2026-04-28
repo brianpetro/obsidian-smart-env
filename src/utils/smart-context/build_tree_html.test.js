@@ -22,7 +22,7 @@ test('should omit redundant child paths', t => {
   t.deepEqual(Object.keys(tree.children.foo.children), []);
 });
 
-test('should split by block key separator, keeping the preceding block separator(s)', t => {
+test('should nest final block refs under their prior heading label', t => {
   const items = [
     { path: 'foo/bar.md##baz#{1}' },
   ];
@@ -35,6 +35,7 @@ test('should split by block key separator, keeping the preceding block separator
   t.truthy(next_2);
   const next_3 = next_2.children['#{1}'];
   t.truthy(next_3);
+  t.is(next_3.path, 'foo/bar.md##baz#{1}');
   t.is(next_3.children.length, 0);
 });
 
@@ -55,7 +56,7 @@ test('should not split by forward slash contained in block key', t => {
   t.is(next_3.children.length, 0);
 });
 
-test('should split single-hash block paths under the source file', t => {
+test('should nest single-hash line refs under the prior heading label', t => {
   const items = [
     { path: 'PKM/Advanced/Habitual Reflection.md#Habitual Reflection#{1}' },
     { path: 'PKM/Advanced/Habitual Reflection.md' },
@@ -69,7 +70,21 @@ test('should split single-hash block paths under the source file', t => {
   t.truthy(source.children['Habitual Reflection']);
   t.is(source.children['Habitual Reflection'].path, 'PKM/Advanced/Habitual Reflection.md#Habitual Reflection');
   t.truthy(source.children['Habitual Reflection'].children['#{1}']);
+  t.is(source.children['Habitual Reflection'].children['#{1}'].path, 'PKM/Advanced/Habitual Reflection.md#Habitual Reflection#{1}');
   t.falsy(advanced.children['Habitual Reflection.md#Habitual Reflection']);
+});
+
+test('should preserve parent headings while nesting leaf block refs', t => {
+  const items = [
+    { path: 'notes/a.md#Parent#Child#{1}' },
+  ];
+  const tree = build_path_tree(items);
+  const source = tree.children.notes.children['a.md'];
+
+  t.truthy(source.children.Parent);
+  t.truthy(source.children.Parent.children.Child);
+  t.truthy(source.children.Parent.children.Child.children['#{1}']);
+  t.is(source.children.Parent.children.Child.children['#{1}'].path, 'notes/a.md#Parent#Child#{1}');
 });
 
 test('should strip preceding word characters followed by colon (e.g., "external:../")', t => {
@@ -105,4 +120,5 @@ test('should add missing class when item does not exist', t => {
   const html = build_tree_html(items);
   t.regex(html, /missing/, 'Missing items include sc-missing class');
 });
+
 

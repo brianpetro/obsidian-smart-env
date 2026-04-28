@@ -52,11 +52,10 @@ export function build_html(context_item, params = {}) {
     if (context_item.item_ref.key.includes('#')) {
       const name_pcs = context_item.item_ref.key.split('/').pop().split('#').filter(Boolean);
       const last_pc = name_pcs.pop();
-      const segments = [];
       if (last_pc && last_pc.startsWith('{')) {
-        segments.push(name_pcs.pop());
-        segments.push(context_item.item_ref.lines.join('-'));
-        name = segments.join(' > Lines: ');
+        name = `Lines: ${context_item.item_ref.lines.join('-')}`;
+      } else {
+        name = last_pc;
       }
     } else {
       name = context_item.item_ref.key.split('/').pop();
@@ -99,3 +98,4 @@ async function post_process(context_item, container, params = {}) {
 
   return container;
 }
+
