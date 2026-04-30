@@ -73,13 +73,13 @@ export function format_size_label(size, context_size) {
 function build_badge_html(label, class_name, params = {}) {
   if (!label) return '';
   const icon_attr = params.icon ? ` data-icon="${escape_html(params.icon)}"` : '';
-  const title_attr = params.title ? ` title="${escape_html(params.title)}"` : '';
+  const tooltip = params.title ? ` aria-label="${escape_html(params.title)}"` : '';
   const icon_html = params.icon ? '<span class="sc-context-item-badge-icon"></span>' : '';
   const label_html = params.icon
-    ? `<span class="sc-context-item-badge-label">${escape_html(label)}</span>`
+    ? `` // no text if there's an icon, to save space
     : escape_html(label)
   ;
-  return `<span class="${class_name}"${icon_attr}${title_attr}>${icon_html}${label_html}</span>`;
+  return `<span class="${class_name}"${icon_attr}${tooltip}>${icon_html}${label_html}</span>`;
 }
 
 function get_context_item_name(context_item) {
