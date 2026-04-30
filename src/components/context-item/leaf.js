@@ -74,12 +74,13 @@ function build_badge_html(label, class_name, params = {}) {
   if (!label) return '';
   const icon_attr = params.icon ? ` data-icon="${escape_html(params.icon)}"` : '';
   const tooltip = params.title ? ` aria-label="${escape_html(params.title)}"` : '';
+  const named_context_attr = params.named_context ? ` role="button" data-named-context="${escape_html(params.named_context)}"` : '';
   const icon_html = params.icon ? '<span class="sc-context-item-badge-icon"></span>' : '';
   const label_html = params.icon
     ? `` // no text if there's an icon, to save space
     : escape_html(label)
   ;
-  return `<span class="${class_name}"${icon_attr}${tooltip}>${icon_html}${label_html}</span>`;
+  return `<span class="${class_name}"${icon_attr}${tooltip}${named_context_attr}>${icon_html}${label_html}</span>`;
 }
 
 function get_context_item_name(context_item) {
@@ -141,6 +142,7 @@ function get_origin_badges(context_item) {
     badges.push({
       icon: 'smart-named-contexts',
       label: named_context,
+      named_context,
       title: `Included from named context: ${named_context}`,
       class_name: 'sc-context-item-origin-badge sc-context-item-origin-named-context',
     });

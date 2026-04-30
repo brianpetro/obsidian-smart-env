@@ -70,13 +70,36 @@ export async function post_process(ctx, container, params = {}) {
     }
   };
 
+  const on_named_context_badge_click = (event) => {
+    const badge =  event.target.classList.contains('sc-context-item-origin-named-context') 
+      ? event.target
+      : event.target.closest('.sc-context-item-origin-named-context')
+    ;
+    if (!badge) return;
+    const ctx_name = badge.getAttribute('data-named-context');
+    if (!ctx_name) return;
+    
+    event.preventDefault();
+    event.stopPropagation();
+    const named_ctx = ctx.env.smart_contexts.get_named_context(ctx_name);
+    if (!named_ctx) return console.warn(`Smart Context: Failed to find named context with name: ${ctx_name}`);
+    named_ctx.emit_event('context_selector:open');
+  };
+
   const disposers = [];
   container.addEventListener('click', on_tree_remove_click);
+  container.addEventListener('click', on_named_context_badge_click);
   disposers.push(() => container.removeEventListener('click', on_tree_remove_click));
+  disposers.push(() => container.removeEventListener('click', on_named_context_badge_click));
   disposers.push(ctx.on_event('context:updated', schedule_render_tree_leaves));
+  // add update listeners for named contexts
+  ctx.named_contexts.forEach((named_ctx) => {
+    disposers.push(named_ctx.on_event('context:updated', schedule_render_tree_leaves));
+  });
   this.attach_disposer(container, disposers);
   return container;
 }
+
 
 function get_item_key(item) {
   return item?.key || item?.path || '';
