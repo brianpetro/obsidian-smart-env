@@ -318,8 +318,7 @@ export async function post_process(env, container, params = {}) {
 
       await render_plugin_items(official_list_el, official_items);
 
-      const can_view_experimental = experimental_items.some((item) => item.is_entitled);
-      if (experimental_items.length && can_view_experimental) {
+      if (experimental_items.length) {
         experimental_section_el.style.display = '';
         await render_plugin_items(experimental_list_el, experimental_items);
       } else {
@@ -561,10 +560,25 @@ export class PluginListItem {
     return this.tags.includes('experimental');
   }
 
+  get canonical_url() {
+    if (!this.has_group_ui) {
+      return this.get_track_canonical_url(this.display_item_type);
+    }
+
+    return this.get_track_canonical_url(this.installed_type || 'pro')
+      || this.get_track_canonical_url('core')
+      || ''
+    ;
+  }
+
   get details_url() {
-    return get_plugin_details_url(this.pro_plugin) ||
-      get_plugin_details_url(this.core_plugin) ||
-      ''
+    if (!this.has_group_ui) {
+      return this.get_track_details_url(this.display_item_type);
+    }
+
+    return this.get_track_details_url(this.installed_type || 'pro')
+      || this.get_track_details_url('core')
+      || ''
     ;
   }
 
@@ -720,8 +734,8 @@ export class PluginListItem {
         ];
       case 'outdated_env':
         return [
-          { type: 'status', text: 'Outdated Smart Environment loaded' },
-          { type: 'button', action: 'install', text: 'Update', variant: 'primary' },
+          { type: 'status', text: 'Reload required for current Smart Environment' },
+          { type: 'button', action: 'restart_obsidian', text: 'Reload', variant: 'primary' },
         ];
       case 'loaded':
         return [
@@ -857,9 +871,24 @@ export class PluginListItem {
     return get_plugin_description(this.get_track_plugin(item_type));
   }
 
+  get_track_canonical_url(item_type) {
+    const plugin = this.get_track_plugin(item_type) || this.primary_plugin;
+    return get_plugin_canonical_url(plugin)
+      || get_plugin_details_url(plugin)
+      || PRO_PLUGINS_URL
+    ;
+  }
+
   get_track_details_url(item_type) {
-    return get_plugin_details_url(this.get_track_plugin(item_type))
-      || this.details_url
+    const plugin = this.get_track_plugin(item_type) || this.primary_plugin;
+    const release_page_url = this.installed_type === item_type
+      ? build_plugin_release_page_url(plugin, this.installed_version)
+      : ''
+    ;
+
+    return release_page_url
+      || get_plugin_details_url(plugin)
+      || get_plugin_canonical_url(plugin)
       || ''
     ;
   }
@@ -867,6 +896,15 @@ export class PluginListItem {
   get_track_subscription_status_text(item_type) {
     if (item_type !== 'pro') return '';
     return this.subscription_status_text;
+  }
+
+  get_plugin_action_label(plugin) {
+    return get_plugin_label(plugin)
+      || this.install_target_label
+      || this.label
+      || this.plugin_id
+      || 'plugin'
+    ;
   }
 
   async handle_action(action, params = {}) {
@@ -969,7 +1007,7 @@ export class PluginListItem {
     try {
       await enable_plugin(this.app, this.plugin_id);
       this.env?.events?.emit?.('pro_plugins:enabled', {
-        level: 'info',
+        level: 'debug',
         message: `${this.label} enabled.`,
         event_source: 'browse_smart_plugins.list_item',
       });
@@ -1018,7 +1056,7 @@ export class PluginListItem {
         event_source: 'browse_smart_plugins.list_item.learn_more',
       });
     }
-    const url = this.details_url || PRO_PLUGINS_URL;
+    const url = this.canonical_url || PRO_PLUGINS_URL;
     window.open(with_utm_source(url, 'plugin-store'), '_external');
   }
 
@@ -1030,31 +1068,38 @@ export class PluginListItem {
         event_source: 'browse_smart_plugins.list_item.learn_more',
       });
     }
-    const url = this.get_track_details_url(item_type) || PRO_PLUGINS_URL;
+    const url = this.get_track_canonical_url(item_type) || PRO_PLUGINS_URL;
     window.open(with_utm_source(url, 'plugin-store'), '_external');
   }
 
   async install_core_plugin(plugin) {
     const was_installed = this.is_installed;
     const was_enabled = this.is_enabled;
+    const plugin_label = this.get_plugin_action_label(plugin);
     const install_enable_behavior = get_install_enable_behavior({
       was_installed,
       was_enabled,
     });
 
     try {
+      this.env?.events?.emit?.('smart_plugins:install_started', {
+        level: 'debug',
+        message: `Installing "${plugin_label}" ...`,
+        event_source: 'browse_smart_plugins.list_item',
+      });
+
       const { json: release } = await this.get_latest_github_release(plugin);
       const version = release?.tag_name;
       await this.app.plugins.installPlugin(get_plugin_repo(plugin), version, {
         id: this.plugin_id,
-        name: this.install_target_label,
+        name: plugin_label,
       });
       if (install_enable_behavior.should_enable_after_install) {
         await this.enable();
       }
       this.env?.events?.emit?.('smart_plugins:install_completed', {
-        level: 'attention',
-        message: `${this.install_target_label} installed successfully.`,
+        level: 'debug',
+        message: `${plugin_label} installed successfully.`,
         event_source: 'browse_smart_plugins.list_item',
       });
       this.env?.events?.emit?.('pro_plugins:refresh', {
@@ -1094,6 +1139,7 @@ export class PluginListItem {
   async install_plugin(params = {}, plugin) {
     const was_installed = this.is_installed;
     const was_enabled = this.is_enabled;
+    const plugin_label = this.get_plugin_action_label(plugin);
     const install_enable_behavior = get_install_enable_behavior({
       was_installed,
       was_enabled,
@@ -1101,15 +1147,15 @@ export class PluginListItem {
 
     try {
       this.env?.events?.emit?.('pro_plugins:install_started', {
-        level: 'info',
-        message: `Installing "${this.install_target_label}" ...`,
+        level: 'debug',
+        message: `Installing "${plugin_label}" ...`,
         event_source: 'browse_smart_plugins.list_item',
       });
 
       const files = await this.download_plugin_files(plugin);
       const folder_name = String(this.plugin_id || '').trim();
       if (!folder_name) {
-        throw new Error(`Missing plugin id for "${this.install_target_label}".`);
+        throw new Error(`Missing plugin id for "${plugin_label}".`);
       }
 
       const base_folder = `${this.app.vault.configDir}/plugins/${folder_name}`;
@@ -1125,8 +1171,8 @@ export class PluginListItem {
       }
 
       this.env?.events?.emit?.('pro_plugins:install_completed', {
-        level: 'attention',
-        message: `${this.install_target_label} installed successfully.`,
+        level: 'debug',
+        message: `${plugin_label} installed successfully.`,
         event_source: 'browse_smart_plugins.list_item',
       });
       emit_store_event(this.env, 'pro_plugin_installed', params, {
@@ -1157,22 +1203,23 @@ export class PluginListItem {
     const repo = get_plugin_repo(plugin);
     const was_installed = this.is_installed;
     const was_enabled = this.is_enabled;
+    const plugin_label = this.get_plugin_action_label(plugin);
     const install_enable_behavior = get_install_enable_behavior({
       was_installed,
       was_enabled,
     });
 
     if (!repo) {
-      throw new Error(`Missing GitHub repo for "${this.install_target_label}".`);
+      throw new Error(`Missing GitHub repo for "${plugin_label}".`);
     }
     if (!this.plugin_id) {
-      throw new Error(`Missing plugin id for "${this.install_target_label}".`);
+      throw new Error(`Missing plugin id for "${plugin_label}".`);
     }
 
     try {
       env?.events?.emit?.('smart_plugins:install_started', {
-        level: 'info',
-        message: `Installing "${this.install_target_label}" ...`,
+        level: 'debug',
+        message: `Installing "${plugin_label}" ...`,
         event_source: 'browse_smart_plugins.list_item',
       });
 
@@ -1207,8 +1254,8 @@ export class PluginListItem {
       }
 
       env?.events?.emit?.('smart_plugins:install_completed', {
-        level: 'attention',
-        message: `${this.install_target_label} installed successfully.`,
+        level: 'debug',
+        message: `${plugin_label} installed successfully.`,
         event_source: 'browse_smart_plugins.list_item.install_github_release_plugin',
       });
       env?.events?.emit?.('pro_plugins:refresh', {
@@ -1279,6 +1326,17 @@ function get_plugin_description(plugin = {}) {
   return String(plugin?.item_desc || plugin?.description || '').trim();
 }
 
+function get_plugin_canonical_url(plugin = {}) {
+  return String(
+    plugin?.main_url ||
+    plugin?.url ||
+    plugin?.info_url ||
+    plugin?.details_url ||
+    plugin?.docs_url ||
+    ''
+  ).trim();
+}
+
 function get_plugin_details_url(plugin = {}) {
   return String(
     plugin?.details_url ||
@@ -1287,6 +1345,29 @@ function get_plugin_details_url(plugin = {}) {
     plugin?.url ||
     ''
   ).trim();
+}
+
+function build_plugin_release_page_url(plugin = {}, version = '') {
+  const main_url = String(plugin?.main_url || plugin?.url || '').trim();
+  const version_slug = get_release_page_slug(version);
+  if (!main_url || !version_slug) return '';
+
+  const base_url = main_url
+    .split('#')[0]
+    .split('?')[0]
+    .replace(/\/+$/, '')
+  ;
+  if (!base_url) return '';
+
+  return `${base_url}/releases/${version_slug}/`;
+}
+
+function get_release_page_slug(version = '') {
+  const version_pcs = normalize_release_version(version).split('.');
+  const major = String(version_pcs[0] || '').trim();
+  const minor = String(version_pcs[1] || '').trim();
+  if (!major || !minor) return '';
+  return `${major}-${minor}`;
 }
 
 function get_plugin_install_method(plugin = {}) {
