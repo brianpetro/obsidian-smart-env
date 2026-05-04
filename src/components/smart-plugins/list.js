@@ -523,6 +523,15 @@ export class PluginListItem {
 
   get installed_type() {
     if (!this.installed_manifest) return null;
+
+    if (this.has_pro_plugin && !this.has_core_plugin) {
+      return 'pro';
+    }
+
+    if (this.has_core_plugin && !this.has_pro_plugin) {
+      return 'core';
+    }
+
     return infer_installed_plugin_type({
       plugin_id: this.plugin_id,
       manifest_name: this.installed_manifest.name,
