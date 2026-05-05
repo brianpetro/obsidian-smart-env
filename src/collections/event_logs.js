@@ -125,20 +125,25 @@ export class EventLogs extends BaseEventLogs {
    * @returns {string|DocumentFragment}
    */
   async build_native_notice_content(event_key, event = {}) {
-    const component_key = get_native_notice_component_key(event_key, event);
+    // Treat btn_event_key as the action key for renderers that need a string CTA target.
+    const notice_event = event?.btn_event_key && !event?.btn_callback
+      ? { ...event, btn_callback: event.btn_event_key }
+      : event
+    ;
+    const component_key = get_native_notice_component_key(event_key, notice_event);
     if (component_key && this.env?.config?.components?.[component_key]) {
       const component_content = await this.env.smart_components.render_component(component_key, this.env, {
         event_key,
-        event,
-        on_action: (callback_key) => this.run_notice_callback(callback_key, { event_key, event }),
+        event: notice_event,
+        on_action: (callback_key) => this.run_notice_callback(callback_key, { event_key, event: notice_event }),
         on_mute: () => this.set_event_key_muted(event_key, true),
       });
       if (component_content) return component_content;
     }
 
-    const notice_message = get_native_notice_message(event_key, event);
-    const btn_text = typeof event?.btn_text === 'string' ? event.btn_text.trim() : '';
-    const btn_callback = typeof event?.btn_callback === 'string' ? event.btn_callback.trim() : '';
+    const notice_message = get_native_notice_message(event_key, notice_event);
+    const btn_text = typeof notice_event?.btn_text === 'string' ? notice_event.btn_text.trim() : '';
+    const btn_callback = typeof notice_event?.btn_callback === 'string' ? notice_event.btn_callback.trim() : '';
 
     if (!btn_text || !btn_callback || typeof document === 'undefined') {
       return notice_message;
@@ -155,7 +160,7 @@ export class EventLogs extends BaseEventLogs {
     button_el.className = 'mod-cta';
     button_el.textContent = btn_text;
     button_el.addEventListener('click', () => {
-      this.run_notice_callback(btn_callback, { event_key, event });
+      this.run_notice_callback(btn_callback, { event_key, event: notice_event });
     });
     frag.appendChild(button_el);
 
@@ -173,7 +178,7 @@ export class EventLogs extends BaseEventLogs {
     return dispatch_notice_action(this.env, callback_key, {
       event_source: 'native_notice_button',
       source_event_key: params.event_key,
-      source_event: params.event,
+      source_event: params.event || {},
     });
   }
 
@@ -223,3 +228,4 @@ export default {
   class: EventLogs,
   settings_config,
 };
+

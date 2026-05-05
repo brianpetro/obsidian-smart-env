@@ -77,3 +77,41 @@ test('get_native_notice_component_key uses type-specific and default component r
   t.is(get_native_notice_component_key('domain:event', { level: 'info' }), 'default_notification');
   t.is(get_native_notice_component_key('domain:event', { level: 'unknown' }), null);
 });
+
+test('run_notice_callback preserves explicit button event payloads through dispatch', (t) => {
+  const emitted = [];
+  const source_event = {
+    btn_event_key: 'context_selector:open',
+    btn_event_payload: {
+      collection_key: 'smart_contexts',
+      item_key: 'Alpha',
+    },
+  };
+  const instance = {
+    env: {
+      events: {
+        emit(event_key, payload) {
+          emitted.push({ event_key, payload });
+        },
+      },
+    },
+  };
+
+  const result = EventLogs.prototype.run_notice_callback.call(instance, 'context_selector:open', {
+    event_key: 'context:named_context_remove_blocked',
+    event: source_event,
+  });
+
+  t.true(result);
+  t.deepEqual(emitted, [{
+    event_key: 'context_selector:open',
+    payload: {
+      collection_key: 'smart_contexts',
+      item_key: 'Alpha',
+      event_source: 'native_notice_button',
+      source_event_key: 'context:named_context_remove_blocked',
+      source_event,
+    },
+  }]);
+});
+
