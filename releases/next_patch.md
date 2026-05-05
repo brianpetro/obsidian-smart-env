@@ -13,3 +13,6 @@ Improved Smart Plugins install flow: Fewer notifications; Added links to release
 
 
 Added: `btn_event_key` with `btn_event_payload` as alternative to `btn_callback` in event payloads
+
+
+Improved: removal in context tree should allow multiple subsequent removals without having to wait on background precesses and rerendering.
