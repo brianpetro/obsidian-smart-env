@@ -16,3 +16,6 @@ Added: `btn_event_key` with `btn_event_payload` as alternative to `btn_callback`
 
 
 Improved: removal in context tree should allow multiple subsequent removals without having to wait on background precesses and rerendering.
+
+
+Improved: SmartEnv config version handling and add tests for environment creation lifecycle
