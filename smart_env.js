@@ -5,6 +5,7 @@ import {
 } from 'obsidian';
 import { SmartEnv as BaseSmartEnv } from 'smart-environment';
 import { merge_env_config } from 'smart-environment/utils/merge_env_config.js';
+import { compare_versions } from 'smart-environment/utils/compare_versions.js';
 import default_config from './default.config.js';
 import {
   add_smart_icons,
@@ -24,6 +25,8 @@ import { deep_clone_config } from 'smart-environment/utils/deep_clone_config.js'
 import { normalize_opts } from 'smart-environment/utils/normalize_opts.js';
 import pkg from './package.json' with { type: 'json' };
 import { register_copy_menu_actions, register_context_menu_actions } from './src/utils/smart-context/copy_actions.js';
+
+const MIN_COMPATIBLE_SMART_ENV_VERSION = '2.4.0';
 
 export class SmartEnv extends BaseSmartEnv {
   static version = pkg.version;
@@ -48,9 +51,11 @@ export class SmartEnv extends BaseSmartEnv {
     this._config = {};
 
     const sorted_configs = Object.entries(this.smart_env_configs)
-      .sort(([main_key]) => {
+      .sort(([a_key], [b_key]) => {
         if (!this.primary_main_key) return 0;
-        return main_key === this.primary_main_key ? -1 : 0;
+        if (a_key === this.primary_main_key) return -1;
+        if (b_key === this.primary_main_key) return 1;
+        return 0;
       })
     ;
 
@@ -64,9 +69,7 @@ export class SmartEnv extends BaseSmartEnv {
         console.warn(`SmartEnv: '${key}' opts missing, skipping`);
         continue;
       }
-      const this_version_pcs = rec.opts.version.split('.');
-      const this_minor = parseInt(this_version_pcs[1] || '0');
-      if ( this_minor < 4 ) {
+      if (!is_supported_smart_env_version(rec.opts.version)) {
         // prevent including outdated config
         delete this.smart_env_configs[key]; // this should be handled by unload but here for redundancy during transition period
         continue; // skip loading this outdated plugin's config
@@ -98,10 +101,22 @@ export class SmartEnv extends BaseSmartEnv {
 
     const opts = merge_env_config(env_config, default_config);
     opts.env_path = ''; // scope handled by Obsidian FS methods
-    if (this.global_env && this.global_env.state !== 'init') {
-      handle_env_load_attempt_after_loaded(this.global_env);
+    const existing_env = this.global_env;
+
+    if (existing_env && (existing_env.state === 'loaded' || is_global_env_locked(this.global_ref))) {
+      handle_env_load_attempt_after_loaded(existing_env);
       this.create_env_getter(plugin);
-      return this.global_env;
+      return existing_env;
+    }
+
+    if (existing_env && existing_env.state !== 'init') {
+      const is_newer_env = compare_versions(this.version, existing_env.constructor?.version) > 0;
+      if (is_newer_env) {
+        console.warn(
+          'SmartEnv: Superseding environment before load lock because a newer SmartEnv version is available',
+          `${this.version} > ${existing_env.constructor?.version}`,
+        );
+      }
     }
 
     return super.create(plugin, opts).then((env) => {
@@ -603,7 +618,7 @@ function handle_env_load_attempt_after_loaded(env) {
     ...deferred_smart_plugins,
   };
   const notice_message = `Smart Plugins waiting to load. Restart Obsidian to load ${Object.keys(deferred_smart_plugins).join(', ')} into the Smart Environment.`;
-  if(env.constructor.version.startsWith('2.4') || env.constructor.version.startsWith('2.5')) {
+  if(is_supported_smart_env_version(env.constructor.version)) {
     env.events.emit('smart_env:restart_required', {
       level: 'attention',
       message: notice_message,
@@ -657,11 +672,8 @@ function handle_outdated_plugins() {
     .reduce((acc, plugin_id) => {
       const plugin_instance = app.plugins.plugins[plugin_id];
       if (
-        (
-          plugin_instance?.SmartEnv?.version
-          && !plugin_instance?.SmartEnv.version.startsWith('2.4')
-          && !plugin_instance?.SmartEnv.version.startsWith('2.5')
-        )
+        plugin_instance?.SmartEnv?.version
+        && !is_supported_smart_env_version(plugin_instance.SmartEnv.version)
       ) {
         plugin_instance.onload = () => {
           console.warn('prevented onload of outdated plugin', plugin_id);
@@ -701,3 +713,13 @@ function handle_outdated_plugins() {
     }
   });
 }
+
+function is_global_env_locked(global_ref) {
+  return Object.getOwnPropertyDescriptor(global_ref, 'smart_env')?.configurable === false;
+}
+
+function is_supported_smart_env_version(version) {
+  return compare_versions(version, MIN_COMPATIBLE_SMART_ENV_VERSION) >= 0;
+}
+
+
