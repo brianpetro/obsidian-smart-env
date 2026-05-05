@@ -322,7 +322,6 @@ export class SmartEnv extends BaseSmartEnv {
     }
 
     await this.load();
-    await this.after_load();
     return this;
   }
 
