@@ -14,6 +14,16 @@
     padding: 0 0.2rem;
     margin-left: -1.4rem;
   }
+  .sc-context-item-remove.is-disabled {
+    color: var(--text-faint, var(--text-muted));
+    cursor: not-allowed;
+    filter: none;
+    opacity: 0.65;
+  }
+  .sc-context-item-remove.is-disabled:hover {
+    font-weight: normal;
+    filter: none;
+  }
   .sc-context-item-remove.is-removing {
     display: inline-flex;
     align-items: center;
@@ -104,3 +114,4 @@
     transform: rotate(360deg);
   }
 }
+

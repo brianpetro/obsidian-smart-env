@@ -91,9 +91,9 @@ test('remove_by_path removes descendant blocks when parent source is not directl
   t.true('notes/b.md' in ctx.data.context_items);
 });
 
-
-// test handles removal from a named context and promotes remaining items to root level
-test('remove_by_path promotes remaining items to root level when removed from named context', (t) => {
+// Core does not mutate or promote named-context children. The UI disables these
+// remove controls and directs users to open the source named context instead.
+test('remove_by_path does not promote named context children in Core', (t) => {
   const ctx = create_context({
     'named_ctx': { named_context: true, context_items: {
       'notes/a.md': {},
@@ -102,10 +102,11 @@ test('remove_by_path promotes remaining items to root level when removed from na
     'other/c.md': {},
   });
 
-  SmartContext.prototype.remove_by_path.call(ctx, 'notes/a.md');
+  const removed_keys = SmartContext.prototype.remove_by_path.call(ctx, 'notes/a.md');
 
+  t.deepEqual(removed_keys, []);
+  t.true('named_ctx' in ctx.data.context_items);
   t.false('notes/a.md' in ctx.data.context_items);
-  t.true('notes/b.md' in ctx.data.context_items);
+  t.false('notes/b.md' in ctx.data.context_items);
   t.true('other/c.md' in ctx.data.context_items);
 });
-

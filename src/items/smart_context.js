@@ -4,7 +4,7 @@ export class SmartContext extends BaseClass {
   get named_contexts () {
     return Object.entries(this.data?.context_items || {})
       .filter(([name, item_data]) => item_data?.named_context)
-      .map(([name, item_data]) => this.env.smart_contexts.get_named_context(name))
+      .map(([name, item_data]) => this.env.smart_contexts.get_named_context(item_data?.key || name))
       .filter(Boolean)
     ;
   }
@@ -12,37 +12,56 @@ export class SmartContext extends BaseClass {
    * @param {string} target_path
    */
   remove_by_path(target_path, params = {}) {
-    const norm_key = target_path.endsWith('/') ? target_path.slice(0, -1) : target_path;
-    const remove_keys = Object.entries(this.data?.context_items || {})
-      .filter(([key, data]) => (
-        key === norm_key
-        || key.startsWith(norm_key + '/'))
-        || key.startsWith(norm_key + '#')
-      )
-      .map(([key]) => key)
-    ;
-    remove_keys.forEach((key) => {
-      delete this.data.context_items[key];
+    return this.remove_by_paths([
+      {
+        path: target_path,
+        ...(params.folder ? { folder: true } : {}),
+      },
+    ], params);
+  }
+
+  /**
+   * Remove multiple paths from context in one data pass.
+   *
+   * @param {Array<string|{ path:string, folder?:boolean }>} target_paths
+   * @param {object} [params={}]
+   * @param {boolean} [params.emit_updated=true]
+   * @param {boolean} [params.queue_save=true]
+   * @returns {string[]}
+   */
+  remove_by_paths(target_paths = [], params = {}) {
+    const {
+      emit_updated = true,
+      queue_save = true,
+    } = params;
+    const targets = normalize_remove_targets(target_paths, params);
+    if (!targets.length) return [];
+
+    const context_items = this.data?.context_items || {};
+    const remove_keys = [];
+
+    Object.keys(context_items).forEach((key) => {
+      const target = targets.find((target) => item_matches_remove_path(key, target.norm_key));
+      if (!target) return;
+      remove_keys.push(key);
     });
-    if(!remove_keys.length) {
-      // IF REMOVED FROM NAMED CONTEXT, THEN PROMOTE ALL ITEMS IN NAMED CONTEXT TO ROOT LEVEL (EXCEPT THE REMOVED ITEM)
-      const included_in_named_context = this.named_contexts.find((ctx) => Object.entries(ctx.data?.context_items || {}).some(([key]) => key.startsWith(target_path)));
-      if(included_in_named_context) {
-        delete this.data.context_items[included_in_named_context.data.name];
-        const replace_with_items = Object.entries(included_in_named_context.data?.context_items || {}).filter(([key]) => !key.startsWith(target_path));
-        replace_with_items.forEach(([key, item_data]) => {
-          this.data.context_items[key] = item_data;
-        });
-      }
+
+    remove_keys.forEach((key) => {
+      delete context_items[key];
+    });
+
+    if (!remove_keys.length) return [];
+
+    if (emit_updated) {
+      this.emit_event('context:updated', {
+        removed_key: targets[0].path,
+        removed_keys: targets.map((target) => target.path),
+        ...(targets.some((target) => target.folder) ? { folder: true } : {}),
+      });
     }
 
-    this.emit_event('context:updated', {
-      removed_key: target_path,
-      ...(params.folder ? { folder: true } : {}),
-    });
-
-    this.queue_save();
-
+    if (queue_save) this.queue_save();
+    return remove_keys;
   }
 
   /**
@@ -82,4 +101,53 @@ export class SmartContext extends BaseClass {
     this.queue_save();
     if (emit_updated) this.emit_event('context:updated', emit_payload);
   }
+}
+
+function normalize_remove_targets(target_paths = [], params = {}) {
+  const items = Array.isArray(target_paths) ? target_paths : [target_paths];
+  const targets = [];
+
+  items.forEach((target) => {
+    const path = typeof target === 'string'
+      ? target
+      : target?.path
+    ;
+    const normalized_path = String(path || '').trim();
+    if (!normalized_path) return;
+
+    const next_target = {
+      path: normalized_path,
+      norm_key: normalize_remove_path(normalized_path),
+      folder: target?.folder === true || params.folder === true,
+    };
+
+    for (const existing_target of targets) {
+      if (item_matches_remove_path(next_target.norm_key, existing_target.norm_key)) return;
+    }
+
+    for (let i = targets.length - 1; i >= 0; i -= 1) {
+      if (item_matches_remove_path(targets[i].norm_key, next_target.norm_key)) {
+        targets.splice(i, 1);
+      }
+    }
+
+    targets.push(next_target);
+  });
+
+  return targets;
+}
+
+function normalize_remove_path(path = '') {
+  return String(path || '').replace(/\/+$/g, '');
+}
+
+function item_matches_remove_path(item_key = '', target_path = '') {
+  const normalized_item_key = normalize_remove_path(item_key);
+  const normalized_target_path = normalize_remove_path(target_path);
+  if (!normalized_item_key || !normalized_target_path) return false;
+  return normalized_item_key === normalized_target_path
+    || normalized_item_key.startsWith(normalized_target_path + '/')
+    || normalized_item_key.startsWith(normalized_target_path + '#')
+    || normalized_item_key.startsWith(normalized_target_path + '{')
+  ;
 }

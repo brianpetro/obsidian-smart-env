@@ -203,9 +203,19 @@ export function build_html(context_item, params = {}) {
     : ''
   ;
   const missing_class = context_item?.exists === false ? ' missing' : '';
+  const remove_disabled = params.remove_disabled === true;
+  const remove_class = remove_disabled
+    ? 'sc-context-item-remove is-disabled'
+    : 'sc-context-item-remove'
+  ;
+  const remove_label = remove_disabled
+    ? 'Open named context to edit included item'
+    : 'Remove item'
+  ;
+  const remove_disabled_attr = remove_disabled ? ' aria-disabled="true"' : '';
 
   return `<span class="sc-context-item-leaf">
-  <span class="sc-context-item-remove" data-path="${escape_html(item_key)}" aria-label="Remove item">×</span>
+  <span class="${remove_class}" data-path="${escape_html(item_key)}" aria-label="${escape_html(remove_label)}"${remove_disabled_attr}>×</span>
   ${score_html}
   ${icon_html}
   <span class="sc-context-item-name${missing_class}">${escape_html(name || item_key)}</span>
@@ -227,9 +237,19 @@ async function post_process(context_item, container, params = {}) {
 
   const remove_btn = container.querySelector('.sc-context-item-remove');
   if (remove_btn) {
+    if (params.remove_disabled === true) {
+      remove_btn.setAttribute('title', 'Open the named context to remove this included item.');
+    }
+
     remove_btn.addEventListener('click', (event) => {
       event.preventDefault();
       event.stopPropagation();
+      if (params.remove_disabled === true) {
+        if (typeof params.on_remove_disabled === 'function') {
+          params.on_remove_disabled(event, context_item);
+        }
+        return;
+      }
       if (typeof params.on_remove !== 'function') return;
       if (remove_btn.classList.contains('is-removing')) return;
       set_remove_pending(remove_btn);
@@ -269,3 +289,4 @@ async function post_process(context_item, container, params = {}) {
 
   return container;
 }
+
