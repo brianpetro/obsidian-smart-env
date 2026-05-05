@@ -1,4 +1,4 @@
-import { setIcon } from 'obsidian';
+import { MarkdownRenderer, setIcon } from 'obsidian';
 
 /**
  * @param {import('./list').PluginListItem} item
@@ -12,7 +12,6 @@ export function build_html(item, params = {}) {
   return build_row_html(item, {
     item_type: item.display_item_type,
     name: item.formatted_name,
-    description: item.formatted_description,
     subscription_status_text: item.subscription_status_text,
     control_state: row_state?.control_state || 'can_install',
   });
@@ -28,7 +27,6 @@ function build_group_html(item, params = {}) {
         item_type: 'core',
         track_item_type: 'core',
         name: item.get_track_name('core'),
-        description: item.get_track_description('core'),
         subscription_status_text: '',
         control_state: core_state?.control_state || 'cant_install',
       })}
@@ -36,7 +34,6 @@ function build_group_html(item, params = {}) {
         item_type: 'pro',
         track_item_type: 'pro',
         name: item.get_track_name('pro'),
-        description: item.get_track_description('pro'),
         subscription_status_text: item.get_track_subscription_status_text('pro'),
         control_state: pro_state?.control_state || 'cant_install',
       })}
@@ -59,7 +56,7 @@ function build_row_html(item, row = {}) {
   return `<div class="setting-item pro-plugins-list-item" data-item-type="${item_type}" data-item-state="${control_state}" data-row-control-state="${control_state}"${track_item_type_attr}>
     <div class="setting-item-info">
       <div class="setting-item-name ${item_type === 'core' ? 'smart-badge core-badge' : 'smart-badge pro-badge'}">${row.name || ''}</div>
-      <div class="setting-item-description">${row.description || ''}</div>
+      <div class="setting-item-description smart-plugins-item-description markdown-rendered"></div>
       ${subscription_state_html}
     </div>
     <div class="setting-item-control"></div>
@@ -87,10 +84,13 @@ export async function post_process(item, container, params = {}) {
   ;
 
   for (const row of rows) {
+    const track_item_type = row.getAttribute('data-track-item-type') || '';
+    const description_container = row.querySelector('.setting-item-description');
+    await render_description.call(this, item, description_container, get_row_description(item, track_item_type), params);
+
     const control_container = row.querySelector('.setting-item-control');
     if (!control_container) continue;
 
-    const track_item_type = row.getAttribute('data-track-item-type') || '';
     const controls = await render_controls.call(this, item, {
       ...params,
       track_item_type,
@@ -101,6 +101,40 @@ export async function post_process(item, container, params = {}) {
   }
 
   return container;
+}
+
+function get_row_description(item, track_item_type = '') {
+  const safe_track_item_type = String(track_item_type || '').trim();
+  if (safe_track_item_type) {
+    return item.get_track_description(safe_track_item_type);
+  }
+
+  return item.formatted_description;
+}
+
+async function render_description(item, container, markdown = '', params = {}) {
+  if (!container) return;
+
+  this.empty(container);
+  const safe_markdown = String(markdown || '').trim();
+  if (!safe_markdown) return;
+
+  const app = params.app || item.app || item.env?.obsidian_app || window.app;
+  const component = item.env?.main || item.env?.plugin || null;
+  await MarkdownRenderer.render(app, safe_markdown, container, '', component);
+  container.querySelectorAll('a').forEach((a) => {
+    a.setAttribute('target', '_external');
+    // if no utm_source param, add one for tracking
+    try {
+      const url = new URL(a.href);
+      if (!url.searchParams.has('utm_source')) {
+        url.searchParams.set('utm_source', 'plugin_list_description');
+        a.href = url.toString();
+      }
+    } catch (e) {
+      // ignore invalid URLs
+    }
+  });
 }
 
 function build_controls_html(item, params = {}) {

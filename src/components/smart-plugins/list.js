@@ -1,4 +1,4 @@
-import { requestUrl, setIcon } from 'obsidian';
+import { MarkdownRenderer, requestUrl, setIcon } from 'obsidian';
 import {
   build_plugin_file_record,
   enable_plugin,
@@ -120,7 +120,7 @@ export function build_html(env, params = {}) {
             <div class="callout-icon"></div>
             <div class="callout-title-inner">Store message</div>
           </div>
-          <div class="callout-content"></div>
+          <div class="callout-content markdown-rendered"></div>
         </div>
         <div class="smart-plugins-section">
           <div class="smart-plugins-official-list">Loading...</div>
@@ -180,11 +180,23 @@ export async function post_process(env, container, params = {}) {
     this.empty(referral_container);
     if (referral_el) referral_container.appendChild(referral_el);
   };
-  const render_server_message = (message = '', opts = {}) => {
+  const render_markdown = async (target_el, markdown = '') => {
+    if (!target_el) return;
+
+    this.empty(target_el);
+    const safe_markdown = String(markdown || '').trim();
+    if (!safe_markdown) return;
+
+    await MarkdownRenderer.render(app, safe_markdown, target_el, '', plugin);
+    target_el.querySelectorAll('a').forEach((a) => {
+      a.setAttribute('target', '_external');
+    });
+  };
+  const render_server_message = async (message = '', opts = {}) => {
     const safe_message = String(message || '').trim();
     if (!safe_message) {
       if (server_message_el?.style) server_message_el.style.display = 'none';
-      if (server_message_content_el) server_message_content_el.textContent = '';
+      if (server_message_content_el) this.empty(server_message_content_el);
       return;
     }
 
@@ -194,7 +206,7 @@ export async function post_process(env, container, params = {}) {
     if (server_message_el?.style) server_message_el.style.display = '';
     server_message_el?.setAttribute?.('data-callout', callout_type);
     if (server_message_title_el) server_message_title_el.textContent = safe_title;
-    if (server_message_content_el) server_message_content_el.textContent = safe_message;
+    if (server_message_content_el) await render_markdown(server_message_content_el, safe_message);
     if (server_message_icon_el) {
       setIcon(server_message_icon_el, callout_type === 'warning' ? 'alert-triangle' : 'info');
     }
@@ -244,7 +256,7 @@ export async function post_process(env, container, params = {}) {
       sub_exp: null,
     });
     this.empty(referral_container);
-    render_server_message();
+    await render_server_message();
     experimental_section_el.style.display = 'none';
     this.empty(experimental_list_el);
 
@@ -302,7 +314,7 @@ export async function post_process(env, container, params = {}) {
         sub_exp,
         auth_state,
       });
-      render_server_message(server_message, {
+      await render_server_message(server_message, {
         callout_type: auth_state === 'invalid' ? 'warning' : 'note',
         title: auth_state === 'invalid' ? 'Account message' : 'Store message',
       });
@@ -331,7 +343,7 @@ export async function post_process(env, container, params = {}) {
       this.empty(official_list_el);
       this.empty(experimental_list_el);
       experimental_section_el.style.display = 'none';
-      render_server_message();
+      await render_server_message();
       official_list_el.appendChild(this.create_doc_fragment('<div class="error"><p>Failed to load plugin information.</p><button class="retry">Retry</button></div>'));
       SMART_PLUGINS_LIST = default_smart_plugins_list();
       const retry_button = official_list_el.querySelector('.retry');
