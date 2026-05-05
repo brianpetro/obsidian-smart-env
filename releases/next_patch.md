@@ -10,3 +10,6 @@ Update tree if included named context is updated
 Fixed: Ollama chat adapter should work regardless of whether model info contains context limit info.
 
 Improved Smart Plugins install flow: Fewer notifications; Added links to release pages
+
+
+Added: `btn_event_key` with `btn_event_payload` as alternative to `btn_callback` in event payloads
