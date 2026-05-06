@@ -25,3 +25,6 @@ Improved: remove unused collection settings component and update references in s
 
 
 Improved: added missing context item handling: missing items are now highlighted in the builder and a notification is emitted with option to remove the missing item
+
+
+Improved: refactor context remove path utilities and add tests for normalization and matching logic
