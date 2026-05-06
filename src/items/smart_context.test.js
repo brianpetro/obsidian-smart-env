@@ -142,7 +142,7 @@ test('emit_missing_context_item_event debounces duplicate warnings per context i
   await new Promise((resolve) => setTimeout(resolve, 25));
 
   t.is(emitted.length, 1);
-  t.is(emitted[0].event_key, 'context_items:load_item_from_data');
+  t.is(emitted[0].event_key, 'smart_context:missing_item');
   t.is(emitted[0].payload.missing_key, missing_key);
   t.is(emitted[0].payload.error, 'Error: second failure');
   t.deepEqual(emitted[0].payload.btn_event_payload, {

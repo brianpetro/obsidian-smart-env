@@ -62,7 +62,7 @@ export const smart_env_config = {
     embedding_model: { class: EmbeddingModel, version: "1.0.0" },
     lookup_list: { class: LookupList, version: "1.0.0" },
     smart_block: { class: SmartBlock, version: "1.0.0" },
-    smart_context: { class: SmartContext, version: "1.0.0" }
+    smart_context: { class: SmartContext, version: "2.1.0" }
   },
   modules: {
 

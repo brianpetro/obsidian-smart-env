@@ -3,6 +3,7 @@ import { SmartContext } from '../items/smart_context.js';
 import { SmartContexts as BaseClass } from 'smart-contexts/smart_contexts.js';
 
 export class SmartContexts extends BaseClass {
+  static version = '2.1.0';
   async init() {
     await super.init?.();
     this.register_remove_missing_item_handler();

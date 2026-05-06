@@ -1,6 +1,7 @@
 import { SmartContext as BaseClass } from 'smart-contexts/smart_context.js';
 
 export class SmartContext extends BaseClass {
+  static version = '2.1.0';
   get named_contexts () {
     return Object.entries(this.data?.context_items || {})
       .filter(([name, item_data]) => item_data?.named_context)
@@ -103,59 +104,6 @@ export class SmartContext extends BaseClass {
     if (emit_updated) this.emit_event('context:updated', emit_payload);
   }
 
-  /**
-   * Emit a missing-context-item warning once a burst of context_items hydration settles.
-   *
-   * ContextItems collections are rebuilt often by render paths, so debounce on the
-   * durable SmartContext instance to avoid duplicate native notices for the same
-   * missing item.
-   *
-   * @param {string} key
-   * @param {Error|string} error
-   * @param {object} [params={}]
-   * @param {number} [params.debounce_ms=250]
-   * @returns {void}
-   */
-  emit_missing_context_item_event(key, error, params = {}) {
-    const missing_key = String(key || '').trim();
-    if (!missing_key) return;
-
-    if (!(this._missing_context_item_event_timers instanceof Map)) {
-      this._missing_context_item_event_timers = new Map();
-    }
-
-    const existing_timer = this._missing_context_item_event_timers.get(missing_key);
-    if (existing_timer) clearTimeout(existing_timer);
-
-    const raw_debounce_ms = Number.isFinite(params.debounce_ms)
-      ? params.debounce_ms
-      : 250
-    ;
-    const debounce_ms = Math.max(0, raw_debounce_ms);
-
-    const timer = setTimeout(() => {
-      this._missing_context_item_event_timers.delete(missing_key);
-      if (!this.data?.context_items?.[missing_key]) return;
-
-      this.emit_warning_event('context_items:load_item_from_data', {
-        message: 'Failed to find context item: ' + missing_key,
-        key: missing_key,
-        missing_key,
-        context_key: this.key,
-        error: error?.toString?.() || String(error || ''),
-        btn_text: 'Remove missing item',
-        btn_callback: 'smart_contexts:remove_missing_item', // should be able to be removed once notifications feed modal detects btn_event_key and btn_event_payload as valid action (to show button)
-        btn_event_key: 'smart_contexts:remove_missing_item',
-        btn_event_payload: {
-          collection_key: 'smart_contexts',
-          item_key: this.key,
-          missing_key,
-        },
-      });
-    }, debounce_ms);
-
-    this._missing_context_item_event_timers.set(missing_key, timer);
-  }
 }
 
 function normalize_remove_targets(target_paths = [], params = {}) {
