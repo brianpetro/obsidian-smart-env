@@ -110,3 +110,45 @@ test('remove_by_path does not promote named context children in Core', (t) => {
   t.false('notes/b.md' in ctx.data.context_items);
   t.true('other/c.md' in ctx.data.context_items);
 });
+
+test('emit_missing_context_item_event debounces duplicate warnings per context item', async (t) => {
+  const missing_key = 'external:../missing-file.md';
+  const emitted = [];
+  const ctx = {
+    key: 'Note.md#codeblock',
+    data: {
+      context_items: {
+        [missing_key]: { key: missing_key },
+      },
+    },
+    emit_warning_event(event_key, payload) {
+      emitted.push({ event_key, payload });
+    },
+  };
+
+  SmartContext.prototype.emit_missing_context_item_event.call(
+    ctx,
+    missing_key,
+    new Error('first failure'),
+    { debounce_ms: 5 },
+  );
+  SmartContext.prototype.emit_missing_context_item_event.call(
+    ctx,
+    missing_key,
+    new Error('second failure'),
+    { debounce_ms: 5 },
+  );
+
+  await new Promise((resolve) => setTimeout(resolve, 25));
+
+  t.is(emitted.length, 1);
+  t.is(emitted[0].event_key, 'context_items:load_item_from_data');
+  t.is(emitted[0].payload.missing_key, missing_key);
+  t.is(emitted[0].payload.error, 'Error: second failure');
+  t.deepEqual(emitted[0].payload.btn_event_payload, {
+    collection_key: 'smart_contexts',
+    item_key: 'Note.md#codeblock',
+    missing_key,
+  });
+});
+

@@ -98,6 +98,12 @@
   gap: 0.25em;
   color: var(--text-muted) !important;
 }
+.sc-context-item-warning-badge {
+  color: var(--text-warning, var(--color-yellow)) !important;
+}
+.sc-context-item-name.missing {
+  color: var(--text-warning, var(--color-yellow));
+}
 .sc-context-item-badge-icon svg,
 .sc-context-item-type-icon svg {
   width: 0.9em;
@@ -114,4 +120,5 @@
     transform: rotate(360deg);
   }
 }
+
 

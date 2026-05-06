@@ -159,6 +159,14 @@ function build_origin_badges_html(context_item) {
     .join('')}</span>`;
 }
 
+function build_missing_badge_html(context_item) {
+  if (context_item?.exists !== false) return '';
+  return build_badge_html('Missing', 'sc-context-item-origin-badge sc-context-item-warning-badge', {
+    icon: 'alert-triangle',
+    title: 'Missing source',
+  });
+}
+
 function render_inline_icons(container) {
   container.querySelectorAll('[data-icon]').forEach((icon_el) => {
     const icon = icon_el.getAttribute('data-icon');
@@ -196,6 +204,7 @@ export function build_html(context_item, params = {}) {
   const size = format_size_label(item_size, params.context_size);
   const score_html = build_badge_html(score, 'sc-context-item-score');
   const size_html = build_badge_html(size, 'sc-context-item-size');
+  const missing_badge_html = build_missing_badge_html(context_item);
   const origin_badges_html = build_origin_badges_html(context_item);
   const icon_type = context_item?.icon_type || null;
   const icon_html = icon_type
@@ -220,6 +229,7 @@ export function build_html(context_item, params = {}) {
   ${icon_html}
   <span class="sc-context-item-name${missing_class}">${escape_html(name || item_key)}</span>
   ${size_html}
+  ${missing_badge_html}
   ${origin_badges_html}
   </span>`;
 }
@@ -289,4 +299,5 @@ async function post_process(context_item, container, params = {}) {
 
   return container;
 }
+
 
