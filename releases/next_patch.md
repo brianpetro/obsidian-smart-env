@@ -22,3 +22,6 @@ Improved: SmartEnv config version handling and add tests for environment creatio
 
 
 Improved: remove unused collection settings component and update references in smart_env_config
+
+
+Improved: added missing context item handling: missing items are now highlighted in the builder and a notification is emitted with option to remove the missing item
