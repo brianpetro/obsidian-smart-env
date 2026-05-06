@@ -19,3 +19,6 @@ Improved: removal in context tree should allow multiple subsequent removals with
 
 
 Improved: SmartEnv config version handling and add tests for environment creation lifecycle
+
+
+Improved: remove unused collection settings component and update references in smart_env_config
