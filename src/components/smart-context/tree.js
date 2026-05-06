@@ -1,6 +1,7 @@
 import { build_path_tree } from '../../utils/smart-context/build_path_tree.js';
 import tree_styles from './tree.css';
 import { create_render_scheduler } from '../../utils/render_utils.js';
+import { item_matches_remove_path } from '../../utils/smart-context/remove_path_utils.js';
 
 const remove_debounce_ms = 1500;
 
@@ -172,21 +173,6 @@ function get_pending_removals(ctx) {
     ctx._pending_remove_by_path = new Map();
   }
   return ctx._pending_remove_by_path;
-}
-
-function normalize_remove_path(path = '') {
-  return String(path || '').replace(/\/+$/g, '');
-}
-
-function item_matches_remove_path(item_key = '', target_path = '') {
-  const normalized_item_key = normalize_remove_path(item_key);
-  const normalized_target_path = normalize_remove_path(target_path);
-  if (!normalized_item_key || !normalized_target_path) return false;
-  return normalized_item_key === normalized_target_path
-    || normalized_item_key.startsWith(normalized_target_path + '/')
-    || normalized_item_key.startsWith(normalized_target_path + '#')
-    || normalized_item_key.startsWith(normalized_target_path + '{')
-  ;
 }
 
 function is_core_context(ctx) {
@@ -378,4 +364,3 @@ function remove_tree_item_from_ui(tree_item_el) {
     current = parent_item;
   }
 }
-

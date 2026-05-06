@@ -1,4 +1,8 @@
 import { SmartContext as BaseClass } from 'smart-contexts/smart_context.js';
+import {
+  item_matches_remove_path,
+  normalize_remove_targets,
+} from '../utils/smart-context/remove_path_utils.js';
 
 export class SmartContext extends BaseClass {
   static version = '2.1.0';
@@ -105,53 +109,3 @@ export class SmartContext extends BaseClass {
   }
 
 }
-
-function normalize_remove_targets(target_paths = [], params = {}) {
-  const items = Array.isArray(target_paths) ? target_paths : [target_paths];
-  const targets = [];
-
-  items.forEach((target) => {
-    const path = typeof target === 'string'
-      ? target
-      : target?.path
-    ;
-    const normalized_path = String(path || '').trim();
-    if (!normalized_path) return;
-
-    const next_target = {
-      path: normalized_path,
-      norm_key: normalize_remove_path(normalized_path),
-      folder: target?.folder === true || params.folder === true,
-    };
-
-    for (const existing_target of targets) {
-      if (item_matches_remove_path(next_target.norm_key, existing_target.norm_key)) return;
-    }
-
-    for (let i = targets.length - 1; i >= 0; i -= 1) {
-      if (item_matches_remove_path(targets[i].norm_key, next_target.norm_key)) {
-        targets.splice(i, 1);
-      }
-    }
-
-    targets.push(next_target);
-  });
-
-  return targets;
-}
-
-function normalize_remove_path(path = '') {
-  return String(path || '').replace(/\/+$/g, '');
-}
-
-function item_matches_remove_path(item_key = '', target_path = '') {
-  const normalized_item_key = normalize_remove_path(item_key);
-  const normalized_target_path = normalize_remove_path(target_path);
-  if (!normalized_item_key || !normalized_target_path) return false;
-  return normalized_item_key === normalized_target_path
-    || normalized_item_key.startsWith(normalized_target_path + '/')
-    || normalized_item_key.startsWith(normalized_target_path + '#')
-    || normalized_item_key.startsWith(normalized_target_path + '{')
-  ;
-}
-
