@@ -11,7 +11,6 @@ import { LookupList } from './src/items/lookup_list.js';
 import { SmartBlock } from './src/items/smart_block.js';
 import { SmartContext } from './src/items/smart_context.js';
 
-import { render as collection_settings_component } from './src/components/collection_settings.js';
 import { render as context_item_leaf_component } from './src/components/context-item/leaf.js';
 import { render as default_notification_component } from './src/components/default_notification.js';
 import { render as env_stats_component } from './src/components/env_stats.js';
@@ -69,7 +68,6 @@ export const smart_env_config = {
 
   },
   components: {
-    collection_settings: { render: collection_settings_component, version: "1.0.0" },
     context_item_leaf: { render: context_item_leaf_component, version: "1.0.0" },
     default_notification: { render: default_notification_component, version: "1.0.0" },
     env_stats: { render: env_stats_component, version: "1.0.0" },
