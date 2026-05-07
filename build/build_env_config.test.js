@@ -113,6 +113,14 @@ export const pre_process = () => 'prep';`
     `export function assigned_action(){}
 assigned_action.version = '7.8.9';`
   );
+  write_file(
+    'src/actions/launch.js',
+    `export function launch(){}
+export const cli = {
+  command: 'launch',
+  description: 'Launch from CLI',
+};`
+  );
 
   /* actions - extra metadata (to prove ACTION_EXPORT_PROPS drives exposure) */
   write_file(
@@ -320,6 +328,16 @@ test('actions config includes display metadata when exported', async t => {
   t.false(Object.prototype.hasOwnProperty.call(log, 'display_description'));
 });
 
+test('actions config includes cli object when exported', async t => {
+  const mod_path = path.join(tmp_root, 'smart_env.config.js');
+  const cfg = await import(pathToFileURL(mod_path).href);
+  const { launch } = cfg.smart_env_config.actions;
+  t.deepEqual(launch.cli, {
+    command: 'launch',
+    description: 'Launch from CLI',
+  });
+});
+
 test('actions config includes exported, assigned, and fallback versions', async t => {
   const mod_path = path.join(tmp_root, 'smart_env.config.js');
   const cfg = await import(pathToFileURL(mod_path).href);
@@ -472,3 +490,4 @@ test('actions only expose metadata exports defined by ACTION_EXPORT_PROPS', asyn
 test.after.always(() => {
   fs.rmSync(tmp_root, { recursive: true, force: true });
 });
+
