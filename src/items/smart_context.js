@@ -95,7 +95,7 @@ export class SmartContext extends BaseClass {
     if (!key) return console.error('SmartContext: add_item called with invalid item', item);
     const emit_payload = { add_item: key };
     const remove_sub_keys = Object.entries(this.data.context_items)
-      .filter(([existing_key]) => existing_key !== key && existing_key.startsWith(key))
+      .filter(([existing_key]) => existing_key !== key && item_matches_remove_path(existing_key, key))
       .map(([existing_key]) => existing_key)
     ;
     if (remove_sub_keys.length) {

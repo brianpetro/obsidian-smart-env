@@ -55,7 +55,7 @@ test('add_item removes redundant block descendants when parent source is added',
   t.true('notes/a.md' in ctx.data.context_items);
   t.false('notes/a.md#Heading' in ctx.data.context_items);
   t.false('notes/a.md#Heading#{1}' in ctx.data.context_items);
-  t.false('notes/a.md2#Heading' in ctx.data.context_items);
+  t.true('notes/a.md2#Heading' in ctx.data.context_items);
   t.true('notes/b.md#Heading' in ctx.data.context_items);
 });
 
@@ -151,4 +151,5 @@ test('emit_missing_context_item_event debounces duplicate warnings per context i
     missing_key,
   });
 });
+
 
