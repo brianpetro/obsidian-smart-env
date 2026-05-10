@@ -540,16 +540,23 @@ function build_latest_release_md(params) {
   } = params;
   const top_section = extract_top_section(canonical_release_md);
   const details_link = `[More details about the latest releases](https://smartconnections.app/${plugin_slug}/releases/${get_minor_slug(version)}/)`;
+  const updated_at = new Date();
+  const updated_date = [
+    updated_at.getFullYear(),
+    `${updated_at.getMonth() + 1}`.padStart(2, '0'),
+    `${updated_at.getDate()}`.padStart(2, '0'),
+  ].join('-');
+  const updated_line = `Updated: ${updated_date}`;
 
   if (get_patch_version(version) === 0) {
     const additional_notes_md = build_additional_notes_section(current_patch_md);
-    return `${[top_section, additional_notes_md, details_link].filter(Boolean).join('\n\n').trim()}\n`;
+    return `${[top_section, additional_notes_md, updated_line, details_link].filter(Boolean).join('\n\n').trim()}\n`;
   }
 
   const callout_md = build_whats_new_callout({ version, current_patch_md });
   const linked_top_section = insert_callout_below_h1(top_section, callout_md);
 
-  return `${[linked_top_section, details_link].filter(Boolean).join('\n\n').trim()}\n`;
+  return `${[linked_top_section, updated_line, details_link].filter(Boolean).join('\n\n').trim()}\n`;
 }
 
 /**
