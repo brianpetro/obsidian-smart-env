@@ -28,3 +28,6 @@ Improved: added missing context item handling: missing items are now highlighted
 
 
 Improved: refactor context remove path utilities and add tests for normalization and matching logic
+
+
+Improved: add last updated date to the latest release markdown output
