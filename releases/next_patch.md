@@ -34,3 +34,6 @@ Improved: add last updated date to the latest release markdown output
 
 
 Improved: refactor upload_release_assets to remove zip creation and enforce required asset checks
+
+
+Improved: removed extraneous model dependencies
