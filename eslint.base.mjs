@@ -39,6 +39,24 @@ export default defineConfig([
     files: ["**/*.js", "**/*.mjs", "**/*.cjs"],
     rules: {
       "@typescript-eslint/no-deprecated": "off",
+      "obsidianmd/ui/sentence-case": [
+        "warn",
+        {
+          brands: [
+            "Smart Environment",
+            "Smart Env",
+            "Smart Lookup",
+            "Smart Loop",
+            "Pro plugins",
+            "Smart Connections",
+            "Smart Context",
+            "Smart Chat",
+            "Smart Graph"
+          ],
+          acronyms: ["OK"],
+          enforceCamelCaseLower: false,
+        },
+      ],
     },
   },
 ]);
