@@ -1,21 +1,12 @@
-name: Reusable Smart Plugin Release
+name: Reusable Smart Plugin Core Release
 
 on:
   workflow_call:
     inputs:
-      release_kind:
-        description: core or pro.
-        required: true
-        type: string
       obsidian_smart_env_ref:
         description: Full commit SHA for brianpetro/obsidian-smart-env.
         required: true
         type: string
-      obsidian_smart_env_pro_ref:
-        description: Full commit SHA for brianpetro/obsidian-smart-env-pro. Required only for pro releases.
-        required: false
-        type: string
-        default: ''
       jsbrains_ref:
         description: Full commit SHA for brianpetro/jsbrains.
         required: true
@@ -57,15 +48,6 @@ jobs:
         run: |
           set -euo pipefail
 
-          release_kind="${{ inputs.release_kind }}"
-          case "$release_kind" in
-            core|pro) ;;
-            *)
-              echo "::error::release_kind must be core or pro."
-              exit 1
-              ;;
-          esac
-
           require_sha() {
             local name="$1"
             local ref="$2"
@@ -77,10 +59,6 @@ jobs:
 
           require_sha "obsidian_smart_env_ref" "${{ inputs.obsidian_smart_env_ref }}"
           require_sha "jsbrains_ref" "${{ inputs.jsbrains_ref }}"
-
-          if [ "$release_kind" = "pro" ]; then
-            require_sha "obsidian_smart_env_pro_ref" "${{ inputs.obsidian_smart_env_pro_ref }}"
-          fi
 
       - name: Checkout plugin repo
         uses: actions/checkout@v6
@@ -103,24 +81,6 @@ jobs:
           path: obsidian-smart-env
           token: ${{ secrets.DEPENDENCY_CHECKOUT_TOKEN || github.token }}
 
-      - name: Checkout Smart Environment Pro
-        if: ${{ inputs.release_kind == 'pro' }}
-        uses: actions/checkout@v6
-        with:
-          repository: ${{ github.repository_owner }}/obsidian-smart-env-pro
-          ref: ${{ inputs.obsidian_smart_env_pro_ref }}
-          path: obsidian-smart-env-pro
-          token: ${{ secrets.DEPENDENCY_CHECKOUT_TOKEN || github.token }}
-
-      - name: Assert Core release does not include Pro environment
-        if: ${{ inputs.release_kind == 'core' }}
-        run: |
-          set -euo pipefail
-          if [ -d obsidian-smart-env-pro ]; then
-            echo "::error::Core releases must not check out obsidian-smart-env-pro."
-            exit 1
-          fi
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -132,7 +92,7 @@ jobs:
           {
             echo "## Release dependency refs"
             echo
-            for repo_dir in "${{ inputs.plugin_repo_path }}" jsbrains obsidian-smart-env obsidian-smart-env-pro; do
+            for repo_dir in "${{ inputs.plugin_repo_path }}" jsbrains obsidian-smart-env; do
               if [ -d "$repo_dir/.git" ]; then
                 echo "- $repo_dir: $(git -C "$repo_dir" rev-parse HEAD)"
               fi
@@ -155,10 +115,6 @@ jobs:
 
           npm_ci_if_locked jsbrains
           npm_ci_if_locked obsidian-smart-env
-
-          if [ -d obsidian-smart-env-pro ]; then
-            npm_ci_if_locked obsidian-smart-env-pro
-          fi
 
       - name: Install plugin repo
         working-directory: ${{ inputs.plugin_repo_path }}
