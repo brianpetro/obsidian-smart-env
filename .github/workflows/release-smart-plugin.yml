@@ -99,6 +99,16 @@ jobs:
             done
           } | tee -a "$GITHUB_STEP_SUMMARY"
 
+      - name: Install jsbrains dependencies
+        run: |
+          set -euo pipefail
+          cd jsbrains
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install --no-audit --fund=false
+          fi
+
       - name: Install Smart Environment dependencies
         run: |
           set -euo pipefail
