@@ -2,7 +2,6 @@ import fs from 'fs';
 import path from 'path';
 import readline from 'readline';
 import { exec } from 'child_process';
-import 'dotenv/config';
 import {
   log_github_error,
   remove_existing_release_and_tag,
@@ -182,7 +181,6 @@ const github_json_request = async ({
   return { data };
 };
 
-
 const create_release = async ({
   github_repo,
   github_token,
@@ -342,7 +340,7 @@ export const run_core_release = async (params = {}) => {
   const github_token = process.env.GH_TOKEN;
   const github_repo = process.env.GH_REPO;
   if (!github_token || !github_repo) {
-    console.error('GH_TOKEN or GH_REPO missing from .env');
+    console.error('GH_TOKEN or GH_REPO missing from environment');
     process.exit(1);
   }
 
