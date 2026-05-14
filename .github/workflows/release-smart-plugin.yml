@@ -123,6 +123,32 @@ jobs:
         working-directory: ${{ inputs.plugin_repo_path }}
         run: npm ci
 
+      - name: Link jsbrains workspace packages
+        run: |
+          set -euo pipefail
+
+          workspace_dir="$(pwd)"
+
+          for node_modules_dir in "${{ inputs.plugin_repo_path }}/node_modules" "obsidian-smart-env/node_modules"; do
+            mkdir -p "$node_modules_dir"
+
+            for package_json in jsbrains/*/package.json; do
+              package_dir="$(dirname "$package_json")"
+              package_name="$(node -e "console.log(JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8')).name)" "$package_json")"
+
+              if [ -z "$package_name" ]; then
+                continue
+              fi
+
+              if [[ "$package_name" == @*/* ]]; then
+                mkdir -p "$node_modules_dir/${package_name%/*}"
+              fi
+
+              rm -rf "$node_modules_dir/$package_name"
+              ln -s "$workspace_dir/$package_dir" "$node_modules_dir/$package_name"
+            done
+          done
+
       - name: Validate precompiled release notes
         working-directory: ${{ inputs.plugin_repo_path }}
         run: |
