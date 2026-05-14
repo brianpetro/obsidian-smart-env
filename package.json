@@ -39,9 +39,7 @@
   },
   "devDependencies": {
     "@xenova/transformers": "latest",
-    "archiver": "^7.0.1",
     "ava": "^6.3.0",
-    "axios": "^1.13.2",
     "dotenv": "^17.2.3",
     "eslint": "^9.39.4",
     "eslint-plugin-obsidianmd": "^0.3.0",

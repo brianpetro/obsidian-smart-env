@@ -17,7 +17,7 @@ on:
         type: string
         default: '22'
       release_flags:
-        description: Optional flags passed to release.js, such as --draft or --replace-existing.
+        description: Optional flags passed to release.js, such as --draft or --replace-existing. The workflow always adds --use-existing-release-notes.
         required: false
         type: string
         default: ''
@@ -120,6 +120,15 @@ jobs:
         working-directory: ${{ inputs.plugin_repo_path }}
         run: npm ci
 
+      - name: Validate precompiled release notes
+        working-directory: ${{ inputs.plugin_repo_path }}
+        run: |
+          set -euo pipefail
+          if [ ! -s releases/latest_release.md ]; then
+            echo "::error::Missing committed releases/latest_release.md. Run releases/run_format_release_notes.js before dispatching this workflow."
+            exit 1
+          fi
+
       - name: Run release script
         working-directory: ${{ inputs.plugin_repo_path }}
         env:
@@ -127,7 +136,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          printf "\n" | node release.js ${{ inputs.release_flags }}
+          printf "\n" | node release.js --use-existing-release-notes ${{ inputs.release_flags }}
 
       - name: Collect release assets for attestation
         id: release_assets

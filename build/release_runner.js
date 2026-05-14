@@ -1,7 +1,6 @@
 import fs from 'fs';
 import path from 'path';
 import readline from 'readline';
-import axios from 'axios';
 import { exec } from 'child_process';
 import 'dotenv/config';
 import {
@@ -90,6 +89,20 @@ const build_release_body_from_md = async ({ rl, release_notes_path, version }) =
   };
 };
 
+
+const read_existing_release_body = ({ release_notes_output_path }) => {
+  if (!fs.existsSync(release_notes_output_path)) {
+    throw new Error(`Missing precompiled release notes: ${release_notes_output_path}`);
+  }
+
+  const release_body = fs.readFileSync(release_notes_output_path, 'utf8').trim();
+  if (!release_body) {
+    throw new Error(`Precompiled release notes are empty: ${release_notes_output_path}`);
+  }
+
+  return release_body;
+};
+
 const prepare_release_notes_dir = async ({
   confirmed_version,
   releases_dir,
@@ -126,6 +139,50 @@ const run_build_command = ({ build_command }) => {
   });
 };
 
+
+const github_json_request = async ({
+  url,
+  github_token,
+  method,
+  body,
+}) => {
+  if (typeof fetch !== 'function') {
+    throw new Error('Global fetch is not available. Use Node.js 18+ for release scripts.');
+  }
+
+  const response = await fetch(url, {
+    method,
+    headers: {
+      Authorization: `Bearer ${github_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  const response_text = response.status === 204 ? '' : await response.text();
+  let data = null;
+  if (response_text) {
+    try {
+      data = JSON.parse(response_text);
+    } catch (error) {
+      data = response_text;
+    }
+  }
+
+  if (!response.ok) {
+    const error = new Error(`GitHub API request failed (${response.status} ${response.statusText})`);
+    error.response = {
+      status: response.status,
+      statusText: response.statusText,
+      data,
+    };
+    throw error;
+  }
+
+  return { data };
+};
+
+
 const create_release = async ({
   github_repo,
   github_token,
@@ -143,14 +200,37 @@ const create_release = async ({
   };
 
   try {
-    return await axios.post(
-      `https://api.github.com/repos/${github_repo}/releases`,
-      release_data,
-      { headers: { Authorization: `Bearer ${github_token}`, 'Content-Type': 'application/json' } },
-    );
+    return await github_json_request({
+      url: `https://api.github.com/repos/${github_repo}/releases`,
+      github_token,
+      method: 'POST',
+      body: release_data,
+    });
   } catch (err) {
     if (log_error) {
       log_error(err, 'creating release');
+    }
+    throw err;
+  }
+};
+
+
+const publish_release = async ({
+  github_repo,
+  github_token,
+  release_id,
+  log_error,
+}) => {
+  try {
+    return await github_json_request({
+      url: `https://api.github.com/repos/${github_repo}/releases/${release_id}`,
+      github_token,
+      method: 'PATCH',
+      body: { draft: false },
+    });
+  } catch (err) {
+    if (log_error) {
+      log_error(err, 'publishing release');
     }
     throw err;
   }
@@ -182,17 +262,16 @@ const upload_release_assets = async ({
     });
   };
 
-  const required_asset_names = ['manifest.json', 'main.js'];
-  const optional_asset_names = ['styles.css'];
-
-  for (const asset_name of required_asset_names) {
+  const required_assets = ['manifest.json', 'main.js'];
+  required_assets.forEach((asset_name) => {
     const asset_path = path.join(dist_dir, asset_name);
     if (!fs.existsSync(asset_path)) {
       throw new Error(`Missing required release asset: ${asset_path}`);
     }
-  }
+  });
 
-  for (const asset_name of [...required_asset_names, ...optional_asset_names]) {
+  const release_asset_names = ['manifest.json', 'main.js', 'styles.css'];
+  for (const asset_name of release_asset_names) {
     const asset_path = path.join(dist_dir, asset_name);
     if (fs.existsSync(asset_path)) {
       await upload_asset_curl(asset_path, asset_name);
@@ -214,12 +293,11 @@ export const run_core_release = async (params = {}) => {
   } = params;
 
   const cli_options = parse_cli_options(cli_args);
+  const use_existing_release_notes = cli_args.includes('--use-existing-release-notes');
 
   const package_json = read_json_file('./package.json');
   const manifest_json = read_json_file('./manifest.json');
   const version = package_json.version;
-  const manifest_id = manifest_json.id;
-
   if (version !== manifest_json.version) {
     console.error('Version mismatch between package.json and manifest.json');
     process.exit(1);
@@ -234,7 +312,9 @@ export const run_core_release = async (params = {}) => {
   console.log(`Creating release for ${confirmed_version}`);
 
   let release_body = '';
-  if (release_notes_source === 'releases_md') {
+  if (use_existing_release_notes) {
+    release_body = read_existing_release_body({ release_notes_output_path });
+  } else if (release_notes_source === 'releases_md') {
     const notes_result = await build_release_body_from_md({
       rl,
       release_notes_path,
@@ -282,18 +362,30 @@ export const run_core_release = async (params = {}) => {
     github_token,
     confirmed_version,
     release_body,
-    draft: cli_options.draft,
+    draft: true,
     log_error,
   });
 
-  const { upload_url, html_url } = release_resp.data;
-  console.log('Release created:', html_url);
+  const { upload_url, html_url, id: release_id } = release_resp.data;
+  console.log('Draft release created:', html_url);
 
   await upload_release_assets({
     upload_url,
     github_token,
-    manifest_id,
-    confirmed_version,
     dist_dir,
   });
+
+  if (cli_options.draft) {
+    console.log('Release left as draft:', html_url);
+    return;
+  }
+
+  const published_release_resp = await publish_release({
+    github_repo,
+    github_token,
+    release_id,
+    log_error,
+  });
+
+  console.log('Release published:', published_release_resp.data.html_url);
 };
