@@ -46,3 +46,6 @@ refactor: remove axios dependency and implement fetch for GitHub API requests
 - Updated the release creation process to optionally use existing release notes.
 - Enhanced error handling for GitHub API requests.
 - Adjusted asset upload logic to ensure required assets are present.
+
+
+Improved: streamline plugin installation behavior by removing unnecessary state checks
