@@ -31,3 +31,6 @@ Improved: refactor context remove path utilities and add tests for normalization
 
 
 Improved: add last updated date to the latest release markdown output
+
+
+Improved: refactor upload_release_assets to remove zip creation and enforce required asset checks
