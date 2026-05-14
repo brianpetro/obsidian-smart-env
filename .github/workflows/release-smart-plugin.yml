@@ -123,19 +123,6 @@ jobs:
         working-directory: ${{ inputs.plugin_repo_path }}
         run: npm ci
 
-      - name: Link checked-out Smart Environment package
-        run: |
-          set -euo pipefail
-
-          workspace_dir="$(pwd)"
-          plugin_node_modules="${{ inputs.plugin_repo_path }}/node_modules"
-
-          mkdir -p "$plugin_node_modules"
-          rm -rf "$plugin_node_modules/obsidian-smart-env"
-          ln -s "$workspace_dir/obsidian-smart-env" "$plugin_node_modules/obsidian-smart-env"
-
-          test -f "$plugin_node_modules/obsidian-smart-env/build/build_plugin.js"
-
       - name: Link jsbrains workspace packages
         run: |
           set -euo pipefail
@@ -178,7 +165,28 @@ jobs:
 
           link_jsbrains_dir "${{ inputs.plugin_repo_path }}/node_modules"
           link_jsbrains_dir "obsidian-smart-env/node_modules"
-          link_jsbrains_dir "${{ inputs.plugin_repo_path }}/node_modules/obsidian-smart-env/node_modules"
+
+      - name: Link checked-out Smart Environment package
+        run: |
+          set -euo pipefail
+
+          workspace_dir="$(pwd)"
+          plugin_node_modules="${{ inputs.plugin_repo_path }}/node_modules"
+          linked_env="$plugin_node_modules/obsidian-smart-env"
+
+          mkdir -p "$plugin_node_modules"
+          rm -rf "$linked_env"
+          ln -s "$workspace_dir/obsidian-smart-env" "$linked_env"
+
+          echo "obsidian-smart-env checkout: $(git -C obsidian-smart-env rev-parse HEAD)"
+          echo "linked obsidian-smart-env:"
+          ls -la "$linked_env"
+          ls -la "$linked_env/build"
+
+          test -f "$linked_env/build/build_plugin.js"
+          test -f "$linked_env/build/dist_js_text.js"
+          test -d "$linked_env/node_modules/smart-embed-model"
+          test -d "$linked_env/node_modules/smart-models"
 
       - name: Validate precompiled release notes
         working-directory: ${{ inputs.plugin_repo_path }}
