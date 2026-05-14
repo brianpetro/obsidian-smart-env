@@ -229,7 +229,7 @@ async function build_plugin(options = {}) {
     },
     plugins: [
       create_markdown_plugin(),
-      dist_text_plugin(),
+      dist_text_plugin(options.esbuild),
       ...(options.plugins || []),
     ],
     banner: copyright_banner ? { js: copyright_banner } : undefined,

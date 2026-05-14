@@ -1,8 +1,7 @@
 // esbuild-plugin-dist-text.mjs
-import * as esbuild from 'esbuild';
 import path from 'node:path';
 
-export function dist_text_plugin() {
+export function dist_text_plugin(esbuild_instance) {
   return {
     name: 'dist-text',
     setup(build) {
@@ -21,7 +20,7 @@ export function dist_text_plugin() {
       build.onLoad({ filter: /.*/, namespace: 'dist-text' }, async (args) => {
         const { abs_src_path } = args.pluginData;
 
-        const result = await esbuild.build({
+        const result = await esbuild_instance.build({
           entryPoints: [abs_src_path],
           bundle: true,
           format: 'esm',
