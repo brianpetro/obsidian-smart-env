@@ -129,25 +129,43 @@ jobs:
 
           workspace_dir="$(pwd)"
 
-          for node_modules_dir in "${{ inputs.plugin_repo_path }}/node_modules" "obsidian-smart-env/node_modules"; do
+          link_jsbrains_dir() {
+            local node_modules_dir="$1"
             mkdir -p "$node_modules_dir"
 
-            for package_json in jsbrains/*/package.json; do
-              package_dir="$(dirname "$package_json")"
-              package_name="$(node -e "console.log(JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8')).name)" "$package_json")"
-
-              if [ -z "$package_name" ]; then
+            for package_dir in jsbrains/*/; do
+              if [ ! -d "$package_dir" ]; then
                 continue
               fi
 
-              if [[ "$package_name" == @*/* ]]; then
-                mkdir -p "$node_modules_dir/${package_name%/*}"
+              local package_base
+              package_base="$(basename "$package_dir")"
+              if [ "$package_base" = "node_modules" ]; then
+                continue
               fi
 
-              rm -rf "$node_modules_dir/$package_name"
-              ln -s "$workspace_dir/$package_dir" "$node_modules_dir/$package_name"
+              rm -rf "$node_modules_dir/$package_base"
+              ln -s "$workspace_dir/${package_dir%/}" "$node_modules_dir/$package_base"
+
+              local package_json="$package_dir/package.json"
+              if [ -f "$package_json" ]; then
+                local package_name
+                package_name="$(node -e "console.log(JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8')).name || '')" "$package_json")"
+                if [ -n "$package_name" ] && [ "$package_name" != "$package_base" ]; then
+                  if [[ "$package_name" == @*/* ]]; then
+                    mkdir -p "$node_modules_dir/${package_name%/*}"
+                  fi
+
+                  rm -rf "$node_modules_dir/$package_name"
+                  ln -s "$workspace_dir/${package_dir%/}" "$node_modules_dir/$package_name"
+                fi
+              fi
             done
-          done
+          }
+
+          link_jsbrains_dir "${{ inputs.plugin_repo_path }}/node_modules"
+          link_jsbrains_dir "obsidian-smart-env/node_modules"
+          link_jsbrains_dir "${{ inputs.plugin_repo_path }}/node_modules/obsidian-smart-env/node_modules"
 
       - name: Validate precompiled release notes
         working-directory: ${{ inputs.plugin_repo_path }}
