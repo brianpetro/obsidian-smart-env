@@ -45,8 +45,13 @@
     "ava": "^6.3.0",
     "axios": "^1.13.2",
     "dotenv": "^17.2.3",
+    "eslint": "^9.39.4",
+    "eslint-plugin-obsidianmd": "^0.3.0",
+    "globals": "^17.6.0",
     "js-tiktoken": "^1.0.19",
-    "readline": "^1.3.0"
+    "readline": "^1.3.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.59.3"
   },
   "workspaces": [
     "../jsbrains/*"
