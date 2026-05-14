@@ -12,32 +12,9 @@ import { ExcalidrawSourceContentAdapter } from "./adapters/smart-sources/excalid
 // import { SmartBlocks, SmartBlock } from 'smart-blocks';
 // import { AjsonMultiFileBlocksDataAdapter } from "smart-blocks/adapters/data/ajson_multi_file.js";
 // import { MarkdownBlockContentAdapter } from "smart-blocks/adapters/markdown_block.js";
-// smart model
+// local embedding model
 import { SmartEmbedModel } from "smart-embed-model";
-import { SmartEmbedOpenAIAdapter } from "smart-embed-model/adapters/openai.js";
 import { SmartEmbedTransformersIframeAdapter } from "smart-embed-model/adapters/transformers_iframe.js";
-import { SmartEmbedOllamaAdapter } from "smart-embed-model/adapters/ollama.js";
-import { GeminiEmbedModelAdapter } from "smart-embed-model/adapters/gemini.js";
-import { LmStudioEmbedModelAdapter } from "smart-embed-model/adapters/lm_studio.js";
-// chat model
-import { SmartChatModel } from "smart-chat-model";
-import {
-  SmartChatModelAnthropicAdapter,
-  SmartChatModelAzureAdapter,
-  // SmartChatModelCohereAdapter,
-  SmartChatModelCustomAdapter,
-  SmartChatModelGeminiAdapter,
-  SmartChatModelGoogleAdapter,
-  SmartChatModelGroqAdapter,
-  SmartChatModelLmStudioAdapter,
-  SmartChatModelOllamaAdapter,
-  SmartChatModelOpenaiAdapter,
-  SmartChatModelOpenRouterAdapter,
-  SmartChatModelXaiAdapter,
-  SmartChatModelDeepseekAdapter
-} from "smart-chat-model/adapters.js";
-import { SmartHttpRequest, SmartHttpObsidianRequestAdapter } from "smart-http-request";
-import { requestUrl } from "obsidian";
 // actions architecture
 // import smart_block from "smart-blocks/smart_block.js";
 import smart_source from "smart-sources/smart_source.js";
@@ -70,38 +47,7 @@ const smart_env_config = {
       class: SmartEmbedModel,
       adapters: {
         transformers: SmartEmbedTransformersIframeAdapter,
-        openai: SmartEmbedOpenAIAdapter,
-        ollama: SmartEmbedOllamaAdapter,
-        gemini: GeminiEmbedModelAdapter,
-        lm_studio: LmStudioEmbedModelAdapter,
       },
-    },
-    smart_chat_model: {
-      class: SmartChatModel,
-      // DEPRECATED FORMAT: will be changed (requires SmartModel adapters getters update)
-      adapters: {
-        anthropic: SmartChatModelAnthropicAdapter,
-        azure: SmartChatModelAzureAdapter,
-        custom: SmartChatModelCustomAdapter,
-        google: SmartChatModelGoogleAdapter,
-        gemini: SmartChatModelGeminiAdapter,
-        groq: SmartChatModelGroqAdapter,
-        lm_studio: SmartChatModelLmStudioAdapter,
-        ollama: SmartChatModelOllamaAdapter,
-        open_router: SmartChatModelOpenRouterAdapter,
-        openai: SmartChatModelOpenaiAdapter,
-        xai: SmartChatModelXaiAdapter,
-        deepseek: SmartChatModelDeepseekAdapter,
-      },
-      http_adapter: new SmartHttpRequest({
-        adapter: SmartHttpObsidianRequestAdapter,
-        obsidian_request_url: requestUrl,
-      }),
-    },
-    http_adapter: {
-      class: SmartHttpRequest,
-      adapter: SmartHttpObsidianRequestAdapter,
-      obsidian_request_url: requestUrl,
     },
   },
   collections: {
