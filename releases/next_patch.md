@@ -37,3 +37,12 @@ Improved: refactor upload_release_assets to remove zip creation and enforce requ
 
 
 Improved: removed extraneous model dependencies
+
+
+refactor: remove axios dependency and implement fetch for GitHub API requests
+
+- Removed axios from dependencies and refactored the code to use the native fetch API for making GitHub API requests.
+- Added a function to read existing release notes from a file.
+- Updated the release creation process to optionally use existing release notes.
+- Enhanced error handling for GitHub API requests.
+- Adjusted asset upload logic to ensure required assets are present.
