@@ -1,0 +1,206 @@
+name: Reusable Smart Plugin Release
+
+on:
+  workflow_call:
+    inputs:
+      release_kind:
+        description: core or pro.
+        required: true
+        type: string
+      obsidian_smart_env_ref:
+        description: Full commit SHA for brianpetro/obsidian-smart-env.
+        required: true
+        type: string
+      obsidian_smart_env_pro_ref:
+        description: Full commit SHA for brianpetro/obsidian-smart-env-pro. Required only for pro releases.
+        required: false
+        type: string
+        default: ''
+      jsbrains_ref:
+        description: Full commit SHA for brianpetro/jsbrains.
+        required: true
+        type: string
+      node_version:
+        description: Node.js version used for the release build.
+        required: false
+        type: string
+        default: '22'
+      release_flags:
+        description: Optional flags passed to release.js, such as --draft or --replace-existing.
+        required: false
+        type: string
+        default: ''
+      plugin_repo_path:
+        description: Workspace path where the plugin repo is checked out.
+        required: false
+        type: string
+        default: plugin
+    secrets:
+      DEPENDENCY_CHECKOUT_TOKEN:
+        required: false
+      RELEASE_TOKEN:
+        required: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Validate release inputs
+        run: |
+          set -euo pipefail
+
+          release_kind="${{ inputs.release_kind }}"
+          case "$release_kind" in
+            core|pro) ;;
+            *)
+              echo "::error::release_kind must be core or pro."
+              exit 1
+              ;;
+          esac
+
+          require_sha() {
+            local name="$1"
+            local ref="$2"
+            if [[ ! "$ref" =~ ^[0-9a-fA-F]{40}$ ]]; then
+              echo "::error::$name must be a full 40-character commit SHA for deterministic release builds."
+              exit 1
+            fi
+          }
+
+          require_sha "obsidian_smart_env_ref" "${{ inputs.obsidian_smart_env_ref }}"
+          require_sha "jsbrains_ref" "${{ inputs.jsbrains_ref }}"
+
+          if [ "$release_kind" = "pro" ]; then
+            require_sha "obsidian_smart_env_pro_ref" "${{ inputs.obsidian_smart_env_pro_ref }}"
+          fi
+
+      - name: Checkout plugin repo
+        uses: actions/checkout@v6
+        with:
+          path: ${{ inputs.plugin_repo_path }}
+
+      - name: Checkout jsbrains
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ github.repository_owner }}/jsbrains
+          ref: ${{ inputs.jsbrains_ref }}
+          path: jsbrains
+          token: ${{ secrets.DEPENDENCY_CHECKOUT_TOKEN || github.token }}
+
+      - name: Checkout Smart Environment
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ github.repository_owner }}/obsidian-smart-env
+          ref: ${{ inputs.obsidian_smart_env_ref }}
+          path: obsidian-smart-env
+          token: ${{ secrets.DEPENDENCY_CHECKOUT_TOKEN || github.token }}
+
+      - name: Checkout Smart Environment Pro
+        if: ${{ inputs.release_kind == 'pro' }}
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ github.repository_owner }}/obsidian-smart-env-pro
+          ref: ${{ inputs.obsidian_smart_env_pro_ref }}
+          path: obsidian-smart-env-pro
+          token: ${{ secrets.DEPENDENCY_CHECKOUT_TOKEN || github.token }}
+
+      - name: Assert Core release does not include Pro environment
+        if: ${{ inputs.release_kind == 'core' }}
+        run: |
+          set -euo pipefail
+          if [ -d obsidian-smart-env-pro ]; then
+            echo "::error::Core releases must not check out obsidian-smart-env-pro."
+            exit 1
+          fi
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node_version }}
+
+      - name: Log checked-out release refs
+        run: |
+          set -euo pipefail
+          {
+            echo "## Release dependency refs"
+            echo
+            for repo_dir in "${{ inputs.plugin_repo_path }}" jsbrains obsidian-smart-env obsidian-smart-env-pro; do
+              if [ -d "$repo_dir/.git" ]; then
+                echo "- $repo_dir: $(git -C "$repo_dir" rev-parse HEAD)"
+              fi
+            done
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Install dependency repos
+        run: |
+          set -euo pipefail
+
+          npm_ci_if_locked() {
+            local repo_dir="$1"
+            if [ -f "$repo_dir/package-lock.json" ]; then
+              echo "Installing $repo_dir"
+              (cd "$repo_dir" && npm ci)
+            else
+              echo "Skipping $repo_dir: no package-lock.json"
+            fi
+          }
+
+          npm_ci_if_locked jsbrains
+          npm_ci_if_locked obsidian-smart-env
+
+          if [ -d obsidian-smart-env-pro ]; then
+            npm_ci_if_locked obsidian-smart-env-pro
+          fi
+
+      - name: Install plugin repo
+        working-directory: ${{ inputs.plugin_repo_path }}
+        run: npm ci
+
+      - name: Run release script
+        working-directory: ${{ inputs.plugin_repo_path }}
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          printf "\n" | node release.js ${{ inputs.release_flags }}
+
+      - name: Collect release assets for attestation
+        id: release_assets
+        run: |
+          set -euo pipefail
+
+          plugin_path="${{ inputs.plugin_repo_path }}"
+          manifest_path="$plugin_path/dist/manifest.json"
+          main_path="$plugin_path/dist/main.js"
+          styles_path="$plugin_path/dist/styles.css"
+
+          for required_path in "$manifest_path" "$main_path"; do
+            if [ ! -f "$required_path" ]; then
+              echo "::error::Missing required release asset: $required_path"
+              exit 1
+            fi
+          done
+
+          {
+            echo "subject_path<<EOF"
+            echo "$manifest_path"
+            echo "$main_path"
+            if [ -f "$styles_path" ]; then
+              echo "$styles_path"
+            fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Attest Obsidian release assets
+        uses: actions/attest@v4
+        with:
+          subject-path: ${{ steps.release_assets.outputs.subject_path }}
