@@ -99,22 +99,15 @@ jobs:
             done
           } | tee -a "$GITHUB_STEP_SUMMARY"
 
-      - name: Install dependency repos
+      - name: Install Smart Environment dependencies
         run: |
           set -euo pipefail
-
-          npm_ci_if_locked() {
-            local repo_dir="$1"
-            if [ -f "$repo_dir/package-lock.json" ]; then
-              echo "Installing $repo_dir"
-              (cd "$repo_dir" && npm ci)
-            else
-              echo "Skipping $repo_dir: no package-lock.json"
-            fi
-          }
-
-          npm_ci_if_locked jsbrains
-          npm_ci_if_locked obsidian-smart-env
+          cd obsidian-smart-env
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install --no-audit --fund=false
+          fi
 
       - name: Install plugin repo
         working-directory: ${{ inputs.plugin_repo_path }}
