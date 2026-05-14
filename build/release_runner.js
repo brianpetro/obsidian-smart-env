@@ -1,7 +1,6 @@
 import fs from 'fs';
 import path from 'path';
 import readline from 'readline';
-import archiver from 'archiver';
 import axios from 'axios';
 import { exec } from 'child_process';
 import 'dotenv/config';
@@ -160,10 +159,7 @@ const create_release = async ({
 const upload_release_assets = async ({
   upload_url,
   github_token,
-  manifest_id,
-  confirmed_version,
   dist_dir = './dist',
-  zip_cleanup_delay_ms = 3000,
 }) => {
   const upload_asset_curl = (asset_path, asset_name) => {
     return new Promise((resolve, reject) => {
@@ -186,27 +182,21 @@ const upload_release_assets = async ({
     });
   };
 
-  const zip_name = `${manifest_id}-${confirmed_version}.zip`;
-  const zip_stream = fs.createWriteStream(`./${zip_name}`);
-  const archive = archiver('zip', { zlib: { level: 0 } });
+  const required_asset_names = ['manifest.json', 'main.js'];
+  const optional_asset_names = ['styles.css'];
 
-  await new Promise((resolve, reject) => {
-    archive.pipe(zip_stream);
-    archive.directory(dist_dir, false);
-    archive.on('error', reject);
-    zip_stream.on('close', resolve);
-    archive.finalize();
-  });
-
-  console.log(`Archive wrote ${archive.pointer()} bytes`);
-  await upload_asset_curl(`./${zip_name}`, zip_name);
-
-  for (const file of fs.readdirSync(dist_dir)) {
-    await upload_asset_curl(path.join(dist_dir, file), file);
+  for (const asset_name of required_asset_names) {
+    const asset_path = path.join(dist_dir, asset_name);
+    if (!fs.existsSync(asset_path)) {
+      throw new Error(`Missing required release asset: ${asset_path}`);
+    }
   }
 
-  if (zip_cleanup_delay_ms) {
-    setTimeout(() => fs.unlinkSync(`./${zip_name}`), zip_cleanup_delay_ms);
+  for (const asset_name of [...required_asset_names, ...optional_asset_names]) {
+    const asset_path = path.join(dist_dir, asset_name);
+    if (fs.existsSync(asset_path)) {
+      await upload_asset_curl(asset_path, asset_name);
+    }
   }
 };
 
