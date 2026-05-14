@@ -123,6 +123,12 @@ jobs:
         working-directory: ${{ inputs.plugin_repo_path }}
         run: npm ci
 
+      - name: Link Smart Environment package
+        run: |
+          set -euo pipefail
+          rm -rf "${{ inputs.plugin_repo_path }}/node_modules/obsidian-smart-env"
+          ln -s "$(pwd)/obsidian-smart-env" "${{ inputs.plugin_repo_path }}/node_modules/obsidian-smart-env"
+
       - name: Link jsbrains workspace packages
         run: |
           set -euo pipefail
