@@ -26,6 +26,16 @@ on:
         required: false
         type: string
         default: plugin
+      dependency_owner:
+        description: GitHub owner for jsbrains and obsidian-smart-env dependency checkouts.
+        required: false
+        type: string
+        default: brianpetro
+      attest_release_assets:
+        description: Generate artifact attestations for built release assets.
+        required: false
+        type: boolean
+        default: true
     secrets:
       DEPENDENCY_CHECKOUT_TOKEN:
         required: false
@@ -39,6 +49,7 @@ jobs:
       contents: write
       id-token: write
       attestations: write
+      artifact-metadata: write
     defaults:
       run:
         shell: bash
@@ -68,7 +79,7 @@ jobs:
       - name: Checkout jsbrains
         uses: actions/checkout@v6
         with:
-          repository: ${{ github.repository_owner }}/jsbrains
+          repository: ${{ inputs.dependency_owner }}/jsbrains
           ref: ${{ inputs.jsbrains_ref }}
           path: jsbrains
           token: ${{ secrets.DEPENDENCY_CHECKOUT_TOKEN || github.token }}
@@ -76,7 +87,7 @@ jobs:
       - name: Checkout Smart Environment
         uses: actions/checkout@v6
         with:
-          repository: ${{ github.repository_owner }}/obsidian-smart-env
+          repository: ${{ inputs.dependency_owner }}/obsidian-smart-env
           ref: ${{ inputs.obsidian_smart_env_ref }}
           path: obsidian-smart-env
           token: ${{ secrets.DEPENDENCY_CHECKOUT_TOKEN || github.token }}
@@ -121,7 +132,13 @@ jobs:
 
       - name: Install plugin repo
         working-directory: ${{ inputs.plugin_repo_path }}
-        run: npm ci
+        run: |
+          set -euo pipefail
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install --no-audit --fund=false
+          fi
 
       - name: Link jsbrains workspace packages
         run: |
@@ -185,6 +202,7 @@ jobs:
 
           test -f "$linked_env/build/build_plugin.js"
           test -f "$linked_env/build/dist_js_text.js"
+          test -f "$linked_env/build/release_runner.js"
           test -d "$linked_env/node_modules/smart-embed-model"
           test -d "$linked_env/node_modules/smart-models"
 
@@ -202,9 +220,17 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
           GH_REPO: ${{ github.repository }}
+          RELEASE_FLAGS: ${{ inputs.release_flags }}
         run: |
           set -euo pipefail
-          printf "\n" | node release.js --use-existing-release-notes ${{ inputs.release_flags }}
+
+          args=(release.js --use-existing-release-notes)
+          if [ -n "$RELEASE_FLAGS" ]; then
+            read -r -a parsed_release_flags <<< "$RELEASE_FLAGS"
+            args+=("${parsed_release_flags[@]}")
+          fi
+
+          printf "\n" | node "${args[@]}"
 
       - name: Collect release assets for attestation
         id: release_assets
@@ -234,6 +260,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Attest Obsidian release assets
+        if: ${{ inputs.attest_release_assets }}
         uses: actions/attest@v4
         with:
           subject-path: ${{ steps.release_assets.outputs.subject_path }}
