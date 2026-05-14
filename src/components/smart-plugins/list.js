@@ -1095,11 +1095,9 @@ export class PluginListItem {
 
   async install_core_plugin(plugin) {
     const was_installed = this.is_installed;
-    const was_enabled = this.is_enabled;
     const plugin_label = this.get_plugin_action_label(plugin);
     const install_enable_behavior = get_install_enable_behavior({
       was_installed,
-      was_enabled,
     });
 
     try {
@@ -1159,11 +1157,9 @@ export class PluginListItem {
 
   async install_plugin(params = {}, plugin) {
     const was_installed = this.is_installed;
-    const was_enabled = this.is_enabled;
     const plugin_label = this.get_plugin_action_label(plugin);
     const install_enable_behavior = get_install_enable_behavior({
       was_installed,
-      was_enabled,
     });
 
     try {
@@ -1184,9 +1180,6 @@ export class PluginListItem {
 
       await this.app.plugins.loadManifests();
 
-      if (install_enable_behavior.should_disable_before_install) {
-        await this.app.plugins.disablePlugin(this.plugin_id);
-      }
       if (install_enable_behavior.should_enable_after_install) {
         await enable_plugin(this.app, this.plugin_id);
       }
@@ -1223,11 +1216,9 @@ export class PluginListItem {
     const env = params.env || null;
     const repo = get_plugin_repo(plugin);
     const was_installed = this.is_installed;
-    const was_enabled = this.is_enabled;
     const plugin_label = this.get_plugin_action_label(plugin);
     const install_enable_behavior = get_install_enable_behavior({
       was_installed,
-      was_enabled,
     });
 
     if (!repo) {
@@ -1267,9 +1258,6 @@ export class PluginListItem {
       ]);
 
       await app.plugins.loadManifests();
-      if (install_enable_behavior.should_disable_before_install) {
-        await app.plugins.disablePlugin(this.plugin_id);
-      }
       if (install_enable_behavior.should_enable_after_install) {
         await enable_plugin(app, this.plugin_id);
       }
@@ -1453,4 +1441,5 @@ function build_invalid_credentials_message(server_message = '') {
 
   return `${default_message}\n\n${safe_server_message}`;
 }
+
 

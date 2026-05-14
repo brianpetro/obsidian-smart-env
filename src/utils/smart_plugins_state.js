@@ -270,26 +270,22 @@ export function compute_plugin_list_item_state(params = {}) {
 }
 
 /**
- * Resolve enable/disable behavior for install/update flows.
+ * Resolve enable behavior for install/update flows.
  *
  * New installs should enable the plugin.
- * Updates should only re-enable when the plugin was enabled beforehand.
+ * Updates should leave runtime plugin state untouched and rely on reload.
  *
  * @param {object} [params={}]
  * @param {boolean} [params.was_installed]
- * @param {boolean} [params.was_enabled]
  * @returns {{
- *   should_disable_before_install: boolean,
  *   should_enable_after_install: boolean,
  * }}
  */
 export function get_install_enable_behavior(params = {}) {
   const was_installed = params.was_installed === true;
-  const was_enabled = params.was_enabled === true;
 
   return {
-    should_disable_before_install: was_installed && was_enabled,
-    should_enable_after_install: !was_installed || was_enabled,
+    should_enable_after_install: !was_installed,
   };
 }
 
