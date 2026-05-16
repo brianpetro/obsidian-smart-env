@@ -2,6 +2,18 @@ import { copy_to_clipboard as base_copy } from '../../utils/copy_to_clipboard.js
 import { format_stats_message } from '../../utils/smart-context/format_stats_message.js';
 
 export async function copy_to_clipboard(params = {}) {
+  const re_import_queue = this.env?.smart_sources?.sources_re_import_queue || {};
+  const re_import_count = Object.keys(re_import_queue).length;
+  if (re_import_count && typeof this.env?.run_re_import === 'function') {
+    this.emit_event('context:reimport_before_action', {
+      level: 'info',
+      message: 'Updating changed sources before copying context.',
+      count: re_import_count,
+      event_source: 'context_actions.copy_to_clipboard',
+    });
+    await this.env.run_re_import();
+  }
+
   const context_items = this.context_items.filter(params.filter);
   if (!context_items.length) {
     this.emit_event('context:copy_empty', {
