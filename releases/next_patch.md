@@ -49,3 +49,6 @@ refactor: remove axios dependency and implement fetch for GitHub API requests
 
 
 Improved: streamline plugin installation behavior by removing unnecessary state checks
+
+
+Improved: Core context copy now runs queued source re-imports before compiling direct clipboard exports and emits an info notice only when queued changes exist.
