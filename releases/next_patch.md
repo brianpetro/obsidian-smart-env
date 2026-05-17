@@ -55,3 +55,6 @@ Improved: Core context copy now runs queued source re-imports before compiling d
 
 
 Improved: Smart Context: added current file indication to output and link tree
+
+
+Added: re-import wait time setting to Smart Environment settings.
