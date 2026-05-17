@@ -52,3 +52,6 @@ Improved: streamline plugin installation behavior by removing unnecessary state 
 
 
 Improved: Core context copy now runs queued source re-imports before compiling direct clipboard exports and emits an info notice only when queued changes exist.
+
+
+Improved: Smart Context: added current file indication to output and link tree
