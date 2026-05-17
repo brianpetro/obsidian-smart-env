@@ -30,8 +30,8 @@ const get_item_name = (context_item) => {
 // THIS SHOULD BE HANDLED MUCH BETTER IN ARCHITECTURE AND REPLACEMENT LOGIC
 // LEZER?
 export async function merge_template(item_text, params={}) {
-  const active_file_path = this.env?.obsidian_app?.workspace?.getActiveFile?.()?.path || '';
-  const item_source_path = String(this.key || '').split('#')[0];
+  const active_file_path = this.env?.obsidian_app?.workspace?.getActiveFile?.()?.path;
+  const item_source_path = this.key.split('#')[0];
   const MERGE_VARS = {
     'KEY': this.key,
     'ITEM_NAME': get_item_name(this),

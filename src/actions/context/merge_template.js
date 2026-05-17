@@ -10,15 +10,14 @@ export async function merge_template(context_items_text, params={}) {
   const context_items = params.context_items || [];
   const MERGE_VARS = {
     'FILE_TREE': () => {
-      const active_file_path = this.env?.obsidian_app?.workspace?.getActiveFile?.()?.path || '';
+      const active_file_path = this.env?.obsidian_app?.workspace?.getActiveFile?.()?.path;
       let did_mark_current = false;
       const tree_keys = context_items.map((item) => {
-        const key = String(item?.key || '');
-        if (!did_mark_current && active_file_path && key.split('#')[0] === active_file_path) {
+        if (!did_mark_current && active_file_path && item.key.split('#')[0] === active_file_path) {
           did_mark_current = true;
-          return `${key} (current)`;
+          return `${item.key} (current)`;
         }
-        return key;
+        return item.key;
       });
       return build_file_tree_string(tree_keys);
     },
