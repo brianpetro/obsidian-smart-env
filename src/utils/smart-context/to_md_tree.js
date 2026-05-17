@@ -116,8 +116,8 @@ function escape_markdown_link_text(text = '') {
  * @returns {{
  *   children: Array<
  *     | { type: 'dir', name: string, node: any }
- *     | { type: 'file', target: string }
- *     | { type: 'external_file', label: string, href: string }
+ *     | { type: 'file', target: string, is_current?: boolean }
+ *     | { type: 'external_file', label: string, href: string, is_current?: boolean }
  *   >,
  *   dir_nodes: Map<string, any>,
  *   file_keys: Set<string>,
@@ -380,14 +380,16 @@ function render_tree_lines(node, depth = 0, lines = []) {
       continue;
     }
 
+    const current_suffix = child.is_current ? ' (current)' : '';
+
     if (child.type === 'external_file') {
       const safe_label = escape_markdown_link_text(child.label);
-      lines.push(`${'\t'.repeat(depth)}- [${safe_label}](${child.href})`);
+      lines.push(`${'\t'.repeat(depth)}- [${safe_label}](${child.href})${current_suffix}`);
       continue;
     }
 
     if (child.type === 'file') {
-      lines.push(`${'\t'.repeat(depth)}- [[${child.target}]]`);
+      lines.push(`${'\t'.repeat(depth)}- [[${child.target}]]${current_suffix}`);
     }
   }
   return lines;
@@ -427,6 +429,16 @@ function list_context_items(smart_context) {
 }
 
 /**
+ * Resolve the current active file path from the workspace.
+ *
+ * @param {import('smart-contexts').SmartContext|any} smart_context
+ * @returns {string}
+ */
+function get_active_file_path(smart_context) {
+  return smart_context?.env?.obsidian_app?.workspace?.getActiveFile?.()?.path || '';
+}
+
+/**
  * Build a wikilink tree for a SmartContext using its context_items collection.
  *
  * External items are rendered as Markdown file links with absolute `file://`
@@ -441,6 +453,8 @@ export function context_to_md_tree(smart_context) {
 
   const root_node = create_tree_node();
   const seen_keys = new Set();
+  const active_file_path = get_active_file_path(smart_context);
+  let did_mark_current = false;
 
   for (let i = 0; i < items.length; i += 1) {
     const item = items[i];
@@ -471,6 +485,10 @@ export function context_to_md_tree(smart_context) {
 
     const file_segment = path_segments.pop();
     const parent_node = ensure_path(root_node, path_segments);
+    const is_current = !did_mark_current
+      && active_file_path
+      && parsed_key.normalized_key.split('#')[0] === active_file_path
+    ;
 
     if (parsed_key.is_external) {
       const href = resolve_external_href(smart_context, parsed_key.raw_key);
@@ -483,7 +501,9 @@ export function context_to_md_tree(smart_context) {
         type: 'external_file',
         label: file_segment,
         href,
+        is_current,
       });
+      if (is_current) did_mark_current = true;
       continue;
     }
 
@@ -497,8 +517,11 @@ export function context_to_md_tree(smart_context) {
     parent_node.children.push({
       type: 'file',
       target: wikilink_target,
+      is_current,
     });
+    if (is_current) did_mark_current = true;
   }
 
   return render_tree_lines(root_node).join('\n');
 }
+

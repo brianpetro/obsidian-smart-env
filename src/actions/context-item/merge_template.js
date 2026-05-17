@@ -30,12 +30,15 @@ const get_item_name = (context_item) => {
 // THIS SHOULD BE HANDLED MUCH BETTER IN ARCHITECTURE AND REPLACEMENT LOGIC
 // LEZER?
 export async function merge_template(item_text, params={}) {
+  const active_file_path = this.env?.obsidian_app?.workspace?.getActiveFile?.()?.path || '';
+  const item_source_path = String(this.key || '').split('#')[0];
   const MERGE_VARS = {
     'KEY': this.key,
     'ITEM_NAME': get_item_name(this),
     'TIME_AGO': convert_to_time_ago(this.mtime) || 'Missing',
     'LINK_DEPTH': this.data.d || '0',
     'EXT': this.item_ref?.file_type || '',
+    'IS_CURRENT': active_file_path && item_source_path === active_file_path ? 'is-current' : '',
   };
 
   const replace_vars = async (template) => {
@@ -97,6 +100,7 @@ export const settings_config = {
           <li><code>{{TIME_AGO}}</code> - Time since the item was last modified</li>
           <li><code>{{LINK_DEPTH}}</code> - Depth level of the item</li>
           <li><code>{{EXT}}</code> - File extension of the item</li>
+          <li><code>{{IS_CURRENT}}</code> - <code>is-current</code> when the item belongs to the active note</li>
         </ul>
     `,
   },
@@ -111,6 +115,7 @@ export const settings_config = {
 
 export const default_settings = {
   template_preset: 'xml_structured',
-  template_before: '<item loc="{{KEY}}" at="{{TIME_AGO}}">',
+  template_before: '<item loc="{{KEY}}" at="{{TIME_AGO}}" {{IS_CURRENT}}>',
   template_after: '</item>',
 };
+

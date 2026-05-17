@@ -5,7 +5,7 @@ export const template_presets = {
     label: 'XML-style (default)',
     context_template_before: '<context>\n{{FILE_TREE}}',
     context_template_after: '</context>',
-    item_template_before: '<item loc="{{KEY}}" at="{{TIME_AGO}}" depth="{{LINK_DEPTH}}">',
+    item_template_before: '<item loc="{{KEY}}" at="{{TIME_AGO}}" depth="{{LINK_DEPTH}}" {{IS_CURRENT}}>',
     item_template_after: '</item>',
   },
   markdown_headings: {
@@ -13,7 +13,7 @@ export const template_presets = {
     context_template_before: '{{FILE_TREE}}',
     context_template_after: '',
     item_template_before: [
-      '## {{KEY}}',
+      '## {{KEY}} {{IS_CURRENT}}',
       'Updated: {{TIME_AGO}} | Depth: {{LINK_DEPTH}}',
       '````{{EXT}}',
     ].join('\n'),
@@ -82,3 +82,4 @@ export function get_item_templates(settings = {}, defaults = {}) {
     template_after: get_template_value(settings, defaults, 'item_template_after', 'template_after'),
   };
 }
+

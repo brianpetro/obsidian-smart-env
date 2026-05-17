@@ -10,7 +10,17 @@ export async function merge_template(context_items_text, params={}) {
   const context_items = params.context_items || [];
   const MERGE_VARS = {
     'FILE_TREE': () => {
-      return build_file_tree_string(context_items.map(c => c.key));
+      const active_file_path = this.env?.obsidian_app?.workspace?.getActiveFile?.()?.path || '';
+      let did_mark_current = false;
+      const tree_keys = context_items.map((item) => {
+        const key = String(item?.key || '');
+        if (!did_mark_current && active_file_path && key.split('#')[0] === active_file_path) {
+          did_mark_current = true;
+          return `${key} (current)`;
+        }
+        return key;
+      });
+      return build_file_tree_string(tree_keys);
     },
   };
 
@@ -63,7 +73,7 @@ export const settings_config = {
     group: 'Context templates',
     value: `<b>Available variables:</b>
       <ul>
-        <li><code>{{FILE_TREE}}</code> - Shows hierarchical view of all files</li>
+        <li><code>{{FILE_TREE}}</code> - Shows hierarchical view of all files and marks the active note with <code>(current)</code></li>
       </ul>
     `,
   },
@@ -74,3 +84,4 @@ export const default_settings = {
   template_before: '<context>\n{{FILE_TREE}}',
   template_after: '</context>',
 };
+
