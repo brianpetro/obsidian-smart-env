@@ -20,6 +20,11 @@ export async function render(env, opts = {}) {
 
 export async function post_process(env, container, opts = {}) {
   const settings_config = {
+    re_import_wait_time: {
+      type: 'number',
+      name: 'Re-import wait time',
+      description: 'Time in seconds to wait before re-importing a file after modification. Increase if re-importing is interfering with editing experience. Decrease to have changes reflected in the Smart Environment more quickly.',
+    },
     folder_exclusions,
     view_exclusions,
     // reset_env_settings_btn, // TODO: manually tested before implementing reset button
