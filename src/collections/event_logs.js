@@ -62,8 +62,6 @@ export function get_native_notice_component_key(event_key, event = {}) {
 }
 
 export class EventLogs extends BaseEventLogs {
-  static version = 0.004;
-
   static get default_settings() {
     return {
       ...(super.default_settings || {}),
