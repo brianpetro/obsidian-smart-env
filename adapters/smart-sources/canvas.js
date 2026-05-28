@@ -16,72 +16,6 @@ export function parse_canvas_json({ content } = {}) {
     return null;
   }
 }
-
-/**
- * Build a link record compatible with SmartSource outlinks.
- * @param {Object} params
- * @param {string} params.target
- * @param {string} [params.title]
- * @returns {{ title: string, target: string, line: number }}
- */
-function build_link_record({ target, title } = {}) {
-  if (!target) return null;
-  return {
-    title: title || target,
-    target,
-    line: 1,
-  };
-}
-
-/**
- * Extract link records from a single canvas node.
- * @param {Object} params
- * @param {Object} params.node
- * @returns {Array<{ title: string, target: string, line: number, embedded?: boolean }>}
- */
-function get_canvas_node_links({ node } = {}) {
-  if (!node || typeof node !== 'object') return [];
-  if (node.type === 'text' && typeof node.text === 'string') {
-    return get_markdown_links(node.text);
-  }
-  if (node.type === 'file' && typeof node.file === 'string') {
-    const subpath = typeof node.subpath === 'string' ? node.subpath : '';
-    const target = `${node.file}${subpath}`;
-    const record = build_link_record({ target, title: node.file });
-    return record ? [record] : [];
-  }
-  if (node.type === 'link' && typeof node.url === 'string') {
-    const record = build_link_record({ target: node.url, title: node.url });
-    return record ? [record] : [];
-  }
-  return [];
-}
-
-/**
- * Extract link records from canvas nodes.
- * @param {Object} params
- * @param {Array<Object>} [params.nodes=[]]
- * @returns {Array<{ title: string, target: string, line: number, embedded?: boolean }>}
- */
-function get_canvas_links_from_nodes({ nodes = [] } = {}) {
-  if (!Array.isArray(nodes)) return [];
-  return nodes.reduce((links, node) => {
-    links.push(...get_canvas_node_links({ node }));
-    return links;
-  }, []);
-}
-
-/**
- * Parse `.canvas` JSON content and return outlink records.
- * @param {Object} params
- * @param {string} params.content
- * @returns {Array<{ title: string, target: string, line: number, embedded?: boolean }>}
- */
-export function get_canvas_links({ content } = {}) {
-  const canvas_data = parse_canvas_json({ content });
-  if (!canvas_data?.nodes) return [];
-  return get_canvas_links_from_nodes({ nodes: canvas_data.nodes });
-}
 /**
  * @class CanvasSourceContentAdapter
  * @extends FileSourceContentAdapter
@@ -102,7 +36,41 @@ export class CanvasSourceContentAdapter extends FileSourceContentAdapter {
       return;
     }
 
-    this.data.outlinks = get_canvas_links({ content });
+    const canvas_data = parse_canvas_json({ content });
+    const outlinks = [];
+    if (Array.isArray(canvas_data?.nodes)) {
+      const source_collection = this.item.collection;
+      for (let i = 0; i < canvas_data.nodes.length; i++) {
+        const node = canvas_data.nodes[i];
+        if (!node || typeof node !== 'object') return [];
+        if (node.type === 'text' && typeof node.text === 'string') {
+          outlinks.push(...get_markdown_links(node.text));
+        }
+        if (node.type === 'file' && typeof node.file === 'string') {
+          const source_key = node.file;
+          const source = source_collection.get(source_key);
+          if (source) {
+            let key = source_key;
+            // 2026-05-28: No block-level links for now because downstream porcesses doesn't yet handle them
+            // ex. context/source follow-links-to-depth
+            // const subpath = typeof node.subpath === 'string' ? node.subpath : '';
+            // if (subpath) {
+            //   const block_key = Object.keys(source.data.blocks).find((key) => key.endsWith(subpath));
+            //   if (block_key) {
+            //     key += block_key;
+            //   }
+            // }
+            outlinks.push({
+              title: key,
+              target: key,
+              line: 1,
+              embedded: true,
+            });
+          }
+        }
+      }
+    }
+    this.data.outlinks = outlinks;
 
     const file_stat = this.item.file?.stat;
     const size = file_stat?.size ?? content.length;
