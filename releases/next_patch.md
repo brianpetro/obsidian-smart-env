@@ -61,3 +61,6 @@ Added: re-import wait time setting to Smart Environment settings.
 
 - Added configurable debounce timing for queue saves in Collection and EventLogs (reduce event logs save frequency to improve performance)
 
+
+
+improved: canvas file link parsing
