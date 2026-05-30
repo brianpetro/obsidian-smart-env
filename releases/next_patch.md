@@ -64,3 +64,6 @@ Added: re-import wait time setting to Smart Environment settings.
 
 
 improved: canvas file link parsing
+
+
+fixed: used new Obsidian protocol API
