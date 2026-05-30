@@ -154,7 +154,8 @@ export class SmartEnv extends BaseSmartEnv {
       this._onboarding_events_teardown = register_first_of_event_notifications(this);
     }
   
-    if (!this.plugin.app.workspace.protocolHandlers.has('smart-plugins/callback')) {
+    const protocol_handlers = this.plugin.app.workspace.protocolHandlers || this.plugin.app.workspace.protocolHandler?.handlers;
+    if (!protocol_handlers.has('smart-plugins/callback')) {
       // Register protocol handler for obsidian://smart-plugins/callback
       this.plugin.registerObsidianProtocolHandler('smart-plugins/callback', async (params) => {
         await this.handle_smart_plugins_oauth_callback(params);
