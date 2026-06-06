@@ -223,7 +223,7 @@ export const EVENTS_CHECKLIST_ITEMS_BY_EVENT_KEY = {
   'completion:completed': {
     group: 'Chat Pro',
     milestone: 'Received the first Smart Chat response (a completion finished).',
-    link: 'https://smartconnections.app/smart-chat/api-integration/?utm_source=milestones#quick-start',
+    link: 'https://smartconnections.app/smart-chat/api/?utm_source=milestones#quick-start',
     is_pro: true,
   },
 
