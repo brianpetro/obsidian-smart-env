@@ -627,7 +627,7 @@ function compile_latest_release(params) {
     version,
     releases_dir = path.join(process.cwd(), 'releases'),
     output_path = path.join(releases_dir, 'latest_release.md'),
-    canonical_release_dir = path.resolve(process.cwd(), '../obsidian-1/+Outcome/release'),
+    canonical_release_dir = path.resolve(process.cwd(), '../obsidian-1/+Objective/release'),
     next_patch_path = path.join(releases_dir, 'next_patch.md'),
     dry_run = false,
   } = params;
