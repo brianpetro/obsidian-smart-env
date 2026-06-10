@@ -71,3 +71,5 @@ fixed: used new Obsidian protocol API
 - Notifications improved:
 	- Added "View more" button to notifications to open the events modal with the details
 	- Added "Show more" button to notifications/events feed modal instead of auto-rendering new events to prevent "jank" when viewing
+
+added: implement read_binary method to read files as binary bytes
