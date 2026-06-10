@@ -64,6 +64,11 @@ export class ObsidianFsAdapter {
     return await this.obsidian_adapter.append(rel_path, data);
   }
 
+  async append_binary(rel_path, data) {
+    if (!rel_path.startsWith(this.fs_path)) rel_path = this.fs_path + '/' + rel_path;
+    return await this.obsidian_adapter.appendBinary(rel_path, data);
+  }
+
   /**
    * Create a new directory
    * 
@@ -269,6 +274,17 @@ export class ObsidianFsAdapter {
       console.log(`Created folder: ${folder_path}`);
     }
     return await this.obsidian_adapter.write(rel_path, data);
+  }
+
+  async write_binary(rel_path, data) {
+    if (!rel_path.startsWith(this.fs_path)) rel_path = this.fs_path + '/' + rel_path;
+    // if rel_path contains a folder, ensure it exists
+    const folder_path = rel_path.split('/').slice(0, -1).join('/');
+    if(!await this.exists(folder_path)) {
+      await this.mkdir(folder_path);
+      console.log(`Created folder: ${folder_path}`);
+    }
+    return await this.obsidian_adapter.writeBinary(rel_path, data);
   }
 
   get_link_target_path(link_path, file_path) {
