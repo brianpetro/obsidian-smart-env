@@ -192,6 +192,17 @@ export class ObsidianFsAdapter {
   }
 
   /**
+   * Read a file as binary bytes using Obsidian's native binary adapter path.
+   *
+   * @param {string} rel_path - The relative path of the file to read
+   * @returns {Promise<ArrayBuffer>}
+   */
+  async read_binary(rel_path) {
+    if (!rel_path.startsWith(this.fs_path)) rel_path = this.fs_path + '/' + rel_path;
+    return await this.obsidian_adapter.readBinary(rel_path);
+  }
+
+  /**
    * Rename a file or directory
    * 
    * @param {string} old_path - The current path of the file or directory
