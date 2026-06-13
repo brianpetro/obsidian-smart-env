@@ -31,23 +31,6 @@ export function has_linked_depth_items(ctx) {
 }
 
 /**
- * Resolve the Pro "Copy with media" preference.
- *
- * This helper intentionally accepts either a SmartContext instance or an env-like
- * object so command helpers can read the setting without needing a context first.
- *
- * @param {any} scope
- * @returns {boolean}
- */
-export function get_copy_with_media_setting(scope) {
-  const env = scope?.env || scope || null;
-  if (!env?.is_pro) return false;
-  return Boolean(
-    env?.smart_contexts?.settings?.actions?.context_copy_to_clipboard?.copy_with_media,
-  );
-}
-
-/**
  * @param {HTMLButtonElement} button
  * @param {MouseEvent|KeyboardEvent} event
  * @param {Menu} menu
@@ -259,10 +242,10 @@ export function build_context_actions_menu(ctx, menu, params = {}) {
 }
 
 /**
- * Render the primary quick-copy button.
+ * Render the primary text-copy button.
  *
  * This stays text-only on purpose so there is always a predictable one-click
- * copy path regardless of Pro media preferences.
+ * copy path regardless of Pro media commands.
  *
  * @param {import('smart-contexts').SmartContext} ctx
  * @param {HTMLElement} container
@@ -275,12 +258,12 @@ export function render_btn_quick_copy(ctx, container, params = {}) { // eslint-d
   const button = create_button(container, {
     icon: 'smart-copy-note',
     icon_only: true,
-    aria_label: 'Smart Copy',
+    aria_label: 'Copy text',
   });
 
   button.addEventListener('click', async () => {
     // TODO: replace with ctx.actions.context_smart_copy() (implemented in smart-context-obsidian-early)
-    await ctx.actions.context_copy_to_clipboard();
+    await ctx.actions.context_copy_to_clipboard({ with_media: false });
   });
 
   return button;
