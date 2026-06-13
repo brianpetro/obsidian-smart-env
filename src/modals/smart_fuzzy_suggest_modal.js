@@ -26,6 +26,18 @@ export class SmartFuzzySuggestModal extends FuzzySuggestModal {
     this.item_or_collection = item_or_collection;
     this.emptyStateText = 'No suggestions available';
     this._set_custom_instructions = false;
+
+    this.scope.register(['Shift'], 'Enter', (evt) => {
+      this.use_shift_select = true;
+      this.selectActiveSuggestion(evt);
+      return false;
+    });
+
+    this.scope.register(['Mod'], 'Enter', (evt) => {
+      this.use_mod_select = true;
+      this.selectActiveSuggestion(evt);
+      return false;
+    });
   }
 
 
@@ -112,10 +124,6 @@ export class SmartFuzzySuggestModal extends FuzzySuggestModal {
   open(params = {}) {
     super.open();
     this.modalEl.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        if (e.shiftKey) this.use_shift_select = true;
-        this.selectActiveSuggestion(e);
-      }
       const is_cursor_end_of_input = this.inputEl.selectionStart === this.inputEl.value.length;
       const should_handle_arrow_right = is_cursor_end_of_input
         || e.target !== this.inputEl
@@ -303,3 +311,4 @@ export class SmartFuzzySuggestModal extends FuzzySuggestModal {
     this.item_or_collection.emit_event(`${this.constructor.event_domain}:closed`);
   }
 }
+
