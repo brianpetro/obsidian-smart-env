@@ -318,7 +318,19 @@ export function get_entry_payload_text(entry) {
   const event_obj = entry?.event && typeof entry.event === 'object' ? entry.event : {};
 
   return Object.entries(event_obj)
-    .filter(([key]) => !['at', 'collection_key', 'message', 'level', 'btn_text', 'btn_callback', 'timeout', 'timeout_ms'].includes(key))
+    .filter(([key]) => ![
+      'at',
+      'collection_key',
+      'message',
+      'level',
+      'btn_text',
+      'btn_callback',
+      'timeout',
+      'timeout_ms',
+      'link',
+      'help_link',
+      'hide_mute_button',
+    ].includes(key))
     .map(([key, value]) => `  ${key}: ${typeof value === 'string' ? value : JSON.stringify(value)}`)
     .join('\n');
 }
@@ -333,6 +345,17 @@ export function get_entry_summary_action(entry) {
   const btn_callback = typeof event_obj.btn_callback === 'string' ? event_obj.btn_callback.trim() : '';
   if (!btn_text || !btn_callback) return null;
   return { btn_text, btn_callback };
+}
+
+/**
+ * @param {object} entry
+ * @returns {string}
+ */
+export function get_entry_help_link(entry) {
+  const event_obj = entry?.event && typeof entry.event === 'object' ? entry.event : {};
+  if (typeof event_obj.link === 'string' && event_obj.link.trim()) return event_obj.link.trim();
+  if (typeof event_obj.help_link === 'string' && event_obj.help_link.trim()) return event_obj.help_link.trim();
+  return '';
 }
 
 /**

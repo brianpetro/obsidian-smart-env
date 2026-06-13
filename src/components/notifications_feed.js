@@ -7,6 +7,7 @@ import {
   entries_to_clipboard_text,
   format_level_label,
   get_entry_event_key,
+  get_entry_help_link,
   get_entry_level,
   get_entry_payload_text,
   get_entry_summary_action,
@@ -564,7 +565,9 @@ function append_entry(feed_container, entry, params = {}) {
   const event_key = get_entry_event_key(entry) || 'event';
   const payload_text = get_entry_payload_text(entry);
   const summary_action = get_entry_summary_action(entry);
+  const help_link = get_entry_help_link(entry);
   const is_canonical = is_canonical_notification_entry(entry);
+  const should_render_mute_button = is_canonical && entry?.event?.hide_mute_button !== true;
   const is_muted = is_canonical && Boolean(env?.event_logs?.is_event_key_muted?.(event_key));
   const is_feed_only = Boolean(level) && !is_canonical;
   const entry_row_key = get_entry_row_key(entry);
@@ -678,7 +681,21 @@ function append_entry(feed_container, entry, params = {}) {
     `${Math.max(1, total_count).toLocaleString()} total`,
   ));
 
-  if (is_canonical) {
+  if (help_link) {
+    const help_link_btn = feed_container.ownerDocument.createElement('button');
+    help_link_btn.className = 'smart-env-btn smart-env-btn--ghost smart-env-notification__help-link';
+    help_link_btn.type = 'button';
+    help_link_btn.textContent = 'Learn more';
+    help_link_btn.setAttribute('aria-label', 'Learn more about this event');
+    help_link_btn.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      window.open(help_link, '_external');
+    });
+    actions.appendChild(help_link_btn);
+  }
+
+  if (should_render_mute_button) {
     const mute_btn = feed_container.ownerDocument.createElement('button');
     mute_btn.className = 'smart-env-btn smart-env-btn--ghost smart-env-notification__mute';
     mute_btn.type = 'button';

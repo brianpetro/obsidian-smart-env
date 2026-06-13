@@ -139,6 +139,7 @@ function open_notifications_feed(env, params = {}) {
  * @param {(callback_key: string) => boolean} [params.on_action]
  * @param {() => boolean} [params.on_mute]
  * @param {Function|null} [params.on_open_feed=null]
+ * @param {boolean} [params.hide_mute_button=false]
  * @returns {DocumentFragment|string}
  */
 export function render(env, params = {}) {
@@ -148,6 +149,7 @@ export function render(env, params = {}) {
     on_action = null,
     on_mute = null,
     on_open_feed = null,
+    hide_mute_button = false,
   } = params;
 
   const level = get_event_level(event_key, event) || 'info';
@@ -156,6 +158,10 @@ export function render(env, params = {}) {
   const btn_text = to_trimmed_string(event?.btn_text);
   const btn_callback = to_trimmed_string(event?.btn_callback);
   const help_link = to_trimmed_string(event?.link);
+  const should_render_mute_button = Boolean(event_key)
+    && hide_mute_button !== true
+    && event?.hide_mute_button !== true
+  ;
 
   if (typeof document === 'undefined') {
     return get_default_notice_summary(event_key, event);
@@ -232,7 +238,8 @@ export function render(env, params = {}) {
 
   const should_render_actions = Boolean(btn_text && btn_callback)
     || Boolean(help_link)
-    || Boolean(event_key)
+    || can_view_more
+    || should_render_mute_button
   ;
 
   if (should_render_actions) {
@@ -278,7 +285,7 @@ export function render(env, params = {}) {
       actions_el.appendChild(link_el);
     }
 
-    if (event_key) {
+    if (should_render_mute_button) {
       const mute_btn_el = document.createElement('button');
       mute_btn_el.type = 'button';
       mute_btn_el.className = 'smart-env-default-notice__mute';
