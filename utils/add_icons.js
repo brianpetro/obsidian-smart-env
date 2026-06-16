@@ -12,6 +12,13 @@ const smart_copy_note_svg = svg_wrap_24(`
   <path d="M12 17.4h4.32"></path>
 `);
 
+const smart_copy_media_svg = svg_wrap_24(`
+  <rect x="8.76" y="6.6" width="12.96" height="15.12" rx="2.16"></rect>
+  <path d="M4.44 17.4H3.36a2.16 2.16 0 0 1-2.16-2.16V4.44a2.16 2.16 0 0 1 2.16-2.16h10.8a2.16 2.16 0 0 1 2.16 2.16v2.16"></path>
+  <circle cx="17.52" cy="11.58" r="0.84" fill="currentColor" stroke="none"></circle>
+  <path d="M11.52 18l2.88-3 1.56 1.68 2.22-2.46 2.22 3.06" stroke-width="1.65"></path>
+`);
+
 const smart_context_builder_svg = svg_wrap_24(`
   <rect x="2.1" y="3.2" width="13.2" height="17.6" rx="2.2"></rect>
   <path d="M5.4 7.6h6.6"></path>
@@ -88,6 +95,10 @@ export function add_smart_lookup_icon() {
  */
 export function add_smart_copy_context_icon() {
   addIcon("smart-copy-note", smart_copy_note_svg);
+}
+
+export function add_smart_copy_media_icon() {
+  addIcon("smart-copy-media", smart_copy_media_svg);
 }
 
 /**
@@ -200,6 +211,7 @@ export function add_smart_graph_icon() {
  */
 export function add_smart_icons() {
   add_smart_copy_context_icon();
+  add_smart_copy_media_icon();
   add_smart_context_icon();
   add_inline_connections_icon();
   add_footer_connections_icon();
