@@ -25,6 +25,10 @@ import { deep_clone_config } from 'smart-environment/utils/deep_clone_config.js'
 import { normalize_opts } from 'smart-environment/utils/normalize_opts.js';
 import pkg from './package.json' with { type: 'json' };
 import { register_copy_menu_actions, register_context_menu_actions } from './src/utils/smart-context/copy_actions.js';
+import {
+  build_menu as build_registered_menu,
+  register_menu_action as register_registered_menu_action,
+} from './src/utils/menu_actions.js';
 
 const MIN_COMPATIBLE_SMART_ENV_VERSION = '2.4.0';
 
@@ -49,7 +53,6 @@ export class SmartEnv extends BaseSmartEnv {
     // cache miss or collections updated -> rebuild
     this._collections_version_signature = signature;
     this._config = {};
-
     const sorted_configs = Object.entries(this.smart_env_configs)
       .sort(([a_key], [b_key]) => {
         if (!this.primary_main_key) return 0;
@@ -442,22 +445,29 @@ export class SmartEnv extends BaseSmartEnv {
     ;
   }
 
-  register_menu_action(menu_key, fn) {
-    if (!this._registered_menu_actions) {
-      this._registered_menu_actions = {};
-    }
-    if (!this._registered_menu_actions[menu_key]) {
-      this._registered_menu_actions[menu_key] = new Set();
-    }
-    if (this._registered_menu_actions[menu_key].has(fn)) return;
-    this._registered_menu_actions[menu_key].add(fn);
+  /**
+   * Register a legacy menu builder or a normal action entry with `menus` metadata.
+   *
+   * @param {string} menu_key
+   * @param {Function|string} fn_or_action_key
+   * @param {Function|Object|null} [action_entry=null]
+   * @returns {*}
+   */
+  register_menu_action(menu_key, fn_or_action_key, action_entry = null) {
+    return register_registered_menu_action(this, menu_key, fn_or_action_key, action_entry);
   }
 
-  build_menu(menu_key, menu, scope) {
-    const registered_actions = this._registered_menu_actions?.[menu_key] ?? new Set();
-    registered_actions.forEach(menu_action => {
-      menu_action(menu, scope);
-    });
+  /**
+   * Build registered actions for a menu instance.
+   *
+   * @param {string} menu_key
+   * @param {Object} menu
+   * @param {Object} scope
+   * @param {Object} [params={}]
+   * @returns {Object}
+   */
+  build_menu(menu_key, menu, scope, params = {}) {
+    return build_registered_menu(this, menu_key, menu, scope, params);
   }
 
   /**
@@ -722,5 +732,3 @@ function is_global_env_locked(global_ref) {
 function is_supported_smart_env_version(version) {
   return compare_versions(version, MIN_COMPATIBLE_SMART_ENV_VERSION) >= 0;
 }
-
-
