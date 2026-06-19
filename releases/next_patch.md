@@ -76,3 +76,6 @@ added: implement read_binary method to read files as binary bytes
 
 
 added: implement help link functionality and mute button visibility control in notifications
+
+
+added: implement menu registration and building functions for enhanced menu actions
