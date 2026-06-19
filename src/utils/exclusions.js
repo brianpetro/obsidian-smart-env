@@ -36,6 +36,18 @@ export function add_exclusion(exclusions, value) {
 }
 
 /**
+ * Format a selected folder path as a recursive exclusion pattern.
+ * @param {string} folder_path
+ * @returns {string}
+ */
+export function format_folder_exclusion(folder_path) {
+  const trimmed = (folder_path ?? '').trim().replace(/\/+$/g, '');
+  if (!trimmed) return '';
+  if (trimmed.endsWith('/**')) return trimmed;
+  return `${trimmed}/**`;
+}
+
+/**
  * Remove a value from a CSV list of exclusions.
  * @param {string} exclusions
  * @param {string} value

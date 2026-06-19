@@ -4,7 +4,13 @@
  * and add it to env.settings.smart_sources.folder_exclusions (CSV).
  */
 import { FuzzySuggestModal } from 'obsidian';
-import { add_exclusion, ensure_smart_sources_settings, parse_exclusions_csv, remove_exclusion } from '../utils/exclusions.js';
+import {
+  add_exclusion,
+  ensure_smart_sources_settings,
+  format_folder_exclusion,
+  parse_exclusions_csv,
+  remove_exclusion,
+} from '../utils/exclusions.js';
 
 export class ExcludedFoldersFuzzy extends FuzzySuggestModal {
   /**
@@ -14,7 +20,17 @@ export class ExcludedFoldersFuzzy extends FuzzySuggestModal {
   constructor(app, env) {
     super(app);
     this.env = env;
-    this.setPlaceholder('Select a folder to exclude...');
+    this.setPlaceholder('Select a folder or type an exclusion pattern...');
+    this.setInstructions([
+      { command: 'Enter', purpose: 'Exclude selected folder' },
+      { command: 'Shift + Enter', purpose: 'Add entered pattern directly' },
+      { command: 'Esc', purpose: 'Close' },
+    ]);
+    this.scope.register(['Shift'], 'Enter', (evt) => {
+      this.use_input_value = true;
+      this.onChooseItem(this.inputEl.value, evt);
+      return false;
+    });
   }
 
   /**
@@ -34,10 +50,12 @@ export class ExcludedFoldersFuzzy extends FuzzySuggestModal {
    */
   getItems() {
     const smart_sources_settings = ensure_smart_sources_settings(this.env);
-    const folder_exclusions = parse_exclusions_csv(smart_sources_settings.folder_exclusions);
+    const folder_exclusions = parse_exclusions_csv(smart_sources_settings.folder_exclusions)
+      .map(format_folder_exclusion)
+    ;
 
     const candidates = (this.env.smart_sources?.fs?.folder_paths || [])
-      .filter(path => !folder_exclusions.includes(path));
+      .filter(path => !folder_exclusions.includes(format_folder_exclusion(path)));
 
     return candidates;
   }
@@ -48,13 +66,27 @@ export class ExcludedFoldersFuzzy extends FuzzySuggestModal {
 
   /**
    * Handle selecting a folder to exclude.
+   * Shift-select inserts the current input directly; normal select stores the
+   * selected folder as a recursive pattern ending in `/**`.
    * @param {string} item
+   * @param {KeyboardEvent|MouseEvent} [evt]
    */
-  onChooseItem(item) {
+  onChooseItem(item, evt) {
+    const use_input_value = this.use_input_value || evt?.shiftKey;
+    this.use_input_value = false;
+
+    const exclusion = use_input_value
+      ? this.inputEl.value.trim()
+      : format_folder_exclusion(item)
+    ;
+    if (!exclusion) return;
+
     this.prevent_close = true;
-    if (!item) return;
     const smart_sources_settings = ensure_smart_sources_settings(this.env);
-    smart_sources_settings.folder_exclusions = add_exclusion(smart_sources_settings.folder_exclusions, item);
+    smart_sources_settings.folder_exclusions = add_exclusion(
+      smart_sources_settings.folder_exclusions,
+      exclusion,
+    );
 
     // Refresh header list and suggestions so the newly excluded folder
     // disappears from the candidates.
@@ -65,14 +97,18 @@ export class ExcludedFoldersFuzzy extends FuzzySuggestModal {
   }
 
   /**
-   * Render the current list of excluded folders at the top of the modal,
-   * with inline remove buttons.
+   * Render excluded folders and folder-like .gitignore patterns in one list.
+   * User-managed exclusions include remove buttons; imported patterns show
+   * their .gitignore source in the same position.
    */
   render_excluded_list() {
     if (!this.modalEl) return;
 
     const smart_sources_settings = ensure_smart_sources_settings(this.env);
     const excluded_folders = parse_exclusions_csv(smart_sources_settings.folder_exclusions);
+    const gitignore_exclusions = (this.env.settings.gitignore_exclusions || [])
+      .filter(pattern => !pattern.includes('.'))
+    ;
 
     let header = this.modalEl.querySelector('.sc-excluded-folders-header');
     if (!header) {
@@ -85,7 +121,7 @@ export class ExcludedFoldersFuzzy extends FuzzySuggestModal {
     const title_el = header.createEl('h3');
     title_el.setText('Excluded folders');
 
-    if (!excluded_folders.length) {
+    if (!excluded_folders.length && !gitignore_exclusions.length) {
       const empty_el = header.createEl('p');
       empty_el.setText('No folders excluded yet.');
       return;
@@ -107,6 +143,18 @@ export class ExcludedFoldersFuzzy extends FuzzySuggestModal {
         this.env.update_exclusions?.();
         this.render_excluded_list();
         this.updateSuggestions();
+      });
+    });
+
+    gitignore_exclusions.forEach(pattern => {
+      const li = list_el.createEl('li', {
+        cls: 'excluded-folder-item gitignore-exclusion-item',
+      });
+      li.setText(pattern + '  ');
+      li.createEl('span', {
+        text: '.gitignore',
+        cls: 'gitignore-exclusion-source',
+        attr: { "aria-label": 'Excluded via .gitignore pattern' },
       });
     });
   }

@@ -16,6 +16,8 @@ export const default_settings = {
     file_exclusions: 'Untitled',
     folder_exclusions: '',
   },
+  gitignore_exclusions: [],
+  gitignore_exclusions_updated_at: 0,
   language: 'en',
   re_import_wait_time: 13,
   smart_chat_threads: {

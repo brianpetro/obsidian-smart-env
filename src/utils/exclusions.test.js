@@ -2,6 +2,7 @@ import test from 'ava';
 import {
   add_exclusion,
   ensure_smart_sources_settings,
+  format_folder_exclusion,
   parse_exclusions_csv,
   remove_exclusion,
 } from './exclusions.js';
@@ -15,6 +16,13 @@ test('add_exclusion adds unique trimmed values', t => {
   t.is(add_exclusion('alpha,beta', ' gamma '), 'alpha,beta,gamma');
   t.is(add_exclusion('alpha,beta', 'beta'), 'alpha,beta');
   t.is(add_exclusion('', '  '), '');
+});
+
+test('format_folder_exclusion adds one recursive suffix', t => {
+  t.is(format_folder_exclusion('Folder'), 'Folder/**');
+  t.is(format_folder_exclusion('Folder/'), 'Folder/**');
+  t.is(format_folder_exclusion('Folder/**'), 'Folder/**');
+  t.is(format_folder_exclusion(' / '), '');
 });
 
 test('remove_exclusion removes only matching entries', t => {

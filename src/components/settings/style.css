@@ -33,3 +33,11 @@
   gap: 0.5rem;
   margin-top: 0.5rem;
 }
+
+.gitignore-exclusion-source {
+  font-size: 0.8em !important;
+  color: var(--nav-item-color) !important;
+  background: var(--background-modifier-hover);
+  border-radius: 6px;
+  padding: 0.1rem 0.3rem;
+}
