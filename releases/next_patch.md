@@ -79,3 +79,6 @@ added: implement help link functionality and mute button visibility control in n
 
 
 added: implement menu registration and building functions for enhanced menu actions
+
+
+added: implement gitignore exclusions and enhance folder exclusion functionality
