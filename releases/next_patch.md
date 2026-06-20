@@ -82,3 +82,6 @@ added: implement menu registration and building functions for enhanced menu acti
 
 
 added: implement gitignore exclusions and enhance folder exclusion functionality
+
+
+added: enhance merge_template function to include section in key variable if present in link (mediated through context_item data)
