@@ -33,7 +33,7 @@ export async function merge_template(item_text, params={}) {
   const active_file_path = this.env?.obsidian_app?.workspace?.getActiveFile?.()?.path;
   const item_source_path = this.key.split('#')[0];
   const MERGE_VARS = {
-    'KEY': this.key,
+    'KEY': this.key + (this.data?.section ? `#${this.data.section}` : ''),
     'ITEM_NAME': get_item_name(this),
     'TIME_AGO': convert_to_time_ago(this.mtime) || 'Missing',
     'LINK_DEPTH': this.data.d || '0',
