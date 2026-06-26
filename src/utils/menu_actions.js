@@ -209,8 +209,16 @@ function remove_items(menu_ctx) {
   const should_remove = typeof replace === 'function'
     ? (item, index) => Boolean(replace.call(menu_ctx, item, index, menu_ctx))
     : (item) => {
-      if (replace === true) return item._action_key === menu_ctx.action_key || get_item_title(item) === title;
-      if (typeof replace === 'string') return item._action_key === replace || get_item_title(item) === replace;
+      if (replace === true) {
+        return item._action_key === menu_ctx.action_key
+          || get_item_title(item) === title
+        ;
+      }
+      if (typeof replace === 'string') {
+        return item._action_key === replace
+          || get_item_title(item) === replace
+        ;
+      }
       return false;
     }
   ;
@@ -243,12 +251,20 @@ function get_title(menu_ctx) {
 
 function get_menu_spec(action_entry, menu_key) {
   const menus = action_entry?.menus || action_entry?.action?.menus;
-  if (!menus || !Object.prototype.hasOwnProperty.call(menus, menu_key)) return null;
+  if (!menus || !Object.prototype.hasOwnProperty.call(menus, menu_key)) {
+    return null;
+  }
   return normalize_menu_spec(menus[menu_key]);
 }
 
 function normalize_menu_spec(menu_spec) {
-  if (menu_spec === false || menu_spec === null || typeof menu_spec === 'undefined') return null;
+  if (
+    menu_spec === false
+    || menu_spec === null
+    || typeof menu_spec === 'undefined'
+  ) {
+    return null;
+  }
   if (menu_spec === true) return {};
   if (typeof menu_spec === 'function') return { build: menu_spec };
   if (is_object(menu_spec)) return menu_spec;
