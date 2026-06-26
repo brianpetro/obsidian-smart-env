@@ -9,19 +9,20 @@ import { context_to_md_tree } from '../../utils/smart-context/to_md_tree.js';
  * @returns {Promise<boolean>}
  */
 export async function context_copy_link_tree(params = {}) {
+  const event_source = params.event_source || 'smart_context.copy_link_tree';
   const md_tree = context_to_md_tree(this).trim();
   if (!md_tree) {
     this.emit_event('context:copy_empty', {
       level: 'warning',
       message: 'No context items to copy.',
-      event_source: 'smart_context.copy_link_tree',
+      event_source,
     });
     return false;
   }
 
   const copied = await copy_to_clipboard(md_tree, {
     env: this.env,
-    event_source: 'smart_context.copy_link_tree',
+    event_source,
     success_event_key: 'context:clipboard_raw_copied',
     error_event_key: 'context:clipboard_raw_copy_failed',
     unavailable_event_key: 'context:clipboard_copy_unavailable',
@@ -31,7 +32,7 @@ export async function context_copy_link_tree(params = {}) {
   this.emit_event('context:link_tree_copied', {
     level: 'info',
     message: 'Copied link tree to clipboard.',
-    event_source: 'smart_context.copy_link_tree',
+    event_source,
   });
   return true;
 }
