@@ -1,6 +1,4 @@
 import { Menu, setIcon } from 'obsidian';
-import { copy_to_clipboard } from '../copy_to_clipboard.js';
-import { context_to_md_tree } from './to_md_tree.js';
 
 /**
  * @param {import('smart-contexts').SmartContext} ctx
@@ -97,122 +95,6 @@ function get_help_url(ctx) {
 }
 
 /**
- * Copy the current context as a markdown link tree.
- *
- * @param {import('smart-contexts').SmartContext} ctx
- * @returns {Promise<boolean>}
- */
-async function copy_link_tree(ctx) {
-  const md_tree = context_to_md_tree(ctx).trim();
-  if (!md_tree) {
-    ctx.emit_event('context:copy_empty', {
-      level: 'warning',
-      message: 'No context items to copy.',
-      event_source: 'smart_context.copy_link_tree',
-    });
-    return false;
-  }
-
-  const copied = await copy_to_clipboard(md_tree, {
-    env: ctx.env,
-    event_source: 'smart_context.copy_link_tree',
-    success_event_key: 'context:clipboard_raw_copied',
-    error_event_key: 'context:clipboard_raw_copy_failed',
-    unavailable_event_key: 'context:clipboard_copy_unavailable',
-  });
-  if (!copied) return false;
-
-  ctx.emit_event('context:link_tree_copied', {
-    level: 'info',
-    message: 'Copied link tree to clipboard.',
-    event_source: 'smart_context.copy_link_tree',
-  });
-  return true;
-}
-
-/**
- * Register copy/export actions for Smart Context menus.
- *
- * @param {import('../../../smart_env.js').SmartEnv} env
- * @returns {void}
- */
-export function register_copy_menu_actions(env) {
-  env.register_menu_action('smart_context:copy_menu', (menu, ctx) => {
-    if (!menu || !ctx || !has_active_context_items(ctx)) return;
-    const descriptors = [
-      {
-        key: 'copy_text',
-        title: 'Copy text',
-        icon: 'copy',
-        run: async () => {
-          return await ctx.actions.context_copy_to_clipboard({ with_media: false });
-        },
-      },
-      {
-        key: 'copy_link_tree',
-        title: 'Copy link tree',
-        icon: 'list-tree',
-        order: 3,
-        run: async () => {
-          return await copy_link_tree(ctx);
-        },
-      },
-    ];
-    descriptors.forEach((descriptor) => {
-      menu_add_from_desc(menu, descriptor);
-    });
-  });
-}
-
-/**
- * Register non-copy context actions for Smart Context menus.
- *
- * @param {import('../../../smart_env.js').SmartEnv} env
- * @returns {void}
- */
-export function register_context_menu_actions(env) {
-  env.register_menu_action('smart_context:actions_menu', (menu, ctx) => {
-    if (!menu || !ctx || !has_any_context_state(ctx)) return;
-    const descriptors = [
-      {
-        key: 'final_separator',
-        separator: true,
-        order: 998,
-      },
-      {
-        key: 'clear_context',
-        title: 'Clear this context',
-        icon: 'rotate-ccw',
-        order: 999,
-        run: async () => {
-          ctx.clear_all?.();
-          return true;
-        },
-      },
-    ];
-    descriptors.forEach((descriptor) => {
-      menu_add_from_desc(menu, descriptor);
-    });
-  });
-}
-
-function menu_add_from_desc(menu, descriptor) {
-  if (descriptor.separator) {
-    menu.addSeparator();
-    menu.items[menu.items.length - 1]._order = descriptor.order || 0;
-    return;
-  }
-  menu.addItem((mi) => {
-    mi.setTitle(descriptor.title)
-      .setIcon(descriptor.icon)
-      .onClick(async () => {
-        await descriptor.run();
-      });
-    mi._order = descriptor.order || 0;
-  });
-}
-
-/**
  * Add registered Smart Context menu entries.
  *
  * Menu action scopes:
@@ -227,16 +109,10 @@ function menu_add_from_desc(menu, descriptor) {
 export function build_context_actions_menu(ctx, menu, params = {}) {
   if (!ctx || !menu) return menu;
 
-  ctx?.env?.build_menu?.('smart_context:copy_menu', menu, ctx);
-  ctx?.env?.build_menu?.('smart_context:actions_menu', menu, ctx);
+  ctx?.env?.build_menu?.('smart_context:copy_menu', menu, ctx, params);
 
-  if (menu.items?.sort) {
-    menu.items.sort((a, b) => {
-      const order_a = a._order || 0;
-      const order_b = b._order || 0;
-      return order_a - order_b;
-    });
-  }
+  ctx?.env?.build_menu?.('smart_context:actions_menu', menu, ctx, params);
+
 
   return menu;
 }
@@ -280,7 +156,7 @@ export function render_btn_quick_copy(ctx, container, params = {}) { // eslint-d
 export function render_btn_copy_menu(ctx, container, params = {}) {
   if (!has_active_context_items(ctx)) return null;
 
-  const app = ctx?.env?.plugin?.app || ctx?.env?.obsidian_app || window?.app || globalThis?.app || null;
+  const app = ctx?.env?.plugin?.app || ctx?.env?.obsidian_app || globalThis?.app || null;
   if (!app) return null;
 
   const button = create_button(container, {
@@ -358,4 +234,3 @@ export function render_btn_help(ctx, container) {
   });
   return button;
 }
-

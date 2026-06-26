@@ -2,8 +2,6 @@ import test from 'ava';
 import {
   build_context_actions_menu,
   has_linked_depth_items,
-  register_context_menu_actions,
-  register_copy_menu_actions,
 } from './copy_actions.js';
 
 function build_menu_registry() {
@@ -104,8 +102,6 @@ test('has_linked_depth_items detects non-zero depths only', (t) => {
 
 test('build_context_actions_menu uses registered copy and action scopes', (t) => {
   const env = build_menu_registry();
-  register_copy_menu_actions(env);
-  register_context_menu_actions(env);
   env.register_menu_action('smart_context:copy_menu', (menu) => {
     menu.addItem((item) => {
       item.setTitle('Registered copy action')

@@ -39,6 +39,9 @@ import { render as suggest_display_right_component } from './src/components/sugg
 import { render as supporter_callout_component } from './src/components/supporter_callout.js';
 import { render as user_agreement_callout_component } from './src/components/user_agreement_callout.js';
 
+import { context_clear_context as context_clear_context_action, menus as context_clear_context_action_menus } from './src/actions/context/clear_context.js';
+import { context_copy_link_tree as context_copy_link_tree_action, menus as context_copy_link_tree_action_menus } from './src/actions/context/copy_link_tree.js';
+import { context_copy_text_to_clipboard as context_copy_text_to_clipboard_action, menus as context_copy_text_to_clipboard_action_menus } from './src/actions/context/copy_text_to_clipboard.js';
 import { copy_to_clipboard as context_copy_to_clipboard_action } from './src/actions/context/copy_to_clipboard.js';
 import { merge_template as context_item_merge_template_action, settings_config as context_item_merge_template_action_settings_config, default_settings as context_item_merge_template_action_default_settings } from './src/actions/context-item/merge_template.js';
 import { merge_template as context_merge_template_action, settings_config as context_merge_template_action_settings_config, default_settings as context_merge_template_action_default_settings } from './src/actions/context/merge_template.js';
@@ -47,7 +50,7 @@ import { context_suggest_contexts as context_suggest_contexts_action, display_na
 import { context_suggest_sources as context_suggest_sources_action, display_name as context_suggest_sources_action_display_name } from './src/actions/context-suggest/sources.js';
 import { pre_process as lookup_list_pre_process_action, pre_process as lookup_list_pre_process_action_pre_process } from './src/actions/lookup-list/pre_process.js';
 import { similarity as similarity_action, settings_config as similarity_action_settings_config, display_name as similarity_action_display_name, display_description as similarity_action_display_description } from './src/actions/similarity.js';
-import { source_open as source_open_action } from './src/actions/source/open.js';
+import { source_open as source_open_action, menus as source_open_action_menus } from './src/actions/source/open.js';
 
 
 export const smart_env_config = {
@@ -97,6 +100,9 @@ export const smart_env_config = {
     user_agreement_callout: { render: user_agreement_callout_component, version: "1.0.1" }
   },
   actions: {
+    context_clear_context: { action: context_clear_context_action, menus: context_clear_context_action_menus, version: "1.0.1" },
+    context_copy_link_tree: { action: context_copy_link_tree_action, menus: context_copy_link_tree_action_menus, version: "1.0.1" },
+    context_copy_text_to_clipboard: { action: context_copy_text_to_clipboard_action, menus: context_copy_text_to_clipboard_action_menus, version: "1.0.1" },
     context_copy_to_clipboard: { action: context_copy_to_clipboard_action, version: "1.0.1" },
     context_item_merge_template: { action: context_item_merge_template_action, settings_config: context_item_merge_template_action_settings_config, default_settings: context_item_merge_template_action_default_settings, version: "1.0.1" },
     context_merge_template: { action: context_merge_template_action, settings_config: context_merge_template_action_settings_config, default_settings: context_merge_template_action_default_settings, version: "1.0.1" },
@@ -105,6 +111,6 @@ export const smart_env_config = {
     context_suggest_sources: { action: context_suggest_sources_action, display_name: context_suggest_sources_action_display_name, version: "1.0.1" },
     lookup_list_pre_process: { action: lookup_list_pre_process_action, pre_process: lookup_list_pre_process_action_pre_process, version: "1.0.1" },
     similarity: { action: similarity_action, settings_config: similarity_action_settings_config, display_name: similarity_action_display_name, display_description: similarity_action_display_description, version: "1.0.1" },
-    source_open: { action: source_open_action, version: "1.0.1" }
+    source_open: { action: source_open_action, menus: source_open_action_menus, version: "1.0.1" }
   }
 };

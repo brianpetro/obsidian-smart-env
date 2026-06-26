@@ -24,7 +24,6 @@ import { SmartEnvSettingTab } from './src/views/smart_env_settings_tab.js';
 import { deep_clone_config } from 'smart-environment/utils/deep_clone_config.js';
 import { normalize_opts } from 'smart-environment/utils/normalize_opts.js';
 import pkg from './package.json' with { type: 'json' };
-import { register_copy_menu_actions, register_context_menu_actions } from './src/utils/smart-context/copy_actions.js';
 import {
   build_menu as build_registered_menu,
   register_menu_action as register_registered_menu_action,
@@ -222,8 +221,6 @@ export class SmartEnv extends BaseSmartEnv {
     });
 
     if (!this._registered_ctx_menu_actions) {
-      register_copy_menu_actions(this);
-      register_context_menu_actions(this);
       this._registered_ctx_menu_actions = true;
     }
 
