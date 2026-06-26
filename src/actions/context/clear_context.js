@@ -10,7 +10,7 @@ export function context_clear_context() {
 }
 
 export const menus = {
-  'smart_context:actions_menu': {
+  'smart_context:action_menu': {
     title: 'Clear this context',
     icon: 'rotate-ccw',
     order: 999,

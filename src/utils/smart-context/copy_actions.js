@@ -112,7 +112,7 @@ export function build_context_actions_menu(ctx, menu, params = {}) {
   ctx?.env?.build_menu?.('smart_context:copy_menu', menu, ctx, params);
   menu.addSeparator();
 
-  ctx?.env?.build_menu?.('smart_context:actions_menu', menu, ctx, params);
+  ctx?.env?.build_menu?.('smart_context:action_menu', menu, ctx, params);
   menu.addSeparator();
 
   ctx?.env?.build_menu?.('smart_contexts:menu', menu, ctx.collection, params);
