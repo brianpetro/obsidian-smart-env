@@ -26,7 +26,6 @@ import { normalize_opts } from 'smart-environment/utils/normalize_opts.js';
 import pkg from './package.json' with { type: 'json' };
 import {
   build_menu as build_registered_menu,
-  register_menu_action as register_registered_menu_action,
 } from './src/utils/menu_actions.js';
 
 const MIN_COMPATIBLE_SMART_ENV_VERSION = '2.4.0';
@@ -440,18 +439,6 @@ export class SmartEnv extends BaseSmartEnv {
         console.error('Failed to render Smart Env status bar', error);
       })
     ;
-  }
-
-  /**
-   * Register a legacy menu builder or a normal action entry with `menus` metadata.
-   *
-   * @param {string} menu_key
-   * @param {Function|string} fn_or_action_key
-   * @param {Function|Object|null} [action_entry=null]
-   * @returns {*}
-   */
-  register_menu_action(menu_key, fn_or_action_key, action_entry = null) {
-    return register_registered_menu_action(this, menu_key, fn_or_action_key, action_entry);
   }
 
   /**
