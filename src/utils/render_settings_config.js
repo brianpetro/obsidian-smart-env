@@ -155,6 +155,10 @@ export function render_settings_group(group_name, scope, settings_config, contai
       if (setting_config.description) {
         setting.setDesc(setting_config.description);
       }
+      const storage_scope = setting_config.secret && scope.secrets
+        ? scope.secrets
+        : scope.settings
+      ;
       switch (setting_config.type) {
         case 'button':
           setting.addButton((btn) => {
@@ -168,7 +172,7 @@ export function render_settings_group(group_name, scope, settings_config, contai
           break;
         case 'toggle':
           setting.addToggle((toggle) => {
-            toggle.setValue(get_by_path(scope.settings, setting_path) || false);
+            toggle.setValue(get_by_path(storage_scope, setting_path) || false);
             toggle.onChange((value) => {
               if(settng_is_pro && !env_is_pro) {
                 scope?.env?.events?.emit?.('settings:pro_feature_blocked', {
@@ -178,7 +182,7 @@ export function render_settings_group(group_name, scope, settings_config, contai
                 });
                 return;
               }
-              set_by_path(scope.settings, setting_path, value);
+              set_by_path(storage_scope, setting_path, value);
               if (typeof setting_config.callback === 'function') {
                 handle_config_callback(setting, value, setting_config.callback, { scope });
               }
@@ -187,29 +191,29 @@ export function render_settings_group(group_name, scope, settings_config, contai
           break;
         case 'text':
           setting.addText((text) => {
-            text.setValue(String(get_by_path(scope.settings, setting_path) || ''));
+            text.setValue(String(get_by_path(storage_scope, setting_path) || ''));
             text.onChange((value) => {
-              set_by_path(scope.settings, setting_path, value);
+              set_by_path(storage_scope, setting_path, value);
             });
           });
           break;
         case 'password':
           setting.addText((text) => {
-            text.setValue(String(get_by_path(scope.settings, setting_path) || ''));
+            text.setValue(String(get_by_path(storage_scope, setting_path) || ''));
             text.inputEl.setAttribute('type', 'password');
             text.onChange((value) => {
-              set_by_path(scope.settings, setting_path, value);
+              set_by_path(storage_scope, setting_path, value);
             });
           });
           break;
         case 'number':
           setting.addText((text) => {
-            text.setValue(String(get_by_path(scope.settings, setting_path) ?? '0'));
+            text.setValue(String(get_by_path(storage_scope, setting_path) ?? '0'));
             text.inputEl.setAttribute('type', 'number');
             text.onChange((value) => {
               const num_value = Number(value);
               if (!isNaN(num_value)) {
-                set_by_path(scope.settings, setting_path, num_value);
+                set_by_path(storage_scope, setting_path, num_value);
               }
               if (typeof setting_config.callback === 'function') {
                 handle_config_callback(setting, num_value, setting_config.callback, { scope });
@@ -230,9 +234,9 @@ export function render_settings_group(group_name, scope, settings_config, contai
                 dropdown.addOption(opt.value, label);
               });
             }
-            dropdown.setValue(get_by_path(scope.settings, setting_path) || '');
+            dropdown.setValue(get_by_path(storage_scope, setting_path) || '');
             dropdown.onChange((value) => {
-              set_by_path(scope.settings, setting_path, value);
+              set_by_path(storage_scope, setting_path, value);
               if (typeof setting_config.callback === 'function') {
                 handle_config_callback(setting, value, setting_config.callback, { scope });
               }
@@ -242,7 +246,7 @@ export function render_settings_group(group_name, scope, settings_config, contai
           break;
         case 'textarea':
           setting.addTextArea((text) => {
-            text.setValue(String(get_by_path(scope.settings, setting_path) || ''));
+            text.setValue(String(get_by_path(storage_scope, setting_path) || ''));
             text.onChange((value) => {
               if(settng_is_pro && !env_is_pro) {
                 scope?.env?.events?.emit?.('settings:pro_feature_blocked', {
@@ -252,7 +256,7 @@ export function render_settings_group(group_name, scope, settings_config, contai
                 });
                 return;
               }
-              set_by_path(scope.settings, setting_path, value);
+              set_by_path(storage_scope, setting_path, value);
             });
             if(settng_is_pro && !env_is_pro) {
               text.setDisabled(true);
@@ -265,11 +269,11 @@ export function render_settings_group(group_name, scope, settings_config, contai
             const max = setting_config.max || 100;
             const step = setting_config.step || 1;
             slider.setLimits(min, max, step);
-            slider.setValue(get_by_path(scope.settings, setting_path) || min);
+            slider.setValue(get_by_path(storage_scope, setting_path) || min);
             // slider.showTooltip();
             slider.setDynamicTooltip();
             slider.onChange((value) => {
-              set_by_path(scope.settings, setting_path, value);
+              set_by_path(storage_scope, setting_path, value);
               if (typeof setting_config.callback === 'function') {
                 handle_config_callback(setting, value, setting_config.callback, { scope });
               }
