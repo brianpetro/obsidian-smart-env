@@ -85,3 +85,6 @@ added: implement gitignore exclusions and enhance folder exclusion functionality
 
 
 added: enhance merge_template function to include section in key variable if present in link (mediated through context_item data)
+
+
+added: implement context actions for clearing context, copying link tree, and copying text to clipboard as menu actions
