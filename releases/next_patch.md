@@ -88,3 +88,7 @@ added: enhance merge_template function to include section in key variable if pre
 
 
 added: implement context actions for clearing context, copying link tree, and copying text to clipboard as menu actions
+
+
+Added: context item menu actions
+Migrated: SMart Env status bar menu to new menu actions architecture
