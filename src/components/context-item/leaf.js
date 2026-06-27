@@ -1,5 +1,5 @@
 import { register_item_hover_popover } from '../../utils/register_item_hover_popover.js';
-import { Platform, setIcon } from 'obsidian';
+import { Menu, Platform, setIcon } from 'obsidian';
 import { escape_html } from 'smart-utils/escape_html.js';
 
 /**
@@ -245,6 +245,28 @@ export async function render(context_item, params = {}) {
 async function post_process(context_item, container, params = {}) {
   render_inline_icons(container);
 
+  const app = context_item?.env?.plugin?.app
+    || context_item?.env?.obsidian_app
+    || globalThis.app
+    || null
+  ;
+
+  container.addEventListener('contextmenu', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!app) return;
+
+    const menu = new Menu(app);
+    context_item?.env?.build_menu?.('context_item:action_menu', menu, context_item, {
+      ...params,
+      context_item,
+      event,
+    });
+    if (!(menu.items?.length > 0)) return;
+
+    menu.showAtMouseEvent(event);
+  });
+
   const remove_btn = container.querySelector('.sc-context-item-remove');
   if (remove_btn) {
     if (params.remove_disabled === true) {
@@ -299,5 +321,3 @@ async function post_process(context_item, container, params = {}) {
 
   return container;
 }
-
-

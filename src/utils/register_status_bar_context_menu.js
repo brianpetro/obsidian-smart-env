@@ -1,24 +1,14 @@
 /**
  * @file register_status_bar_context_menu.js
  * @description
- * Adds a native Obsidian right-click context-menu to a Smart Env status-bar
- * element.  The menu exposes an **Inspect active note** action that launches
- * the existing `SmartNoteInspectModal`, allowing developers and users to
- * debug the Smart Source backing the currently-focused file.
+ * Adds the Smart Env status-bar context menu using registered menu actions.
  *
- * The helper is pure / side-effect-free except for the single DOM-listener it
- * returns (handy for tests).  It deliberately avoids new deps, follows
- * functional style, and uses `snake_case`.
- *
- * @param {import('../../smart_env.js').SmartEnv} env – initialised Smart Env
- * @param {HTMLElement} status_container – the anchor element created in
- *   `SmartEnv.refresh_status`
- * @returns {Function} – the bound `contextmenu` handler (for unit tests)
+ * @param {import('../../smart_env.js').SmartEnv} env
+ * @param {HTMLElement} status_container
+ * @returns {Function}
  */
 
-import { Menu } from "obsidian";
-import { SmartNoteInspectModal } from "../../views/source_inspector.js";
-import { EnvStatsModal } from "../modals/env_stats.js";
+import { Menu } from 'obsidian';
 
 export function register_status_bar_context_menu(env, status_container, deps = {}) {
   const { Menu: MenuClass = Menu } = deps;
@@ -30,106 +20,16 @@ export function register_status_bar_context_menu(env, status_container, deps = {
     ev.stopPropagation();
 
     const menu = new MenuClass(plugin.app);
-    menu.addItem((item) =>
-      item
-        .setTitle("Inspect active note")
-        .setIcon("search")
-        .onClick(async () => {
-          const active_file = plugin.app.workspace.getActiveFile();
-          if (!active_file) {
-            env?.events?.emit?.('status_bar:inspect_active_note_missing', {
-              level: 'warning',
-              message: 'No active note found',
-              event_source: 'register_status_bar_context_menu.inspect',
-            });
-            return;
-          }
-          const src = env.smart_sources?.get(active_file.path);
-          if (!src) {
-            env?.events?.emit?.('status_bar:inspect_source_missing', {
-              level: 'warning',
-              message: 'Active note is not indexed by Smart Environment',
-              event_source: 'register_status_bar_context_menu.inspect',
-            });
-            return;
-          }
-          new SmartNoteInspectModal(plugin, src).open();
-        }),
-    );
-    menu.addItem((item) =>
-      item
-        .setTitle("Show stats")
-        .setIcon("chart-pie")
-        .onClick(() => {
-          const modal = new EnvStatsModal(plugin.app, env);
-          modal.open();
-        }),
-    );
-    menu.addItem((item) =>
-      item
-        .setTitle("Export data")
-        .setIcon("download")
-        .onClick(() => {
-          env.export_json();
-          env?.events?.emit?.('smart_env:exported', {
-            level: 'attention',
-            message: 'Smart Env exported',
-            event_source: 'register_status_bar_context_menu.export',
-          });
-        }),
-    );
-    menu.addItem((item) =>
-      item
-        .setTitle("Milestones")
-        .setIcon("flag")
-        .onClick(() => {
-          env.open_milestones_modal();
-        }),
-    );
-    menu.addItem((item) =>
-      item
-        .setTitle('Notifications')
-        .setIcon('bell')
-        .onClick(() => {
-          env.open_notifications_feed_modal();
-        }),
-    );
-    menu.addSeparator();
-    menu.addItem((item) =>
-      item
-        .setTitle('Browse Smart Plugins')
-        .setIcon('package')
-        .onClick(() => {
-          env.events?.emit?.('smart_plugins:browse', {
-            event_source: 'status_bar',
-          });
-        }),
-    );
-    if (env.is_pro) {
-      menu.addItem((item) =>
-        item
-          .setTitle('Refer a friend (Give 30, Get 30)')
-          .setIcon('hand-heart')
-          .onClick(() => {
-            const url = 'https://smartconnections.app/my-referrals/?utm_source=status-bar';
-            window.open(url, '_external');
-          }),
-      );
-    } else {
-      menu.addItem((item) =>
-        item
-          .setTitle('Start 14-day Pro trial')
-          .setIcon('hand-heart')
-          .onClick(() => {
-            const url = 'https://smartconnections.app/pro-plugins/?utm_source=status-bar';
-            window.open(url, '_external');
-          }),
-      );
-    }
+    env.build_menu?.('env:status_bar_menu', menu, env, {
+      status_container,
+      event: ev,
+    });
+    if (!(menu.items?.length > 0)) return;
+
     menu.showAtPosition({ x: ev.pageX, y: ev.pageY });
   };
 
   // Auto-unregistered on plugin unload
-  plugin.registerDomEvent(status_container, "contextmenu", on_context_menu);
+  plugin.registerDomEvent(status_container, 'contextmenu', on_context_menu);
   return on_context_menu;
 }
