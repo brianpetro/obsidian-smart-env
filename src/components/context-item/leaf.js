@@ -257,11 +257,19 @@ async function post_process(context_item, container, params = {}) {
     if (!app) return;
 
     const menu = new Menu(app);
-    context_item?.env?.build_menu?.('context_item:action_menu', menu, context_item, {
+    const menu_params = {
       ...params,
       context_item,
       event,
-    });
+    };
+    const item_ref = context_item?.item_ref || null;
+
+    if (item_ref) {
+      context_item?.env?.build_menu?.('source:menu', menu, item_ref, menu_params);
+      if (menu.items?.length > 0) menu.addSeparator();
+    }
+
+    context_item?.env?.build_menu?.('context_item:action_menu', menu, context_item, menu_params);
     if (!(menu.items?.length > 0)) return;
 
     menu.showAtMouseEvent(event);
@@ -321,3 +329,4 @@ async function post_process(context_item, container, params = {}) {
 
   return container;
 }
+
