@@ -92,3 +92,6 @@ added: implement context actions for clearing context, copying link tree, and co
 
 Added: context item menu actions
 Migrated: SMart Env status bar menu to new menu actions architecture
+
+
+Added: context tree leaf renders source menu
