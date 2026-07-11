@@ -1,9 +1,9 @@
-import { reset_env_settings } from '../../utils/reset_env_settings.js';
+import { reset_env_settings } from './reset_env_settings.js';
 
 /**
  * Builds an inline confirmation row for resetting Smart Env settings.
  * Hides the original reset button until the confirmation row is dismissed.
- * @param {import('../../../smart_env.js').SmartEnv} env
+ * @param {import('../smart_env.js').SmartEnv} env
  * @param {Object} [params={}]
  * @param {HTMLElement} params.container
  * @param {Function} [params.reset_env_settings_fn]

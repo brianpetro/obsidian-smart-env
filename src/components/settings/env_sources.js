@@ -1,5 +1,4 @@
 import { render_settings_config } from '../../utils/render_settings_config.js';
-import { create_reset_confirm_ui } from './reset_confirm.js';
 import { ExcludedFoldersFuzzy } from '../../modals/exclude_folders_fuzzy.js';
 import { ExcludedSourcesModal } from '../../modals/excluded_sources.js';
 
@@ -23,7 +22,6 @@ export async function post_process(env, container, opts = {}) {
     re_import_wait_time,
     folder_exclusions,
     view_exclusions,
-    // reset_env_settings_btn, // TODO: manually tested before implementing reset button
     re_import_sources,
   };
   render_settings_config(settings_config, env, container, {
@@ -134,18 +132,6 @@ export const re_import_sources = {
       confirm_row.style.display = 'none';
       reimport_btn.style.display = 'inline-block';
     }, { once: true });
-  }
-};
-
-export const reset_env_settings_btn = {
-  type: 'button',
-  name: 'Reset Smart Env settings',
-  description: 'Restore Smart Environment settings to defaults.',
-  btn_text: 'Reset settings',
-  callback: async function (value, setting) {
-    const env = this;
-    const container = setting.controlEl;
-    create_reset_confirm_ui(env, { container });
   }
 };
 
