@@ -1,4 +1,9 @@
-import { MarkdownRenderer, setIcon } from 'obsidian';
+import {
+  MarkdownRenderer,
+  Menu,
+  ToggleComponent,
+  setIcon,
+} from 'obsidian';
 
 /**
  * @param {import('./list').PluginListItem} item
@@ -12,6 +17,8 @@ export function build_html(item, params = {}) {
   return build_row_html(item, {
     item_type: item.display_item_type,
     name: item.formatted_name,
+    icon_name: item.get_track_icon_name(item.display_item_type),
+    meta_text: item.get_track_meta_text(item.display_item_type),
     subscription_status_text: item.subscription_status_text,
     control_state: row_state?.control_state || 'can_install',
   });
@@ -27,6 +34,8 @@ function build_group_html(item, params = {}) {
         item_type: 'core',
         track_item_type: 'core',
         name: item.get_track_name('core'),
+        icon_name: item.get_track_icon_name('core'),
+        meta_text: item.get_track_meta_text('core'),
         subscription_status_text: '',
         control_state: core_state?.control_state || 'cant_install',
       })}
@@ -34,6 +43,8 @@ function build_group_html(item, params = {}) {
         item_type: 'pro',
         track_item_type: 'pro',
         name: item.get_track_name('pro'),
+        icon_name: item.get_track_icon_name('pro'),
+        meta_text: item.get_track_meta_text('pro'),
         subscription_status_text: item.get_track_subscription_status_text('pro'),
         control_state: pro_state?.control_state || 'cant_install',
       })}
@@ -44,6 +55,14 @@ function build_group_html(item, params = {}) {
 function build_row_html(item, row = {}) {
   const item_type = row.item_type || item.display_item_type;
   const control_state = row.control_state || item.computed_state.row?.control_state || 'can_install';
+  const icon_html = row.icon_name
+    ? `<span class="smart-plugins-item-icon" data-icon-name="${row.icon_name}" aria-hidden="true"></span>`
+    : ''
+  ;
+  const meta_html = row.meta_text
+    ? `<div class="smart-plugins-item-meta">${row.meta_text}</div>`
+    : ''
+  ;
   const subscription_state_html = row.subscription_status_text
     ? `<div class="smart-plugins-item-subscription-state">${row.subscription_status_text}</div>`
     : ''
@@ -52,15 +71,29 @@ function build_row_html(item, row = {}) {
     ? ` data-track-item-type="${row.track_item_type}"`
     : ''
   ;
+  const title_class = item_type === 'core' ? 'smart-badge core-badge' : '';
+  const pro_badge_label = `Learn about ${row.name || item.formatted_name || 'this plugin'} Pro`;
+  const pro_badge_html = item_type === 'pro'
+    ? `<button type="button" class="smart-plugin-track-badge smart-plugin-pro-badge" data-smart-plugins-pro-badge data-source="${get_pro_badge_source(item)}" aria-label="${pro_badge_label}" title="${pro_badge_label}">Pro</button>`
+    : ''
+  ;
 
   return `<div class="setting-item pro-plugins-list-item" data-item-type="${item_type}" data-item-state="${control_state}" data-row-control-state="${control_state}"${track_item_type_attr}>
     <div class="setting-item-info">
-      <div class="setting-item-name ${item_type === 'core' ? 'smart-badge core-badge' : 'smart-badge pro-badge'}">${row.name || ''}</div>
+      <div class="setting-item-name ${title_class}">
+        ${icon_html}<span class="smart-plugins-item-title">${row.name || ''}</span>${pro_badge_html}
+      </div>
+      ${meta_html}
       <div class="setting-item-description smart-plugins-item-description markdown-rendered"></div>
       ${subscription_state_html}
     </div>
     <div class="setting-item-control"></div>
   </div>`;
+}
+
+function get_pro_badge_source(item) {
+  const plugin_id = String(item?.plugin_id || '').trim();
+  return plugin_id ? `plugin-store-${plugin_id}` : 'plugin-store-listing';
 }
 
 /**
@@ -85,6 +118,13 @@ export async function post_process(item, container, params = {}) {
 
   for (const row of rows) {
     const track_item_type = row.getAttribute('data-track-item-type') || '';
+    const item_type = track_item_type || row.getAttribute('data-item-type') || item.display_item_type;
+    const icon_el = row.querySelector('.smart-plugins-item-icon');
+    const icon_name = icon_el?.getAttribute('data-icon-name') || '';
+    if (icon_el && icon_name) {
+      setIcon(icon_el, icon_name);
+    }
+
     const description_container = row.querySelector('.setting-item-description');
     await render_description.call(this, item, description_container, get_row_description(item, track_item_type), params);
 
@@ -93,6 +133,7 @@ export async function post_process(item, container, params = {}) {
 
     const controls = await render_controls.call(this, item, {
       ...params,
+      item_type,
       track_item_type,
     });
 
@@ -138,22 +179,20 @@ async function render_description(item, container, markdown = '', params = {}) {
 }
 
 function build_controls_html(item, params = {}) {
-  const track_item_type = String(params.track_item_type || '').trim();
-  const details_url = track_item_type
-    ? item.get_track_details_url(track_item_type)
-    : item.details_url
-  ;
-  const control_specs = track_item_type
-    ? item.get_track_control_specs(track_item_type)
+  const item_type = String(params.item_type || params.track_item_type || item.display_item_type).trim();
+  const control_specs = params.track_item_type
+    ? item.get_track_control_specs(params.track_item_type)
     : item.control_specs
   ;
-
-  const details_button_html = details_url
-    ? '<button class="smart-plugins-details-button" data-action="open_details" aria-label="Open details" title="Open details"></button>'
+  const link_items = item.get_track_link_items(item_type);
+  const track_name = item.get_track_name(item_type);
+  const menu_label = `Open ${track_name || 'plugin'} links`;
+  const menu_button_html = link_items.length
+    ? `<button class="smart-plugins-menu-button" aria-label="${menu_label}" title="${menu_label}"></button>`
     : ''
   ;
 
-  return `<div class="smart-plugins-list-item-controls">${details_button_html}${control_specs.map(build_control_html).join('')}</div>`;
+  return `<div class="smart-plugins-list-item-controls">${control_specs.map(build_control_html).join('')}${menu_button_html}</div>`;
 }
 
 async function render_controls(item, params = {}) {
@@ -165,11 +204,49 @@ async function render_controls(item, params = {}) {
 }
 
 async function post_process_controls(item, container, params = {}) {
-  const track_item_type = String(params.track_item_type || '').trim();
+  const item_type = String(params.item_type || params.track_item_type || item.display_item_type).trim();
+  const link_items = item.get_track_link_items(item_type);
+  const menu_button = container.querySelector('.smart-plugins-menu-button');
+  if (menu_button) {
+    setIcon(menu_button, 'menu');
+    menu_button.addEventListener('click', (event) => {
+      const menu = new Menu(item.app);
+      link_items.forEach((link_item) => {
+        menu.addItem((menu_item) => {
+          menu_item
+            .setTitle(link_item.title)
+            .setIcon(link_item.icon)
+            .onClick(() => {
+              item.open_track_link_url(item_type, link_item.url, params);
+            })
+          ;
+        });
+      });
+      menu.showAtMouseEvent(event);
+    });
+  }
 
-  const details_buttons = container.querySelectorAll('.smart-plugins-details-button');
-  for (const details_button of details_buttons) {
-    setIcon(details_button, 'info');
+  const toggle_controls = container.querySelectorAll('[data-control-type="toggle"]');
+  for (const toggle_control of toggle_controls) {
+    const toggle_host = toggle_control.querySelector('.smart-plugins-toggle-host');
+    if (!toggle_host) continue;
+
+    const toggle_item_type = toggle_control.getAttribute('data-item-type') || item_type;
+    const toggle_value = toggle_control.getAttribute('data-value') === 'true';
+    const toggle_disabled = toggle_control.getAttribute('data-disabled') === 'true';
+    const toggle_label = toggle_control.getAttribute('data-label') || 'Enable plugin';
+    const toggle = new ToggleComponent(toggle_host)
+      .setValue(toggle_value)
+      .setDisabled(toggle_disabled)
+    ;
+    toggle.toggleEl?.setAttribute?.('aria-label', toggle_label);
+    toggle.setTooltip?.(toggle_label);
+    toggle.onChange(async (next_value) => {
+      toggle.setDisabled(true);
+      await item.handle_toggle(toggle_item_type, next_value, params);
+      toggle.setValue(item.installed_type === toggle_item_type && item.is_enabled);
+      toggle.setDisabled(toggle_disabled);
+    });
   }
 
   const buttons = container.querySelectorAll('button[data-action]');
@@ -178,14 +255,14 @@ async function post_process_controls(item, container, params = {}) {
       const action = button.getAttribute('data-action');
       if (!action) return;
 
-      const busy_text = track_item_type
-        ? item.get_busy_text_for_track(track_item_type, action)
+      const busy_text = params.track_item_type
+        ? item.get_busy_text_for_track(params.track_item_type, action)
         : item.get_busy_text(action)
       ;
       if (busy_text) {
         await run_busy_action(button, async () => {
-          if (track_item_type) {
-            await item.handle_track_action(track_item_type, action, params);
+          if (params.track_item_type) {
+            await item.handle_track_action(params.track_item_type, action, params);
             return;
           }
           await item.handle_action(action, params);
@@ -193,8 +270,8 @@ async function post_process_controls(item, container, params = {}) {
         return;
       }
 
-      if (track_item_type) {
-        await item.handle_track_action(track_item_type, action, params);
+      if (params.track_item_type) {
+        await item.handle_track_action(params.track_item_type, action, params);
         return;
       }
 
@@ -210,8 +287,19 @@ function build_control_html(control_spec) {
     return `<span class="core-installed-text">${control_spec.text}</span>`;
   }
 
+  if (control_spec.type === 'toggle') {
+    return `<div class="smart-plugins-toggle-control" data-control-type="toggle" data-item-type="${control_spec.item_type || ''}" data-value="${control_spec.value === true}" data-disabled="${control_spec.disabled === true}" data-label="${control_spec.text || 'Enable plugin'}">
+      <span class="smart-plugins-toggle-label">${control_spec.text || ''}</span>
+      <span class="smart-plugins-toggle-host"></span>
+    </div>`;
+  }
+
   const class_name = control_spec.variant === 'primary' ? 'mod-cta' : '';
-  return `<button class="${class_name}" data-action="${control_spec.action}">${control_spec.text}</button>`;
+  const title_attr = control_spec.title
+    ? ` title="${control_spec.title}" aria-label="${control_spec.title}"`
+    : ''
+  ;
+  return `<button class="${class_name}" data-action="${control_spec.action}"${title_attr}>${control_spec.text}</button>`;
 }
 
 async function run_busy_action(button, callback, busy_text) {

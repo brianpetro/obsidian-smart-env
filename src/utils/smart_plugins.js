@@ -240,6 +240,19 @@ export async function enable_plugin(app, plugin_id) {
 }
 
 /**
+ * Persist a disabled plugin without unloading its active runtime instance.
+ * The change takes effect after Obsidian reloads.
+ *
+ * @param {object} app - The Obsidian app instance.
+ * @param {string} plugin_id
+ * @returns {Promise<void>}
+ */
+export async function disable_plugin(app, plugin_id) {
+  app.plugins.enabledPlugins.delete(plugin_id);
+  app.plugins.requestSaveConfig();
+}
+
+/**
  * Compute the Smart Plugins OAuth storage prefix based on the vault name.
  *
  *   `${vault_name.toLowerCase().replace(/[^a-z0-9]/g, '_')}_smart_plugins_oauth_`

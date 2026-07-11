@@ -1,4 +1,4 @@
-import { Setting } from 'obsidian';
+import { Platform, Setting } from 'obsidian';
 import { copy_to_clipboard } from '../../utils/copy_to_clipboard.js';
 import {
   get_oauth_storage_prefix,
@@ -23,9 +23,9 @@ export async function post_process(env, container, params = {}) {
   const app = env?.plugin?.app || window.app;
   const oauth_storage_prefix = get_oauth_storage_prefix(app);
   const sub_exp = Number(params.sub_exp ?? 0) || 0;
-  let login_click_count = 0;
   let last_login_url = '';
   let manual_login_el = null;
+  let manual_login_parent = container;
 
   const token = localStorage.getItem(oauth_storage_prefix + 'token') || '';
   const auth_state = String(params.auth_state || '').trim() || (token ? 'signed_in' : 'signed_out');
@@ -46,7 +46,7 @@ export async function post_process(env, container, params = {}) {
     if (!manual_login_el || !manual_login_el.isConnected) {
       manual_login_el = document.createElement('div');
       manual_login_el.classList.add('smart-plugins-login-manual');
-      container.appendChild(manual_login_el);
+      manual_login_parent.appendChild(manual_login_el);
     }
 
     manual_login_el.innerHTML = '';
@@ -100,7 +100,7 @@ export async function post_process(env, container, params = {}) {
     setting.addButton((btn) => {
       btn.setButtonText('Refresh');
       btn.onClick(() => {
-        env?.events?.emit?.('pro_plugins:refresh', {
+        env?.events?.emit?.('smart_plugins:store_refresh', {
           event_source: 'smart_plugins_login',
         });
       });
@@ -122,12 +122,14 @@ export async function post_process(env, container, params = {}) {
       .setDesc('Log in with the key provided in your Pro welcome email.')
     ;
 
+    setting.controlEl.classList.add('smart-plugins-login-actions');
+    manual_login_parent = setting.controlEl;
+
     setting.addButton((btn) => {
       btn.setButtonText('Login');
       btn.onClick(() => {
-        login_click_count += 1;
         last_login_url = initiate_smart_plugins_oauth();
-        if (login_click_count >= 2) {
+        if (manual_login_el?.isConnected) {
           render_manual_login_link(last_login_url);
         }
         env?.events?.emit?.('pro_plugins:oauth_browser_login_requested', {
@@ -137,6 +139,32 @@ export async function post_process(env, container, params = {}) {
         });
       });
     });
+
+    const alternative = document.createElement('div');
+    alternative.classList.add('smart-plugins-login-alternative');
+    const copy_link = document.createElement('a');
+    copy_link.href = '#';
+    copy_link.textContent = 'Copy link to login instead';
+    copy_link.addEventListener('click', (event) => {
+      event.preventDefault();
+      last_login_url = build_smart_plugins_oauth_url();
+      render_manual_login_link(last_login_url);
+    });
+    alternative.appendChild(copy_link);
+    setting.controlEl.appendChild(alternative);
+
+    if (Platform.isLinux) {
+      const linux_note = document.createElement('div');
+      linux_note.classList.add('smart-plugins-login-linux-note');
+      linux_note.append('Linux installations may require ');
+      const protocol_link = document.createElement('a');
+      protocol_link.href = 'https://obsidian.md/help/uri#Register+Obsidian+URI';
+      protocol_link.target = '_external';
+      protocol_link.textContent = 'registering Obsidian URI';
+      linux_note.appendChild(protocol_link);
+      linux_note.append(' to login.');
+      setting.descEl.appendChild(linux_note);
+    }
 
     return container;
   }
@@ -164,7 +192,7 @@ export async function post_process(env, container, params = {}) {
     setting.addButton((btn) => {
       btn.setButtonText('Refresh');
       btn.onClick(() => {
-        env?.events?.emit?.('pro_plugins:refresh', {
+        env?.events?.emit?.('smart_plugins:store_refresh', {
           event_source: 'smart_plugins_login',
         });
       });
@@ -189,10 +217,14 @@ export async function post_process(env, container, params = {}) {
   return container;
 }
 
-function initiate_smart_plugins_oauth() {
+export function build_smart_plugins_oauth_url() {
   const state = Math.random().toString(36).slice(2);
   const redirect_uri = encodeURIComponent('obsidian://smart-plugins/callback');
-  const url = `${get_smart_server_url()}/oauth?client_id=smart-plugins-op&redirect_uri=${redirect_uri}&state=${state}`;
+  return `${get_smart_server_url()}/oauth?client_id=smart-plugins-op&redirect_uri=${redirect_uri}&state=${state}`;
+}
+
+function initiate_smart_plugins_oauth() {
+  const url = build_smart_plugins_oauth_url();
   window.open(url, '_external');
   return url;
 }

@@ -1,6 +1,7 @@
 import { MarkdownRenderer, requestUrl, setIcon } from 'obsidian';
 import {
   build_plugin_file_record,
+  disable_plugin,
   enable_plugin,
   fetch_plugin_file,
   fetch_server_plugin_list,
@@ -22,9 +23,18 @@ import { compare_versions } from 'smart-environment/utils/compare_versions.js';
 import { convert_to_time_ago } from 'smart-utils/convert_to_time_ago.js';
 import { convert_to_time_until } from 'smart-utils/convert_to_time_until.js';
 
-const SMART_PLUGINS_DESC = `<a href="https://smartconnections.app/core-plugins/?utm_source=plugin-store" target="_external">Core plugins</a> provide essential functionality and a "just works" experience. Pro plugins enable advanced configuration and features for Obsidian AI experts. <a href="https://smartconnections.app/smart-plugins/?utm_source=plugin-store" target="_external">Learn more</a> about Smart Plugins.`;
-const PRO_PLUGINS_FOOTER = `All Pro plugins include advanced configurations and additional model providers. Pro users get priority support via email. <a href="https://smartconnections.app/pro-plugins/?utm_source=plugin-store" target="_external">Learn more</a> about Pro Plugins.`;
+const SMART_PLUGINS_DESC = `
+  <div class="smart-plugins-track-guide-item">
+    <a class="smart-plugin-track-badge smart-plugin-core-track-badge" href="https://smartconnections.app/core-plugins/?utm_source=plugin-store-track-guide" target="_external">Core</a>
+    <span class="smart-plugins-track-guide-copy">Essential functionality and a &quot;just works&quot; experience.</span>
+  </div>
+  <div class="smart-plugins-track-guide-item">
+    <button type="button" class="smart-plugin-track-badge smart-plugin-pro-badge" data-smart-plugins-pro-badge data-source="plugin-store-track-guide" aria-label="Learn about Pro plugins" title="Learn about Pro plugins">Pro</button>
+    <span class="smart-plugins-track-guide-copy">Advanced configuration and features for Obsidian AI experts. <a href="https://smartconnections.app/smart-plugins/?utm_source=plugin-store-track-guide" target="_external">Compare Smart Plugins</a>.</span>
+  </div>
+`;
 const PRO_PLUGINS_URL = 'https://smartconnections.app/pro-plugins/';
+const PRO_PLUGINS_FOOTER = `All Pro plugins include advanced configurations and additional model providers. Pro users get priority support via email. <a href="${PRO_PLUGINS_URL}?utm_source=plugin-store" target="_external">Learn more</a> about Pro Plugins.`;
 
 function default_smart_plugins_list() {
   return [
@@ -35,12 +45,14 @@ function default_smart_plugins_list() {
       item_desc: 'See notes related to what you are working on right now.',
       item_repo: 'brianpetro/obsidian-smart-connections',
       plugin_id: 'smart-connections',
+      icon_name: 'smart-connections',
       url: 'https://smartconnections.app/smart-connections/',
     },
     {
       item_type: 'pro',
       item_name: 'Connections Pro',
       plugin_id: 'smart-connections',
+      icon_name: 'smart-connections',
       item_desc: 'More opportunities for connections. Graph view for visualizing. Inline and footer views (great for mobile!). Configurable algorithms and additional embedding model providers.',
       url: 'https://smartconnections.app/smart-connections/',
     },
@@ -51,12 +63,14 @@ function default_smart_plugins_list() {
       item_desc: 'Assemble notes into AI-ready context with selectors, links, and templates.',
       item_repo: 'brianpetro/smart-context-obsidian',
       plugin_id: 'smart-context',
+      icon_name: 'smart-context-builder',
       url: 'https://smartconnections.app/smart-context/',
     },
     {
       item_type: 'pro',
       item_name: 'Context Pro',
       plugin_id: 'smart-context',
+      icon_name: 'smart-context-builder',
       item_desc: 'Advanced tools for context engineering. Utilize Bases, images, and external sources (great for coders!) in your contexts.',
       url: 'https://smartconnections.app/smart-context/',
     },
@@ -66,6 +80,7 @@ function default_smart_plugins_list() {
       item_name: 'Smart Chat',
       item_desc: 'Run chat workflows in Obsidian with Smart Environment context.',
       plugin_id: 'smart-chatgpt',
+      icon_name: 'smart-chat',
       item_repo: 'brianpetro/smart-chatgpt-obsidian',
       url: 'https://smartconnections.app/smart-chat/',
     },
@@ -73,6 +88,7 @@ function default_smart_plugins_list() {
       item_type: 'pro',
       item_name: 'Chat Pro (API)',
       plugin_id: 'smart-chat',
+      icon_name: 'smart-chat',
       item_desc: 'Configure chat to use Local and Cloud API providers (Ollama, LM Studio, OpenAI, Gemini, Anthropic, Open Router, and more).',
       url: 'https://smartconnections.app/smart-chat/',
     },
@@ -82,6 +98,7 @@ function default_smart_plugins_list() {
       item_desc: 'Run semantic search as a dedicated Smart Plugin.',
       item_repo: 'brianpetro/smart-lookup-obsidian',
       plugin_id: 'smart-lookup',
+      icon_name: 'smart-lookup',
       url: 'https://smartconnections.app/smart-lookup/',
       install_method: 'github',
     },
@@ -91,6 +108,7 @@ function default_smart_plugins_list() {
       item_name: 'Smart Templates',
       item_repo: 'brianpetro/obsidian-smart-templates',
       plugin_id: 'smart-templates',
+      icon_name: 'layout-template',
       item_desc: 'Create structured templates designed for Smart Plugins workflows.',
       url: 'https://smartconnections.app/smart-templates/',
     },
@@ -98,6 +116,7 @@ function default_smart_plugins_list() {
       item_type: 'pro',
       item_name: 'Connect Pro',
       plugin_id: 'smart-connect-pro',
+      icon_name: 'link',
       item_desc: 'Integrate with ChatGPT. Use a GPT that has access to Obsidian CLI.',
       url: 'https://smartconnections.app/connect-pro/',
     },
@@ -107,14 +126,10 @@ let SMART_PLUGINS_LIST = default_smart_plugins_list();
 
 export function build_html(env, params = {}) {
   return `
-    <div class="pro-plugins-container setting-item-heading">
-      <div class="setting-group">
-        <div class="setting-item setting-item-heading">
-          <div class="setting-item-control">
-            <div class="smart-plugins-login"></div>
-          </div>
-        </div>
-        <p>${SMART_PLUGINS_DESC}</p>
+    <div class="pro-plugins-container">
+      <div class="setting-group smart-plugins-store">
+        <div class="smart-plugins-login"></div>
+        <div class="smart-plugins-intro" role="group" aria-label="Smart Plugin tracks">${SMART_PLUGINS_DESC}</div>
         <div class="smart-plugins-server-message callout" data-callout="note" style="display:none;">
           <div class="callout-title">
             <div class="callout-icon"></div>
@@ -132,8 +147,11 @@ export function build_html(env, params = {}) {
           </div>
           <div class="smart-plugins-experimental-list"></div>
         </div>
-        <p>${PRO_PLUGINS_FOOTER}</p>
-        <div class="smart-plugins-referral"></div>
+        <div class="smart-plugins-marketing-section">
+          <div class="smart-plugins-marketing-title">More from Smart Plugins</div>
+          <p class="smart-plugins-footer">${PRO_PLUGINS_FOOTER}</p>
+          <div class="smart-plugins-referral"></div>
+        </div>
       </div>
     </div>
   `;
@@ -162,6 +180,15 @@ export async function post_process(env, container, params = {}) {
   const server_message_icon_el = server_message_el?.querySelector('.callout-icon');
   const server_message_title_el = server_message_el?.querySelector('.callout-title-inner');
   const server_message_content_el = server_message_el?.querySelector('.callout-content');
+
+  const handle_pro_badge_click = (event) => {
+    const badge = event.target?.closest?.('[data-smart-plugins-pro-badge]');
+    if (!badge || !container.contains(badge)) return;
+
+    const source = badge.getAttribute('data-source');
+    window.open(build_pro_plugins_url(source), '_external');
+  };
+  container.addEventListener('click', handle_pro_badge_click);
 
   const render_component = env.smart_components.render_component.bind(env.smart_components);
   const render_login = async (login_params = {}) => {
@@ -261,8 +288,6 @@ export async function post_process(env, container, params = {}) {
     this.empty(experimental_list_el);
 
     try {
-      await app.plugins.loadManifests();
-
       let resp = await fetch_server_plugin_list(token);
       let auth_state = has_token ? 'signed_in' : 'signed_out';
       let server_message = String(resp?.message || '').trim();
@@ -354,13 +379,21 @@ export async function post_process(env, container, params = {}) {
   };
 
   const disposers = [];
+  disposers.push(() => container.removeEventListener('click', handle_pro_badge_click));
   disposers.push(env.events.on('smart_plugins_oauth_completed', render_smart_plugins));
   disposers.push(env.events.on('pro_plugins:logged_out', render_smart_plugins));
+  disposers.push(env.events.on('smart_plugins:store_refresh', render_smart_plugins));
+  // DEPRECATED: retain as a read-only Store refresh alias during migration.
   disposers.push(env.events.on('pro_plugins:refresh', render_smart_plugins));
   this.attach_disposer?.(container, disposers);
 
   await render_smart_plugins();
   return container;
+}
+
+function build_pro_plugins_url(source = '') {
+  const safe_source = String(source || '').trim() || 'plugin-store-pro-badge';
+  return `${PRO_PLUGINS_URL}?utm_source=${encodeURIComponent(safe_source)}`;
 }
 
 function normalize_release_version(value) {
@@ -450,6 +483,15 @@ async function hydrate_core_plugin_versions(smart_plugins_list = []) {
       if (version) {
         item.version = version;
       }
+      const last_updated = Date.parse(
+        release?.published_at ||
+        release?.created_at ||
+        release?.updated_at ||
+        ''
+      );
+      if (Number.isFinite(last_updated) && last_updated > 0) {
+        item.last_updated = last_updated;
+      }
     } catch (error) {
       console.warn(`[smart-plugins:list] Failed to hydrate latest core release for ${repo}`, error);
     }
@@ -525,6 +567,14 @@ export class PluginListItem {
     return this.app.plugins?.manifests?.[this.plugin_id] || null;
   }
 
+  get pending_install() {
+    return this.env?.pending_plugin_installs?.[this.plugin_id] || null;
+  }
+
+  get pending_disable() {
+    return this.env?.pending_plugin_disables?.[this.plugin_id] === true;
+  }
+
   get is_enabled() {
     return this.app.plugins.enabledPlugins.has(this.plugin_id);
   }
@@ -534,6 +584,11 @@ export class PluginListItem {
   }
 
   get installed_type() {
+    const pending_item_type = get_plugin_item_type(this.pending_install);
+    if (pending_item_type === 'core' || pending_item_type === 'pro') {
+      return pending_item_type;
+    }
+
     if (!this.installed_manifest) return null;
 
     if (this.has_pro_plugin && !this.has_core_plugin) {
@@ -563,7 +618,10 @@ export class PluginListItem {
   }
 
   get installed_version() {
-    return this.installed_manifest?.version || null;
+    return normalize_release_version(this.pending_install?.version)
+      || this.installed_manifest?.version
+      || null
+    ;
   }
 
   get is_entitled() {
@@ -705,11 +763,13 @@ export class PluginListItem {
       display_item_type: this.display_item_type,
       installed_type: this.installed_type,
       is_entitled: this.is_entitled,
-      should_update: this.should_update,
-      has_outdated_env_compatibility: this.has_outdated_env_compatibility,
-      is_deferred: this.is_deferred,
-      is_loaded: this.is_loaded,
-      is_enabled: this.is_enabled,
+      should_update: this.pending_disable ? false : this.should_update,
+      has_outdated_env_compatibility: this.pending_disable
+        ? false
+        : this.has_outdated_env_compatibility,
+      is_deferred: this.is_deferred || this.pending_disable,
+      is_loaded: this.pending_disable ? false : this.is_loaded,
+      is_enabled: this.is_enabled || this.pending_disable,
     });
 
     const hydrate_track_state = (track_state) => {
@@ -718,7 +778,7 @@ export class PluginListItem {
       return {
         ...track_state,
         plugin: this.get_track_plugin(track_state.item_type),
-        control_specs: this.get_control_specs_for_state(track_state.control_state),
+        control_specs: this.get_control_specs_for_state(track_state.control_state, track_state.item_type),
       };
     };
 
@@ -739,68 +799,108 @@ export class PluginListItem {
     return this.computed_state.track_states?.[item_type] || null;
   }
 
-  get_control_specs_for_state(control_state) {
+  get_control_specs_for_state(control_state, item_type = this.installed_type) {
+    const toggle_value = this.installed_type === item_type && this.is_enabled;
+    const track_version = normalize_release_version(
+      this.get_track_plugin(item_type)?.version,
+    );
+    const installed_version = normalize_release_version(this.installed_version);
+    const enabled_toggle = {
+      type: 'toggle',
+      item_type,
+      value: toggle_value,
+      text: 'Enabled',
+    };
+    const installed_status_text = this.is_loaded
+      ? 'Active'
+      : this.is_enabled
+        ? 'Enabled'
+        : 'Installed'
+    ;
+
     switch (control_state) {
       case 'deferred': {
-        const is_updated = this.loaded_version && this.loaded_version !== this.installed_version;
+        let reload_text = installed_version && installed_version !== 'unknown'
+          ? `Reload required to activate v${installed_version}`
+          : 'Reload required to activate'
+        ;
+        if (this.pending_disable) reload_text = 'Reload required to disable';
         return [
-          { type: 'status', text: `${is_updated ? 'Update ready.' : 'Installed & enabled.'} Reload to activate` },
-          { type: 'button', action: 'restart_obsidian', text: 'Reload', variant: 'primary' },
+          { type: 'button', action: 'restart_obsidian', text: reload_text, variant: 'primary' },
+          enabled_toggle,
         ];
       }
       case 'update_available':
         return [
-          { type: 'status', text: 'Update available' },
-          { type: 'button', action: 'install', text: 'Update', variant: 'primary' },
+          { type: 'status', text: installed_status_text },
+          {
+            type: 'button',
+            action: 'install',
+            text: track_version && track_version !== 'unknown'
+              ? `Update to v${track_version}`
+              : 'Update',
+            variant: 'primary',
+          },
+          enabled_toggle,
         ];
       case 'outdated_env':
         return [
-          { type: 'status', text: 'Reload required for current Smart Environment' },
-          { type: 'button', action: 'restart_obsidian', text: 'Reload', variant: 'primary' },
+          {
+            type: 'button',
+            action: 'restart_obsidian',
+            text: 'Reload required for Smart Environment',
+            variant: 'primary',
+          },
+          enabled_toggle,
         ];
       case 'loaded':
         return [
           { type: 'status', text: 'Active' },
           { type: 'button', action: 'open_settings', text: 'Open settings', variant: 'secondary' },
+          enabled_toggle,
         ];
       case 'installed':
         return [
-          { type: 'status', text: 'Installed' },
+          { type: 'status', text: 'Enabled' },
+          enabled_toggle,
         ];
       case 'can_enable':
         return [
-          { type: 'button', action: 'enable', text: 'Enable', variant: 'primary' },
+          { type: 'status', text: 'Installed' },
+          { type: 'toggle', item_type, value: false, text: 'Enable' },
         ];
       case 'included_in_pro':
         return [
           { type: 'status', text: 'Included in Pro' },
         ];
       case 'core_installed':
-        return [
-          { type: 'status', text: 'Core installed' },
-          ...(this.is_entitled
-            ? [{ type: 'button', action: 'install', text: 'Install Pro', variant: 'primary' }]
-            : []),
-          { type: 'button', action: 'learn_more', text: 'Learn more', variant: 'secondary' },
-        ];
+        return this.is_entitled
+          ? [
+            { type: 'status', text: 'Core installed' },
+            { type: 'toggle', item_type, value: false, text: 'Install Pro' },
+          ]
+          : [
+            { type: 'status', text: 'Requires Pro' },
+            { type: 'toggle', item_type, value: false, text: 'Install Pro', disabled: true },
+          ]
+        ;
       case 'can_install_core_only':
         return [
-          { type: 'button', action: 'install', text: 'Install Core', variant: 'primary' },
+          { type: 'toggle', item_type, value: false, text: 'Install Core' },
         ];
       case 'can_install_pro':
         return [
-          { type: 'button', action: 'install', text: 'Install Pro', variant: 'primary' },
-          { type: 'button', action: 'learn_more', text: 'Learn more', variant: 'secondary' },
+          { type: 'toggle', item_type, value: false, text: 'Install Pro' },
         ];
       case 'cant_install':
         return [
-          { type: 'button', action: 'learn_more', text: 'Learn more', variant: 'secondary' },
+          { type: 'status', text: 'Requires Pro' },
+          { type: 'toggle', item_type, value: false, text: 'Install Pro', disabled: true },
         ];
       case 'can_install':
       default:
         return [
-          { type: 'button', action: 'install', text: 'Install', variant: 'primary' },
-          { type: 'button', action: 'learn_more', text: 'Learn more', variant: 'secondary' },
+          { type: 'toggle', item_type, value: false, text: 'Install' },
         ];
     }
   }
@@ -892,6 +992,76 @@ export class PluginListItem {
     return get_plugin_description(this.get_track_plugin(item_type));
   }
 
+  get_track_icon_name(item_type) {
+    return get_plugin_icon_name(this.get_track_plugin(item_type));
+  }
+
+  get_track_meta_text(item_type) {
+    const plugin = this.get_track_plugin(item_type);
+    const meta = [];
+    const version = normalize_release_version(plugin?.version);
+    const current_version = this.installed_type === item_type
+      ? normalize_release_version(this.loaded_version || this.installed_manifest?.version)
+      : ''
+    ;
+    const last_updated = normalize_positive_epoch_ms(plugin?.last_updated);
+
+    if (version && version !== 'unknown') {
+      const version_difference = current_version
+        ? compare_versions(version, current_version)
+        : 0
+      ;
+
+      if (current_version && version_difference !== 0) {
+        meta.push(`Current v${current_version}`);
+        meta.push(`${version_difference > 0 ? 'Available' : 'Store'} v${version}`);
+      } else {
+        meta.push(`v${version}`);
+      }
+    }
+    if (last_updated) {
+      meta.push(`Updated ${convert_to_time_ago(last_updated)}`);
+    }
+
+    return meta.join(' - ');
+  }
+
+  get_track_link_items(item_type) {
+    const plugin = this.get_track_plugin(item_type) || this.primary_plugin;
+    const links = [];
+    const seen_urls = new Set();
+    const add_link = (title, icon, url) => {
+      const safe_url = String(url || '').trim();
+      if (!safe_url || seen_urls.has(safe_url)) return;
+      seen_urls.add(safe_url);
+      links.push({ title, icon, url: safe_url });
+    };
+    const main_url = get_plugin_main_url(plugin);
+    const plugin_id = String(plugin?.plugin_id || '').trim();
+    const release_page_url = this.installed_type === item_type
+      ? build_plugin_release_page_url(plugin, this.installed_version)
+      : ''
+    ;
+
+    add_link('Release notes', 'file-text', release_page_url);
+    add_link('Getting started', 'rocket', build_getting_started_url(main_url));
+    if (item_type === 'core' && plugin_id) {
+      add_link(
+        'Obsidian plugin listing',
+        'obsidian',
+        `https://community.obsidian.md/plugins/${encodeURIComponent(plugin_id)}`,
+      );
+    }
+    add_link('Details', 'info', plugin?.details_url);
+    add_link('Documentation', 'book-open', plugin?.docs_url);
+    add_link('Learn more', 'help-circle', plugin?.info_url);
+    if (item_type !== 'core') {
+      add_link('Plugin page', 'external-link', main_url);
+    }
+
+    return links;
+  }
+
   get_track_canonical_url(item_type) {
     const plugin = this.get_track_plugin(item_type) || this.primary_plugin;
     return get_plugin_canonical_url(plugin)
@@ -926,6 +1096,42 @@ export class PluginListItem {
       || this.plugin_id
       || 'plugin'
     ;
+  }
+
+  mark_install_deferred(plugin, version = plugin?.version) {
+    if (!this.env.pending_plugin_installs) {
+      this.env.pending_plugin_installs = {};
+    }
+    this.env.pending_plugin_installs[this.plugin_id] = {
+      item_type: get_plugin_item_type(plugin),
+      version: normalize_release_version(version),
+    };
+    this.env.plugin_states[this.plugin_id] = 'deferred';
+  }
+
+  mark_disable_deferred() {
+    if (!this.env.pending_plugin_disables) {
+      this.env.pending_plugin_disables = {};
+    }
+    this.env.pending_plugin_disables[this.plugin_id] = true;
+  }
+
+  clear_pending_disable() {
+    if (!this.env.pending_plugin_disables) return;
+    delete this.env.pending_plugin_disables[this.plugin_id];
+  }
+
+  async handle_toggle(item_type, should_enable, params = {}) {
+    if (should_enable) {
+      if (this.installed_type === item_type) {
+        return await this.enable(params);
+      }
+      await this.handle_track_action(item_type, 'install', params);
+      return this.installed_type === item_type && this.is_enabled;
+    }
+
+    if (this.installed_type !== item_type) return false;
+    return await this.disable(item_type);
   }
 
   async handle_action(action, params = {}) {
@@ -1026,15 +1232,23 @@ export class PluginListItem {
 
   async enable(params = {}) {
     try {
-      await enable_plugin(this.app, this.plugin_id);
+      const loaded_plugin = this.app.plugins.plugins[this.plugin_id];
+      if (this.pending_disable && loaded_plugin) {
+        this.app.plugins.enabledPlugins.add(this.plugin_id);
+        this.app.plugins.requestSaveConfig();
+      } else {
+        await enable_plugin(this.app, this.plugin_id);
+      }
+      this.clear_pending_disable();
       this.env?.events?.emit?.('pro_plugins:enabled', {
         level: 'debug',
         message: `${this.label} enabled.`,
         event_source: 'browse_smart_plugins.list_item',
       });
-      this.env?.events?.emit?.('pro_plugins:refresh', {
+      this.env?.events?.emit?.('smart_plugins:store_refresh', {
         event_source: 'browse_smart_plugins.list_item.enable',
       });
+      return true;
     } catch (err) {
       console.error('[smart-plugins:list] Enable error:', err);
       this.env?.events?.emit?.('pro_plugins:enable_failed', {
@@ -1043,6 +1257,37 @@ export class PluginListItem {
         details: err?.stack || '',
         event_source: 'browse_smart_plugins.list_item',
       });
+      return false;
+    }
+  }
+
+  async disable(item_type = this.installed_type) {
+    const plugin = this.get_track_plugin(item_type) || this.installed_plugin;
+    const plugin_label = this.get_plugin_action_label(plugin);
+
+    try {
+      await disable_plugin(this.app, this.plugin_id);
+      this.mark_disable_deferred();
+      this.env?.events?.emit?.('smart_plugins:disable_completed', {
+        level: 'attention',
+        message: `${plugin_label} will be disabled after reloading Obsidian.`,
+        btn_text: 'Reload Obsidian',
+        btn_callback: 'app:reload',
+        event_source: 'browse_smart_plugins.list_item.disable',
+      });
+      this.env?.events?.emit?.('smart_plugins:store_refresh', {
+        event_source: 'browse_smart_plugins.list_item.disable',
+      });
+      return true;
+    } catch (err) {
+      console.error('[smart-plugins:list] Disable error:', err);
+      this.env?.events?.emit?.('smart_plugins:disable_failed', {
+        level: 'error',
+        message: `Disable failed: ${err.message}`,
+        details: err?.stack || '',
+        event_source: 'browse_smart_plugins.list_item.disable',
+      });
+      return false;
     }
   }
 
@@ -1093,6 +1338,17 @@ export class PluginListItem {
     window.open(with_utm_source(url, 'plugin-store'), '_external');
   }
 
+  open_track_link_url(item_type, url, params = {}) {
+    if (item_type === 'pro' && this.has_pro_plugin && !this.is_entitled) {
+      emit_store_event(this.env, 'pro_trial_cta_clicked', params, {
+        plugin_key: this.plugin_id,
+        recommended_track: 'pro',
+        event_source: 'browse_smart_plugins.list_item.menu',
+      });
+    }
+    window.open(with_utm_source(url, 'plugin-store-menu'), '_external');
+  }
+
   async install_core_plugin(plugin) {
     const was_installed = this.is_installed;
     const plugin_label = this.get_plugin_action_label(plugin);
@@ -1121,7 +1377,7 @@ export class PluginListItem {
         message: `${plugin_label} installed successfully.`,
         event_source: 'browse_smart_plugins.list_item',
       });
-      this.env?.events?.emit?.('pro_plugins:refresh', {
+      this.env?.events?.emit?.('smart_plugins:store_refresh', {
         event_source: 'browse_smart_plugins.list_item.core_install',
       });
     } catch (err) {
@@ -1157,6 +1413,8 @@ export class PluginListItem {
 
   async install_plugin(params = {}, plugin) {
     const was_installed = this.is_installed;
+    const was_enabled = this.is_enabled;
+    const should_defer_activation = was_installed && was_enabled;
     const plugin_label = this.get_plugin_action_label(plugin);
     const install_enable_behavior = get_install_enable_behavior({
       was_installed,
@@ -1178,15 +1436,27 @@ export class PluginListItem {
       const base_folder = `${this.app.vault.configDir}/plugins/${folder_name}`;
       await write_files_with_adapter(this.app.vault.adapter, base_folder, files);
 
-      await this.app.plugins.loadManifests();
+      if (should_defer_activation) {
+        this.mark_install_deferred(plugin);
+      } else {
+        await this.app.plugins.loadManifests();
+      }
 
       if (install_enable_behavior.should_enable_after_install) {
         await enable_plugin(this.app, this.plugin_id);
       }
 
       this.env?.events?.emit?.('pro_plugins:install_completed', {
-        level: 'debug',
-        message: `${plugin_label} installed successfully.`,
+        level: should_defer_activation ? 'attention' : 'debug',
+        message: should_defer_activation
+          ? `${plugin_label} updated. Reload Obsidian to activate the new version.`
+          : `${plugin_label} installed successfully.`,
+        ...(should_defer_activation
+          ? {
+            btn_text: 'Reload Obsidian',
+            btn_callback: 'app:reload',
+          }
+          : {}),
         event_source: 'browse_smart_plugins.list_item',
       });
       emit_store_event(this.env, 'pro_plugin_installed', params, {
@@ -1194,7 +1464,7 @@ export class PluginListItem {
         recommended_track: 'pro',
         event_source: 'browse_smart_plugins.list_item.install',
       });
-      this.env?.events?.emit?.('pro_plugins:refresh', {
+      this.env?.events?.emit?.('smart_plugins:store_refresh', {
         event_source: 'browse_smart_plugins.list_item.install',
       });
       if (typeof params.on_installed === 'function') {
@@ -1216,6 +1486,8 @@ export class PluginListItem {
     const env = params.env || null;
     const repo = get_plugin_repo(plugin);
     const was_installed = this.is_installed;
+    const was_enabled = this.is_enabled;
+    const should_defer_activation = was_installed && was_enabled;
     const plugin_label = this.get_plugin_action_label(plugin);
     const install_enable_behavior = get_install_enable_behavior({
       was_installed,
@@ -1257,17 +1529,29 @@ export class PluginListItem {
         this.download_and_write_release_asset(app, styles_asset.browser_download_url, `${plugin_folder}/styles.css`),
       ]);
 
-      await app.plugins.loadManifests();
+      if (should_defer_activation) {
+        this.mark_install_deferred(plugin, release?.tag_name);
+      } else {
+        await app.plugins.loadManifests();
+      }
       if (install_enable_behavior.should_enable_after_install) {
         await enable_plugin(app, this.plugin_id);
       }
 
       env?.events?.emit?.('smart_plugins:install_completed', {
-        level: 'debug',
-        message: `${plugin_label} installed successfully.`,
+        level: should_defer_activation ? 'attention' : 'debug',
+        message: should_defer_activation
+          ? `${plugin_label} updated. Reload Obsidian to activate the new version.`
+          : `${plugin_label} installed successfully.`,
+        ...(should_defer_activation
+          ? {
+            btn_text: 'Reload Obsidian',
+            btn_callback: 'app:reload',
+          }
+          : {}),
         event_source: 'browse_smart_plugins.list_item.install_github_release_plugin',
       });
-      env?.events?.emit?.('pro_plugins:refresh', {
+      env?.events?.emit?.('smart_plugins:store_refresh', {
         event_source: 'browse_smart_plugins.list_item.install_github_release_plugin',
       });
       if (typeof params.on_installed === 'function') {
@@ -1335,6 +1619,14 @@ function get_plugin_description(plugin = {}) {
   return String(plugin?.item_desc || plugin?.description || '').trim();
 }
 
+function get_plugin_icon_name(plugin = {}) {
+  return String(plugin?.icon_name || '').trim();
+}
+
+function get_plugin_main_url(plugin = {}) {
+  return String(plugin?.main_url || plugin?.url || '').trim();
+}
+
 function get_plugin_canonical_url(plugin = {}) {
   return String(
     plugin?.main_url ||
@@ -1377,6 +1669,15 @@ function get_release_page_slug(version = '') {
   const minor = String(version_pcs[1] || '').trim();
   if (!major || !minor) return '';
   return `${major}-${minor}`;
+}
+
+function build_getting_started_url(url = '') {
+  const base_url = String(url || '')
+    .split('#')[0]
+    .split('?')[0]
+    .replace(/\/+$/, '')
+  ;
+  return base_url ? `${base_url}/getting-started/` : '';
 }
 
 function get_plugin_install_method(plugin = {}) {
@@ -1441,5 +1742,3 @@ function build_invalid_credentials_message(server_message = '') {
 
   return `${default_message}\n\n${safe_server_message}`;
 }
-
-
