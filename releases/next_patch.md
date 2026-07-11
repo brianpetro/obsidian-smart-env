@@ -98,3 +98,6 @@ Added: context tree leaf renders source menu
 
 
 Improved Smart Plugins list modal
+
+
+Add resolve_menu_actions function and corresponding tests
