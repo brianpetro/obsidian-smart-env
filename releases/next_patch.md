@@ -95,3 +95,6 @@ Migrated: SMart Env status bar menu to new menu actions architecture
 
 
 Added: context tree leaf renders source menu
+
+
+Improved Smart Plugins list modal
