@@ -26,6 +26,7 @@ import { normalize_opts } from 'smart-environment/utils/normalize_opts.js';
 import pkg from './package.json' with { type: 'json' };
 import {
   build_menu as build_registered_menu,
+  resolve_menu_actions as resolve_registered_menu_actions,
 } from './src/utils/menu_actions.js';
 
 const MIN_COMPATIBLE_SMART_ENV_VERSION = '2.4.0';
@@ -455,6 +456,18 @@ export class SmartEnv extends BaseSmartEnv {
   }
 
   /**
+   * Resolve visible registered actions without constructing a native menu.
+   *
+   * @param {string} menu_key
+   * @param {Object} scope
+   * @param {Object} [params={}]
+   * @returns {Array<Object>}
+   */
+  resolve_menu_actions(menu_key, scope, params = {}) {
+    return resolve_registered_menu_actions(this, menu_key, scope, params);
+  }
+
+  /**
    * @deprecated 2026-03-17 remove by next major release (keeping for backward compatibility during migration period)
    */
   get notices() {
@@ -716,3 +729,4 @@ function is_global_env_locked(global_ref) {
 function is_supported_smart_env_version(version) {
   return compare_versions(version, MIN_COMPATIBLE_SMART_ENV_VERSION) >= 0;
 }
+

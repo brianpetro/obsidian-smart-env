@@ -15,19 +15,72 @@
 export function build_menu(env, menu_key, menu, scope, params = {}) {
   if (!env || !menu || !menu_key) return menu;
 
-  const menu_contexts = collect_menu_entries(env, menu_key)
-    .sort(compare_entries)
-    .map((entry) => {
-      return create_menu_ctx(env, menu_key, menu, scope, params, entry);
-    })
-    .filter(should_show)
-  ;
+  const menu_contexts = resolve_menu_contexts(
+    env,
+    menu_key,
+    menu,
+    scope,
+    params,
+  );
 
   menu_contexts.forEach((menu_ctx) => {
     build_menu_entry(menu_ctx);
   });
 
   return menu;
+}
+
+/**
+ * Resolve visible actions for a logical menu without constructing or mutating
+ * a native menu.
+ *
+ * Custom builders are returned as `menu_only` because their native submenu or
+ * multi-item output cannot be represented as one direct action button.
+ *
+ * @param {object} env
+ * @param {string} menu_key
+ * @param {object} scope
+ * @param {object} [params={}]
+ * @returns {Array<{
+ *   action_key:string,
+ *   title:string,
+ *   icon:string,
+ *   disabled:boolean,
+ *   order:number,
+ *   menu_only:boolean,
+ *   event_source:string,
+ *   run:(run_params?:object)=>Promise<*>
+ * }>}
+ */
+export function resolve_menu_actions(env, menu_key, scope, params = {}) {
+  if (!env || !menu_key) return [];
+
+  return resolve_menu_contexts(
+    env,
+    menu_key,
+    null,
+    scope,
+    params,
+  )
+    .filter((menu_ctx) => !menu_ctx.menu_spec.separator)
+    .map((menu_ctx) => {
+      const disabled = get_disabled(menu_ctx);
+
+      return {
+        action_key: menu_ctx.action_key,
+        title: get_title(menu_ctx),
+        icon: get_icon(menu_ctx),
+        disabled,
+        order: get_menu_order(menu_ctx),
+        menu_only: typeof menu_ctx.menu_spec.build === 'function',
+        event_source: menu_ctx.event_source,
+        async run(run_params = {}) {
+          if (disabled) return false;
+          return await menu_ctx.run(run_params);
+        },
+      };
+    })
+  ;
 }
 
 /**
@@ -55,6 +108,16 @@ export function collect_menu_entries(env, menu_key) {
   });
 
   return Array.from(entries.values());
+}
+
+function resolve_menu_contexts(env, menu_key, menu, scope, params) {
+  return collect_menu_entries(env, menu_key)
+    .sort(compare_entries)
+    .map((entry) => {
+      return create_menu_ctx(env, menu_key, menu, scope, params, entry);
+    })
+    .filter(should_show)
+  ;
 }
 
 function build_menu_entry(menu_ctx) {
@@ -123,15 +186,9 @@ function add_item(menu_ctx) {
   if (typeof menu_ctx.menu?.addItem !== 'function') return;
 
   const title = get_title(menu_ctx);
-  const icon = get_value(menu_ctx.menu_spec.icon, menu_ctx)
-    || menu_ctx.action_entry?.icon
-    || menu_ctx.action_entry?.display_icon
-    || ''
-  ;
+  const icon = get_icon(menu_ctx);
   const disabled = get_disabled(menu_ctx);
-  const order = get_order(
-    menu_ctx.menu_spec.order ?? menu_ctx.action_entry?.order,
-  );
+  const order = get_menu_order(menu_ctx);
 
   menu_ctx.menu.addItem((item) => {
     item._menu_key = menu_ctx.menu_key;
@@ -160,9 +217,7 @@ function add_separator(menu_ctx) {
 
   item._menu_key = menu_ctx.menu_key;
   item._action_key = menu_ctx.action_key;
-  item._order = get_order(
-    menu_ctx.menu_spec.order ?? menu_ctx.action_entry?.order,
-  );
+  item._order = get_menu_order(menu_ctx);
 }
 
 function should_show(menu_ctx) {
@@ -182,6 +237,20 @@ function get_title(menu_ctx) {
     || menu_ctx.action_entry?.title
     || humanize(menu_ctx.action_key)
   ;
+}
+
+function get_icon(menu_ctx) {
+  return get_value(menu_ctx.menu_spec.icon, menu_ctx)
+    || menu_ctx.action_entry?.icon
+    || menu_ctx.action_entry?.display_icon
+    || ''
+  ;
+}
+
+function get_menu_order(menu_ctx) {
+  return get_order(
+    menu_ctx.menu_spec.order ?? menu_ctx.action_entry?.order,
+  );
 }
 
 function get_menu_spec(action_entry, menu_key) {
@@ -205,7 +274,6 @@ function normalize_menu_spec(menu_spec) {
   if (is_object(menu_spec)) return menu_spec;
   return {};
 }
-
 
 function get_action(actions, action_key) {
   const action = actions?.[action_key];
