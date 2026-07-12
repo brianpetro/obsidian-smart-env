@@ -101,3 +101,11 @@ Improved Smart Plugins list modal
 
 
 Add resolve_menu_actions function and corresponding tests
+
+
+- Update default settings to use arrays for file and folder exclusions.
+- Introduce should_exclude_path_for_length method in ObsidianFsAdapter to enforce path length limits.
+- Modify ExcludedFoldersFuzzy and ExcludedSourcesModal to utilize the new path length policy.
+- Normalize exclusion lists in utils to ensure consistent handling.
+- Add tests for exclusion logic and path length policy.
+- Enhance CSS for fuzzy header display.
