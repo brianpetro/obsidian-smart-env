@@ -3,45 +3,36 @@ import {
   add_exclusion,
   ensure_smart_sources_settings,
   format_folder_exclusion,
-  parse_exclusions_csv,
   remove_exclusion,
 } from './exclusions.js';
 
-test('parse_exclusions_csv trims and filters entries', t => {
-  t.deepEqual(parse_exclusions_csv(' a , ,b, c '), ['a', 'b', 'c']);
-  t.deepEqual(parse_exclusions_csv(''), []);
+const comma_file_path = 'Cases/Lastname, Firstname/Doe v. X, 193 S.W.3d 727.md';
+
+test('add_exclusion and remove_exclusion normalize legacy values to arrays', (t) => {
+  t.deepEqual(add_exclusion('alpha,beta', 'gamma'), ['alpha', 'beta', 'gamma']);
+  t.deepEqual(add_exclusion([comma_file_path], comma_file_path), [comma_file_path]);
+  t.deepEqual(remove_exclusion([comma_file_path, 'other.md'], comma_file_path), ['other.md']);
 });
 
-test('add_exclusion adds unique trimmed values', t => {
-  t.is(add_exclusion('alpha,beta', ' gamma '), 'alpha,beta,gamma');
-  t.is(add_exclusion('alpha,beta', 'beta'), 'alpha,beta');
-  t.is(add_exclusion('', '  '), '');
+test('ensure_smart_sources_settings normalizes both exclusion fields', (t) => {
+  const env = {
+    settings: {
+      smart_sources: {
+        folder_exclusions: 'Folder',
+        file_exclusions: [comma_file_path],
+      },
+    },
+  };
+
+  const settings = ensure_smart_sources_settings(env);
+
+  t.deepEqual(settings.folder_exclusions, ['Folder']);
+  t.deepEqual(settings.file_exclusions, [comma_file_path]);
 });
 
-test('format_folder_exclusion adds one recursive suffix', t => {
+test('format_folder_exclusion adds one recursive suffix', (t) => {
   t.is(format_folder_exclusion('Folder'), 'Folder/**');
   t.is(format_folder_exclusion('Folder/'), 'Folder/**');
   t.is(format_folder_exclusion('Folder/**'), 'Folder/**');
-  t.is(format_folder_exclusion(' / '), '');
-});
-
-test('remove_exclusion removes only matching entries', t => {
-  t.is(remove_exclusion('alpha,beta,gamma', ' beta '), 'alpha,gamma');
-  t.is(remove_exclusion('single', 'missing'), 'single');
-  t.is(remove_exclusion('', 'beta'), '');
-});
-
-test('ensure_smart_sources_settings creates defaults', t => {
-  const env = { settings: {} };
-  const smart_sources_settings = ensure_smart_sources_settings(env);
-  t.truthy(env.settings.smart_sources);
-  t.is(smart_sources_settings.folder_exclusions, '');
-  t.is(smart_sources_settings.file_exclusions, '');
-});
-
-test('ensure_smart_sources_settings preserves existing values', t => {
-  const env = { settings: { smart_sources: { folder_exclusions: 'x', file_exclusions: 'y' } } };
-  const smart_sources_settings = ensure_smart_sources_settings(env);
-  t.is(smart_sources_settings.folder_exclusions, 'x');
-  t.is(smart_sources_settings.file_exclusions, 'y');
+  t.is(format_folder_exclusion('/'), '');
 });

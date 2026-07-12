@@ -41,3 +41,8 @@
   border-radius: 6px;
   padding: 0.1rem 0.3rem;
 }
+
+.smart-fuzzy-header {
+  max-height: 300px;
+  overflow-y: auto;
+}

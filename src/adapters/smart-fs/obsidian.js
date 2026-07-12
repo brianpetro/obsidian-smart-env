@@ -132,6 +132,17 @@ export class ObsidianFsAdapter {
     ;
     return files;
   }
+  /**
+   * Preserve the v2 path-length limit used to protect its path-derived data
+   * filenames. Environments with path-safe persistence can override this method.
+   *
+   * @param {string} file_path
+   * @returns {boolean}
+   */
+  should_exclude_path_for_length(file_path) {
+    return file_path.length > 200;
+  }
+
   // NOTE: currently does not handle hidden files and folders
   async list_recursive(rel_path, opts={}) {
     if (!rel_path.startsWith(this.fs_path)) rel_path = this.fs_path + '/' + rel_path;
@@ -139,11 +150,9 @@ export class ObsidianFsAdapter {
     if(rel_path.endsWith('/')) rel_path = rel_path.slice(0, -1);
     const files = this.obsidian_app.vault.getAllLoadedFiles()
       .filter((file) => {
-        if(file.path.length > 200) {
-          // add to excluded files
-          this.smart_fs.auto_excluded_files.push(file.path);
-          return false;
-        }
+        // Use SmartFs so configured exclusions run before the v2 path-length
+        // compatibility policy and do not become runtime auto exclusions.
+        if(this.smart_fs.is_excluded(file.path)) return false;
         if(rel_path !== '' && !file.path.startsWith(rel_path)) return false;
         if(file instanceof this.obsidian.TFile){
           if(opts.type === 'folder') return false;
@@ -239,6 +248,7 @@ export class ObsidianFsAdapter {
    * Remove a directory
    * 
    * @param {string} rel_path - The relative path of the directory to remove
+   * @param {boolean} [recursive=false]
    * @returns {Promise<void>} A promise that resolves when the operation is complete
    */
   async remove_dir(rel_path, recursive=false) {
@@ -249,7 +259,7 @@ export class ObsidianFsAdapter {
   /**
    * Get file or directory information
    * 
-   * @param {string} rel_path - The relative path of the file or directory
+   * @param {string} rel_path - The relative path to get information for
    * @returns {Promise<Object>} An object containing file or directory information
    */
   async stat(rel_path) {

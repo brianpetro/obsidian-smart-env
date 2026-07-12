@@ -1,14 +1,13 @@
 /**
  * @file excluded_folders_fuzzy.js
  * @description An Obsidian FuzzySuggestModal to pick a single folder from env.fs.folder_paths
- * and add it to env.settings.smart_sources.folder_exclusions (CSV).
+ * and add it to env.settings.smart_sources.folder_exclusions.
  */
 import { FuzzySuggestModal } from 'obsidian';
 import {
   add_exclusion,
   ensure_smart_sources_settings,
   format_folder_exclusion,
-  parse_exclusions_csv,
   remove_exclusion,
 } from '../utils/exclusions.js';
 
@@ -50,7 +49,7 @@ export class ExcludedFoldersFuzzy extends FuzzySuggestModal {
    */
   getItems() {
     const smart_sources_settings = ensure_smart_sources_settings(this.env);
-    const folder_exclusions = parse_exclusions_csv(smart_sources_settings.folder_exclusions)
+    const folder_exclusions = smart_sources_settings.folder_exclusions
       .map(format_folder_exclusion)
     ;
 
@@ -105,14 +104,14 @@ export class ExcludedFoldersFuzzy extends FuzzySuggestModal {
     if (!this.modalEl) return;
 
     const smart_sources_settings = ensure_smart_sources_settings(this.env);
-    const excluded_folders = parse_exclusions_csv(smart_sources_settings.folder_exclusions);
+    const excluded_folders = smart_sources_settings.folder_exclusions;
     const gitignore_exclusions = (this.env.settings.gitignore_exclusions || [])
       .filter(pattern => !pattern.includes('.'))
     ;
 
     let header = this.modalEl.querySelector('.sc-excluded-folders-header');
     if (!header) {
-      header = this.modalEl.createEl('div', { cls: 'sc-excluded-folders-header' });
+      header = this.modalEl.createEl('div', { cls: 'sc-excluded-folders-header smart-fuzzy-header' });
       this.modalEl.prepend(header);
     }
 
