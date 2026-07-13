@@ -1,7 +1,12 @@
 export const provider_options = {
   chat_completion_models: [
+    // {
+    //   label: 'Transformers (local, built-in)',
+    //   value: 'transformers',
+    //   disabled: true,
+    // },
     {
-      label: 'Open Router (cloud)',
+      label: 'PRO: Open Router (cloud)',
       value: 'open_router',
     },
     {
@@ -50,7 +55,7 @@ export const provider_options = {
       disabled: true,
     },
     {
-      label: 'Experimental: Lite LLM (self-hosted proxy)',
+      label: 'PRO: Experimental: Lite LLM (self-hosted proxy)',
       value: 'litellm',
       disabled: true,
     }
