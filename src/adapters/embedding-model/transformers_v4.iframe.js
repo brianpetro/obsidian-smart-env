@@ -249,7 +249,7 @@ export class SmartEmbedTransformersAdapter extends SmartEmbedAdapter {
    * @returns {Promise<void>}
    */
   async load_transformers_with_fallback() {
-    const { pipeline, env, AutoTokenizer, ModelRegistry, LogLevel } = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.1.0');
+    const { pipeline, env, AutoTokenizer, ModelRegistry, LogLevel } = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0');
     env.logLevel = LogLevel.ERROR; // Reduce logging noise during loading
 
     let available_dtypes = [];
