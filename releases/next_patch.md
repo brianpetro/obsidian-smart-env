@@ -109,3 +109,6 @@ Add resolve_menu_actions function and corresponding tests
 - Normalize exclusion lists in utils to ensure consistent handling.
 - Add tests for exclusion logic and path length policy.
 - Enhance CSS for fuzzy header display.
+
+
+Update Transformers library version to 4.2.0 for improved functionality
