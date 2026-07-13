@@ -13,8 +13,10 @@ export const default_settings = {
       },
     },
     excluded_headings: '',
-    file_exclusions: ['Untitled'],
-    folder_exclusions: [],
+    // Legacy CSV keys remain for SC App compatibility. Array writes use the
+    // separate file_exclusions_list and folder_exclusions_list properties.
+    file_exclusions: 'Untitled',
+    folder_exclusions: '',
   },
   gitignore_exclusions: [],
   gitignore_exclusions_updated_at: 0,

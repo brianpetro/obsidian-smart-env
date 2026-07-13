@@ -1,8 +1,8 @@
 import { normalize_exclusion_list } from 'smart-sources/utils/exclusions.js';
 
 /**
- * Ensure Smart Sources settings exist and normalize legacy exclusion strings
- * to the canonical array representation used by all new writes.
+ * Ensure Smart Sources settings exist and initialize the array-backed exclusion
+ * lists without changing the legacy CSV keys read by older clients.
  *
  * @param {Object} env
  * @returns {Object}
@@ -11,11 +11,13 @@ export function ensure_smart_sources_settings(env) {
   if (!env.settings) env.settings = {};
   if (!env.settings.smart_sources) env.settings.smart_sources = {};
   const smart_sources_settings = env.settings.smart_sources;
-  smart_sources_settings.folder_exclusions = normalize_exclusion_list(
-    smart_sources_settings.folder_exclusions,
+  smart_sources_settings.folder_exclusions_list = normalize_exclusion_list(
+    smart_sources_settings.folder_exclusions_list
+      ?? smart_sources_settings.folder_exclusions,
   );
-  smart_sources_settings.file_exclusions = normalize_exclusion_list(
-    smart_sources_settings.file_exclusions,
+  smart_sources_settings.file_exclusions_list = normalize_exclusion_list(
+    smart_sources_settings.file_exclusions_list
+      ?? smart_sources_settings.file_exclusions,
   );
   return smart_sources_settings;
 }

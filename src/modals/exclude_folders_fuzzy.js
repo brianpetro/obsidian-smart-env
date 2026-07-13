@@ -1,7 +1,7 @@
 /**
  * @file excluded_folders_fuzzy.js
  * @description An Obsidian FuzzySuggestModal to pick a single folder from env.fs.folder_paths
- * and add it to env.settings.smart_sources.folder_exclusions.
+ * and add it to env.settings.smart_sources.folder_exclusions_list.
  */
 import { FuzzySuggestModal } from 'obsidian';
 import {
@@ -49,7 +49,7 @@ export class ExcludedFoldersFuzzy extends FuzzySuggestModal {
    */
   getItems() {
     const smart_sources_settings = ensure_smart_sources_settings(this.env);
-    const folder_exclusions = smart_sources_settings.folder_exclusions
+    const folder_exclusions = smart_sources_settings.folder_exclusions_list
       .map(format_folder_exclusion)
     ;
 
@@ -82,8 +82,8 @@ export class ExcludedFoldersFuzzy extends FuzzySuggestModal {
 
     this.prevent_close = true;
     const smart_sources_settings = ensure_smart_sources_settings(this.env);
-    smart_sources_settings.folder_exclusions = add_exclusion(
-      smart_sources_settings.folder_exclusions,
+    smart_sources_settings.folder_exclusions_list = add_exclusion(
+      smart_sources_settings.folder_exclusions_list,
       exclusion,
     );
 
@@ -104,14 +104,14 @@ export class ExcludedFoldersFuzzy extends FuzzySuggestModal {
     if (!this.modalEl) return;
 
     const smart_sources_settings = ensure_smart_sources_settings(this.env);
-    const excluded_folders = smart_sources_settings.folder_exclusions;
+    const excluded_folders = smart_sources_settings.folder_exclusions_list;
     const gitignore_exclusions = (this.env.settings.gitignore_exclusions || [])
       .filter(pattern => !pattern.includes('.'))
     ;
 
     let header = this.modalEl.querySelector('.sc-excluded-folders-header');
     if (!header) {
-      header = this.modalEl.createEl('div', { cls: 'sc-excluded-folders-header smart-fuzzy-header' });
+      header = this.modalEl.createEl('div', { cls: 'sc-excluded-folders-header' });
       this.modalEl.prepend(header);
     }
 
@@ -135,8 +135,8 @@ export class ExcludedFoldersFuzzy extends FuzzySuggestModal {
         cls: 'remove-excluded-folder-btn'
       });
       remove_btn.addEventListener('click', () => {
-        smart_sources_settings.folder_exclusions = remove_exclusion(
-          smart_sources_settings.folder_exclusions,
+        smart_sources_settings.folder_exclusions_list = remove_exclusion(
+          smart_sources_settings.folder_exclusions_list,
           folder_path
         );
         this.env.update_exclusions?.();
