@@ -1,20 +1,21 @@
 import { FileSourceContentAdapter } from "smart-sources/adapters/_file.js";
-import { get_bases_file_links } from "smart-sources/utils/get_bases_cache_links.js";
+
 /**
  * @class BasesSourceContentAdapter
  * @extends FileSourceContentAdapter
  * @description
- * Adapter for handling a SmartSource that is backed by a Markdown file.
- * Responsible for importing file content into `item.data.blocks`, computing hashes, and identifying outlinks.
+ * Base adapter for an Obsidian Bases file. Rendered Bases views are handled by
+ * the Pro adapter; this adapter only maintains the source import bookkeeping.
  */
 export class BasesSourceContentAdapter extends FileSourceContentAdapter {
   static extensions = ['base'];
+
   async import() {
     if (!this.item?.file) return;
-    const base_links = get_bases_file_links({ source: this.item });
-    this.data.outlinks = base_links;
-    this.data.blocks = this.data.blocks || {};
+
+    this.data.outlinks = [];
     this.data.metadata = this.data.metadata || {};
+
     const { mtime = 0, size = 0 } = this.item.file?.stat || {};
     this.data.last_import = {
       mtime,
@@ -28,6 +29,6 @@ export class BasesSourceContentAdapter extends FileSourceContentAdapter {
 }
 
 export default {
-  collection: null, // No collection adapter needed for markdown sources
+  collection: null,
   item: BasesSourceContentAdapter
 };
