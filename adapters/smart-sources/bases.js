@@ -10,7 +10,21 @@ import { FileSourceContentAdapter } from "smart-sources/adapters/_file.js";
 export class BasesSourceContentAdapter extends FileSourceContentAdapter {
   static extensions = ['base'];
 
+  get should_embed() { return false; }
+
+  static async init_items(collection) {
+    await super.init_items(collection);
+
+    Object.values(collection.items || {}).forEach(source => {
+      if (source.file_type !== 'base') return;
+      source._queue_embed = false;
+      if (source.vec) source.vec = null;
+    });
+  }
+
   async import() {
+    this.item._queue_embed = false;
+    if (this.item.vec) this.item.vec = null;
     if (!this.item?.file) return;
 
     this.data.outlinks = [];
