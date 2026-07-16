@@ -112,3 +112,6 @@ Add resolve_menu_actions function and corresponding tests
 
 
 Update Transformers library version to 4.2.0 for improved functionality
+
+
+Add embed_input_action_key getter to Bases, Canvas, and Rendered source adapters
