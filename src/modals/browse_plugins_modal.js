@@ -14,6 +14,7 @@ export class BrowseSmartPlugins extends Modal {
     if (this.modalEl?.style) {
       this.modalEl.style.width = 'min(920px, 92vw)';
       this.modalEl.style.maxHeight = 'min(820px, 88vh)';
+      this.modalEl.style.maxWidth = 'var(--setting-group-max-width)';
     }
 
     this.titleEl.setText('Smart Plugins');
