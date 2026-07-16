@@ -25,6 +25,12 @@ export function parse_canvas_json({ content } = {}) {
  */
 export class CanvasSourceContentAdapter extends FileSourceContentAdapter {
   static extensions = ['canvas'];
+  static embed_input_action_key = 'source_get_embed_input_canvas';
+
+  get embed_input_action_key() {
+    return this.constructor.embed_input_action_key;
+  }
+
   async import() {
     if (!this.item.file) {
       console.warn(`CanvasSourceContentAdapter: Skipping missing-file: ${this.file_path}`);
@@ -90,3 +96,4 @@ export default {
   collection: null, // No collection adapter needed for markdown sources
   item: CanvasSourceContentAdapter
 };
+

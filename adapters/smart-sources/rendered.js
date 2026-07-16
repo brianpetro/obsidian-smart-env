@@ -8,6 +8,12 @@ import { FileSourceContentAdapter } from "smart-sources/adapters/_file.js";
  */
 export class RenderedSourceContentAdapter extends FileSourceContentAdapter {
   static extensions = ['rendered'];
+  static embed_input_action_key = 'source_get_embed_input_rendered';
+
+  get embed_input_action_key() {
+    return this.constructor.embed_input_action_key;
+  }
+
   async import() {
     /* quietly skip import (for now) */
   }

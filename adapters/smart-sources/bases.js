@@ -9,6 +9,11 @@ import { FileSourceContentAdapter } from "smart-sources/adapters/_file.js";
  */
 export class BasesSourceContentAdapter extends FileSourceContentAdapter {
   static extensions = ['base'];
+  static embed_input_action_key = 'source_get_embed_input_base';
+
+  get embed_input_action_key() {
+    return this.constructor.embed_input_action_key;
+  }
 
   get should_embed() { return false; }
 
@@ -46,3 +51,4 @@ export default {
   collection: null,
   item: BasesSourceContentAdapter
 };
+
