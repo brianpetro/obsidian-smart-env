@@ -16,7 +16,7 @@ import { ExcalidrawSourceContentAdapter } from "./adapters/smart-sources/excalid
 import { SmartEmbedModel } from "smart-embed-model";
 import { SmartEmbedTransformersIframeAdapter } from "smart-embed-model/adapters/transformers_iframe.js";
 // actions architecture
-// import smart_block from "smart-blocks/smart_block.js";
+import smart_block from "smart-blocks/smart_block.js";
 import smart_source from "smart-sources/smart_source.js";
 import { parse_blocks } from "smart-blocks/content_parsers/parse_blocks.js";
 import { merge_env_config } from 'smart-environment/utils/merge_env_config.js';
@@ -88,8 +88,8 @@ const smart_env_config = {
     // },
   },
   items: {
+    smart_block,
     smart_source,
-    // smart_block,
   },
   default_settings,
   // begin obsidian-smart-env specific modules (need to update build_env_config.js to handle)
@@ -113,4 +113,8 @@ const smart_env_config = {
 };
 import { smart_env_config as dist_config } from './smart_env.config.js';
 merge_env_config(smart_env_config, dist_config);
+smart_env_config.items.smart_block.actions = {
+  ...smart_block.actions,
+  ...smart_env_config.items.smart_block.actions,
+};
 export default smart_env_config;
