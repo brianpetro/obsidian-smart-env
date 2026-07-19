@@ -28,6 +28,10 @@ import {
   build_menu as build_registered_menu,
   resolve_menu_actions as resolve_registered_menu_actions,
 } from './src/utils/menu_actions.js';
+import {
+  externalize_secrets,
+  internalize_secrets,
+} from './utils/secret_storage.js';
 
 const MIN_COMPATIBLE_SMART_ENV_VERSION = '2.4.0';
 
@@ -36,6 +40,32 @@ export class SmartEnv extends BaseSmartEnv {
   constructor(opts = {}) {
     super(opts);
     this.plugin_states = {};
+  }
+
+  /**
+   * Persist settings, routing secret fields (API keys) into the OS keychain via
+   * `app.secretStorage` instead of writing them in plaintext to `smart_env.json`.
+   * On Obsidian versions without `secretStorage`, falls back to the base behavior.
+   * @override
+   */
+  async save_settings(settings) {
+    const app = this.main?.app;
+    const to_persist = await externalize_secrets(app, settings);
+    await super.save_settings(to_persist);
+  }
+
+  /**
+   * Load settings, injecting secret fields from the OS keychain. Migrates any
+   * legacy plaintext secret found in `smart_env.json` into the keychain and
+   * rewrites the file without it. No-op migration when `secretStorage` is absent.
+   * @override
+   */
+  async load_settings() {
+    const settings = await super.load_settings();
+    const app = this.main?.app;
+    const { migrated } = await internalize_secrets(app, settings);
+    if (migrated) await this.save_settings(settings);
+    return settings;
   }
   /**
    * Override to prevent loading outdated plugins
