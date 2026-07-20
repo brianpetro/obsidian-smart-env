@@ -60,7 +60,7 @@ export class SmartItemView extends ItemView {
    *
    * This will:
    * - call plugin.registerView(view_type, ...)
-   * - add a command "Open: <display_text> view"
+   * - add a command "Open: <display_text> view" when enabled
    * - define a getter on plugin: plugin[method_name] -> the view instance
    * - define a method on plugin: plugin["open_" + method_name]() -> opens the view
    * - listen for env events named `${view_type}:open` and open the view when emitted
@@ -68,7 +68,7 @@ export class SmartItemView extends ItemView {
    * @param {import('obsidian').Plugin} plugin
    * @returns {{method_name:string, open_method_name:string, event_name:string}}
    */
-  static register_item_view(plugin) {
+  static register_item_view(plugin, params = {}) {
     const View = /** @type {typeof SmartItemView} */ (this);
 
     // check if already registered
@@ -81,13 +81,15 @@ export class SmartItemView extends ItemView {
     plugin.registerView(View.view_type, (leaf) => new View(leaf, plugin));
 
     // Add a matching command for opening this view
-    plugin.addCommand({
-      id: View.view_type,
-      name: "Open: " + View.display_text + " view",
-      callback: () => {
-        View.open(plugin.app.workspace);
-      }
-    });
+    if (!params.skip_command_registration) {
+      plugin.addCommand({
+        id: View.view_type,
+        name: "Open: " + View.display_text + " view",
+        callback: () => {
+          View.open(plugin.app.workspace);
+        }
+      });
+    }
 
     // Derive ergonomic API on the plugin instance
     const method_name = View.view_type.replace(/^smart-/, "").replace(/-/g, "_");

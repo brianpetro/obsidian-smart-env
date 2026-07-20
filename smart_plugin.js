@@ -58,12 +58,12 @@ export class SmartPlugin extends Plugin {
   get item_views() {
     return {};
   }
-  register_item_views() {
+  register_item_views(params = {}) {
     const views = Object.values(this.item_views);
     for(let i = 0; i < views.length; i++) {
       const ViewClass = views[i];
       if (typeof ViewClass.register_item_view === "function") {
-        ViewClass.register_item_view(this);
+        ViewClass.register_item_view(this, params);
       }
     }
   }
