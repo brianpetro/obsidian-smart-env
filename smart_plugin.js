@@ -6,6 +6,12 @@ import {
 } from "obsidian";
 import { SmartEnv } from "./smart_env.js";
 import { SmartNotices } from 'smart-notices/smart_notices.js';
+import {
+  register_command_actions as register_configured_command_actions,
+} from './src/utils/command_actions.js';
+import {
+  register_ribbon_actions as register_configured_ribbon_actions,
+} from './src/utils/ribbon_actions.js';
 
 /**
  * @extends Plugin
@@ -23,6 +29,14 @@ export class SmartPlugin extends Plugin {
     Object.values(this.commands).forEach((cmd) => {
       this.addCommand(cmd);
     });
+  }
+
+  register_command_actions() {
+    register_configured_command_actions(this);
+  }
+
+  register_ribbon_actions() {
+    register_configured_ribbon_actions(this);
   }
 
 

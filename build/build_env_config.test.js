@@ -119,6 +119,21 @@ assigned_action.version = '7.8.9';`
 export const cli = {
   command: 'launch',
   description: 'Launch from CLI',
+};
+export const commands = {
+  launch: {
+    register_when() {
+      return true;
+    },
+  },
+};
+export const ribbon_icons = {
+  launch: {
+    icon_name: 'rocket',
+    register_when() {
+      return true;
+    },
+  },
 };`
   );
 
@@ -336,6 +351,21 @@ test('actions config includes cli object when exported', async t => {
     command: 'launch',
     description: 'Launch from CLI',
   });
+});
+
+test('actions config includes commands when exported', async t => {
+  const mod_path = path.join(tmp_root, 'smart_env.config.js');
+  const cfg = await import(pathToFileURL(mod_path).href);
+  const { launch } = cfg.smart_env_config.actions;
+  t.is(typeof launch.commands.launch.register_when, 'function');
+});
+
+test('actions config includes ribbon icons when exported', async t => {
+  const mod_path = path.join(tmp_root, 'smart_env.config.js');
+  const cfg = await import(pathToFileURL(mod_path).href);
+  const { launch } = cfg.smart_env_config.actions;
+  t.is(launch.ribbon_icons.launch.icon_name, 'rocket');
+  t.is(typeof launch.ribbon_icons.launch.register_when, 'function');
 });
 
 test('actions config includes exported, assigned, and fallback versions', async t => {
