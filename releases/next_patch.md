@@ -118,3 +118,6 @@ Add embed_input_action_key getter to Bases, Canvas, and Rendered source adapters
 
 
 improved: get_embed_input delegates to actions architecture for improved flexibility
+
+
+Added: command and ribbon action registration
