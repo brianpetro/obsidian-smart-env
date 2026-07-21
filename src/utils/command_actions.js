@@ -1,3 +1,8 @@
+import {
+  get_scope_env,
+  run_action_entry,
+} from 'smart-environment';
+
 export function register_command_actions(plugin) {
   const { env, app } = plugin;
   const actions = env?.config?.actions;
@@ -132,65 +137,6 @@ export function register_command_actions(plugin) {
     plugin.addCommand(command);
     registered_commands.set(command_id, action_key);
   }
-}
-
-export function get_scope_env(scope) {
-  if (!scope || typeof scope !== 'object') {
-    throw new TypeError('Action scope must be an object.');
-  }
-
-  const env = 'env' in scope
-    ? scope.env
-    : scope;
-
-  if (!env || typeof env !== 'object' || !env.config?.actions) {
-    throw new TypeError(
-      'Action scope must be a SmartEnv or expose one through scope.env.',
-    );
-  }
-
-  return env;
-}
-
-/**
- * @param {object} scope
- * @param {string} action_key
- * @param {object} [params]
- * @param {{event_source?: string}} [options]
- * @returns {Promise<*>}
- */
-export async function run_action_entry(
-  scope,
-  action_key,
-  params = {},
-  options = {},
-) {
-  const { event_source } = options;
-  if (!is_object(params)) {
-    throw new TypeError('Action params must be an object.');
-  }
-
-  const env = get_scope_env(scope);
-  const action_entry = env.config.actions[action_key];
-  if (!action_entry) {
-    throw new Error(`Action not found: ${action_key}`);
-  }
-
-  const scoped_action = scope.actions?.[action_key];
-  const action = typeof scoped_action === 'function'
-    ? scoped_action
-    : action_entry.action?.bind(scope);
-
-  if (typeof action !== 'function') {
-    throw new Error(`Action is not callable: ${action_key}`);
-  }
-
-  return await action({
-    ...params,
-    ...(typeof event_source === 'undefined'
-      ? {}
-      : { event_source }),
-  });
 }
 
 function create_command_callback({

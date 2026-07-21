@@ -1,7 +1,7 @@
 import {
   get_scope_env,
   run_action_entry,
-} from './command_actions.js';
+} from 'smart-environment';
 
 /**
  * Build configured menu entries for a menu instance.
