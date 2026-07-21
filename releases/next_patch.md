@@ -121,3 +121,6 @@ improved: get_embed_input delegates to actions architecture for improved flexibi
 
 
 Added: command and ribbon action registration
+
+
+Added generic release notes opener as command action (migrating away from ItemView registering it's own commands)
