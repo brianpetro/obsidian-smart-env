@@ -1,3 +1,8 @@
+import {
+  get_scope_env,
+  run_action_entry,
+} from './command_actions.js';
+
 /**
  * Build configured menu entries for a menu instance.
  *
@@ -111,6 +116,12 @@ export function collect_menu_entries(env, menu_key) {
 }
 
 function resolve_menu_contexts(env, menu_key, menu, scope, params) {
+  try {
+    if (get_scope_env(scope) !== env) return [];
+  } catch {
+    return [];
+  }
+
   return collect_menu_entries(env, menu_key)
     .sort(compare_entries)
     .map((entry) => {
@@ -155,23 +166,22 @@ function create_menu_ctx(env, menu_key, menu, scope, params, entry) {
       return `menu:${menu_key}:${entry.action_key}`;
     },
     resolve_action() {
-      return get_action(scope?.actions, entry.action_key)
-        || get_action(env?.actions, entry.action_key)
-        || get_fallback_action(menu_ctx)
+      const scoped_action = scope.actions?.[entry.action_key];
+      return typeof scoped_action === 'function'
+        ? scoped_action
+        : entry.action_entry?.action?.bind(scope)
       ;
     },
     async run(run_params = {}) {
-      const action = this.resolve_action();
-      if (typeof action !== 'function') return false;
-
       const spec_params = resolve_params(menu_spec.params, menu_ctx);
-      return await action({
+      return await run_action_entry(scope, entry.action_key, {
         ...params,
         ...spec_params,
         ...run_params,
         menu_ctx,
         menu_key,
         action_key: entry.action_key,
+      }, {
         event_source: run_params.event_source
           || menu_spec.event_source
           || menu_ctx.event_source,
@@ -272,23 +282,7 @@ function normalize_menu_spec(menu_spec) {
   if (menu_spec === true) return {};
   if (typeof menu_spec === 'function') return { build: menu_spec };
   if (is_object(menu_spec)) return menu_spec;
-  return {};
-}
-
-function get_action(actions, action_key) {
-  const action = actions?.[action_key];
-  return typeof action === 'function' ? action : null;
-}
-
-function get_fallback_action(menu_ctx) {
-  const entry = menu_ctx.action_entry;
-  const action_scope = menu_ctx.scope ?? menu_ctx;
-
-  if (typeof entry === 'function') return entry.bind(action_scope);
-  if (typeof entry?.action === 'function') {
-    return entry.action.bind(action_scope);
-  }
-  return null;
+  throw new TypeError('Invalid menu specification.');
 }
 
 function get_value(value, menu_ctx) {

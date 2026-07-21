@@ -45,9 +45,6 @@ function create_menu() {
 }
 
 test('resolve_menu_actions returns visible action metadata in menu order', (t) => {
-  const scope = {
-    icon: 'sparkles',
-  };
   const env = {
     config: {
       actions: {
@@ -101,6 +98,10 @@ test('resolve_menu_actions returns visible action metadata in menu order', (t) =
       },
     },
   };
+  const scope = {
+    env,
+    icon: 'sparkles',
+  };
 
   const actions = resolve_menu_actions(env, 'test:menu', scope, {
     suffix: 'action',
@@ -149,21 +150,19 @@ test('resolve_menu_actions does not execute custom menu builders', (t) => {
       },
     },
   };
+  const scope = { env };
 
-  const actions = resolve_menu_actions(env, 'test:menu', {});
+  const actions = resolve_menu_actions(env, 'test:menu', scope);
 
   t.is(build_call_ct, 0);
   t.is(actions.length, 1);
   t.true(actions[0].menu_only);
 
-  build_menu(env, 'test:menu', create_menu(), {});
+  build_menu(env, 'test:menu', create_menu(), scope);
   t.is(build_call_ct, 1);
 });
 
-test('resolved action run preserves menu params and natural fallback scope', async (t) => {
-  const scope = {
-    marker: 'natural scope',
-  };
+test('resolved action run uses the shared runner and natural scope', async (t) => {
   let action_this = null;
   let action_params = null;
   const env = {
@@ -187,6 +186,15 @@ test('resolved action run preserves menu params and natural fallback scope', asy
           },
         },
       },
+    },
+  };
+  const scope = {
+    env,
+    marker: 'natural scope',
+  };
+  env.actions = {
+    runnable_action() {
+      t.fail('Menu execution must not use env.actions.');
     },
   };
 
@@ -227,8 +235,9 @@ test('resolved disabled action fails closed without executing', async (t) => {
       },
     },
   };
+  const scope = { env };
 
-  const [action] = resolve_menu_actions(env, 'test:menu', {});
+  const [action] = resolve_menu_actions(env, 'test:menu', scope);
   const result = await action.run();
 
   t.false(result);
@@ -254,9 +263,10 @@ test('build_menu and resolve_menu_actions share presentation metadata', (t) => {
     },
   };
   const menu = create_menu();
+  const scope = { env };
 
-  build_menu(env, 'test:menu', menu, {});
-  const [resolved] = resolve_menu_actions(env, 'test:menu', {});
+  build_menu(env, 'test:menu', menu, scope);
+  const [resolved] = resolve_menu_actions(env, 'test:menu', scope);
   const [built] = menu.items;
 
   t.is(built._action_key, resolved.action_key);
@@ -264,4 +274,56 @@ test('build_menu and resolve_menu_actions share presentation metadata', (t) => {
   t.is(built.icon, resolved.icon);
   t.is(built.disabled, resolved.disabled);
   t.is(built._order, resolved.order);
+});
+
+test('menu discovery rejects a foreign natural scope', (t) => {
+  const env = {
+    config: {
+      actions: {
+        foreign_action: {
+          action() {},
+          menus: {
+            'test:menu': true,
+          },
+        },
+      },
+    },
+  };
+  const foreign_scope = {
+    env: {
+      config: {
+        actions: {},
+      },
+    },
+  };
+  const menu = create_menu();
+
+  t.deepEqual(
+    resolve_menu_actions(env, 'test:menu', foreign_scope),
+    [],
+  );
+  t.is(build_menu(env, 'test:menu', menu, foreign_scope), menu);
+  t.is(menu.items.length, 0);
+});
+
+test('menu discovery rejects unsupported placement values', (t) => {
+  const env = {
+    config: {
+      actions: {
+        invalid_action: {
+          action() {},
+          menus: {
+            'test:menu': 'invalid',
+          },
+        },
+      },
+    },
+  };
+
+  t.throws(
+    () => resolve_menu_actions(env, 'test:menu', { env }),
+    {
+      message: 'Invalid menu specification.',
+    },
+  );
 });
