@@ -8,9 +8,27 @@ export const default_page_size = 100;
 export const load_more_step = 100;
 export const all_levels_filter_key = 'all';
 export const debug_levels_filter_key = 'debug';
+export const max_payload_depth = 4;
+export const max_payload_output_length = 4000;
 export const notification_filter_keys = Object.freeze([
   ...notification_levels,
   debug_levels_filter_key,
+]);
+
+const payload_truncation_marker = '[Truncated]';
+const payload_depth_marker = '[MaxDepth]';
+const omitted_payload_keys = new Set([
+  'at',
+  'collection_key',
+  'message',
+  'level',
+  'btn_text',
+  'btn_callback',
+  'timeout',
+  'timeout_ms',
+  'link',
+  'help_link',
+  'hide_mute_button',
 ]);
 
 export { notification_levels };
@@ -311,28 +329,401 @@ export function get_entry_title(entry) {
 }
 
 /**
- * @param {object} entry
+ * @param {unknown} value
+ * @param {number} fallback
+ * @returns {number}
+ */
+function normalize_payload_limit(value, fallback) {
+  const normalized_value = Number(value);
+  if (!Number.isFinite(normalized_value) || normalized_value <= 0) return fallback;
+  return Math.floor(normalized_value);
+}
+
+/**
+ * @param {string} text
+ * @param {number} max_length
+ * @returns {{ text: string, truncated: boolean }}
+ */
+function truncate_payload_text(text, max_length) {
+  const normalized_max_length = Math.max(0, Math.floor(max_length));
+  if (text.length <= normalized_max_length) {
+    return { text, truncated: false };
+  }
+  if (normalized_max_length <= payload_truncation_marker.length) {
+    return {
+      text: payload_truncation_marker.slice(0, normalized_max_length),
+      truncated: true,
+    };
+  }
+
+  return {
+    text: `${text.slice(0, normalized_max_length - payload_truncation_marker.length)}${payload_truncation_marker}`,
+    truncated: true,
+  };
+}
+
+/**
+ * @param {unknown} value
  * @returns {string}
  */
-export function get_entry_payload_text(entry) {
-  const event_obj = entry?.event && typeof entry.event === 'object' ? entry.event : {};
+function get_payload_constructor_name(value) {
+  try {
+    const constructor_name = value?.constructor?.name;
+    return typeof constructor_name === 'string' ? constructor_name : '';
+  } catch {
+    return '';
+  }
+}
 
-  return Object.entries(event_obj)
-    .filter(([key]) => ![
-      'at',
-      'collection_key',
-      'message',
-      'level',
-      'btn_text',
-      'btn_callback',
-      'timeout',
-      'timeout_ms',
-      'link',
-      'help_link',
-      'hide_mute_button',
-    ].includes(key))
-    .map(([key, value]) => `  ${key}: ${typeof value === 'string' ? value : JSON.stringify(value)}`)
-    .join('\n');
+/**
+ * @param {unknown} value
+ * @returns {boolean}
+ */
+function is_plain_payload_object(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+
+  try {
+    const prototype = Object.getPrototypeOf(value);
+    if (prototype === null) return true;
+    return Object.prototype.hasOwnProperty.call(prototype, 'constructor')
+      && prototype.constructor?.name === 'Object'
+    ;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Summarize runtime objects instead of traversing application or DOM graphs.
+ *
+ * @param {unknown} value
+ * @returns {string}
+ */
+function get_payload_object_descriptor(value) {
+  if (!value || typeof value !== 'object') return '';
+  if (Array.isArray(value) || is_plain_payload_object(value)) return '';
+
+  const constructor_name = get_payload_constructor_name(value);
+  if (constructor_name === 'Date') return '';
+
+  if (constructor_name.endsWith('Error')) {
+    try {
+      if (typeof value.message === 'string' && value.message.trim()) {
+        return `[${constructor_name}: ${value.message.trim()}]`;
+      }
+    } catch {
+      // Fall through to the constructor-only descriptor.
+    }
+  }
+
+  return `[${constructor_name || 'Object'}]`;
+}
+
+/**
+ * @param {unknown} value
+ * @returns {string}
+ */
+function get_payload_value_fallback_text(value) {
+  if (value === null) return 'null';
+  if (typeof value === 'undefined') return 'undefined';
+  if (typeof value === 'bigint') return `${value}n`;
+  if (typeof value === 'function') {
+    return `[Function${value.name ? ` ${value.name}` : ''}]`;
+  }
+  if (typeof value === 'symbol') return String(value);
+  if (typeof value === 'object') {
+    return `[Unserializable ${get_payload_constructor_name(value) || 'Object'}]`;
+  }
+  return String(value);
+}
+
+/**
+ * @param {object} state
+ * @param {number} length
+ * @returns {boolean}
+ */
+function consume_payload_budget(state, length) {
+  const normalized_length = Math.max(1, Math.ceil(Number(length) || 0));
+  if (state.remaining_length < normalized_length) {
+    state.remaining_length = 0;
+    state.truncated = true;
+    return false;
+  }
+
+  state.remaining_length -= normalized_length;
+  return true;
+}
+
+/**
+ * @param {string} value
+ * @param {object} state
+ * @returns {string}
+ */
+function get_bounded_payload_string(value, state) {
+  const available_length = Math.max(0, state.remaining_length - 2);
+  if (value.length <= available_length) {
+    consume_payload_budget(state, value.length + 2);
+    return value;
+  }
+
+  state.remaining_length = 0;
+  state.truncated = true;
+  return truncate_payload_text(value, available_length).text;
+}
+
+/**
+ * Build a bounded JSON-safe clone so traversal stops with the display budget.
+ *
+ * @param {unknown} value
+ * @param {object} state
+ * @param {number} depth
+ * @param {Set<object>} ancestors
+ * @returns {unknown}
+ */
+function get_bounded_payload_value(value, state, depth, ancestors) {
+  if (value === null) {
+    consume_payload_budget(state, 4);
+    return null;
+  }
+  if (typeof value === 'string') return get_bounded_payload_string(value, state);
+  if (typeof value === 'bigint') return get_bounded_payload_string(`${value}n`, state);
+  if (typeof value === 'function') {
+    return get_bounded_payload_string(
+      `[Function${value.name ? ` ${value.name}` : ''}]`,
+      state,
+    );
+  }
+  if (typeof value === 'symbol') {
+    return get_bounded_payload_string(String(value), state);
+  }
+  if (typeof value === 'undefined') {
+    consume_payload_budget(state, 9);
+    return undefined;
+  }
+  if (typeof value !== 'object') {
+    consume_payload_budget(state, String(value).length);
+    return value;
+  }
+
+  const object_descriptor = get_payload_object_descriptor(value);
+  if (object_descriptor) {
+    return get_bounded_payload_string(object_descriptor, state);
+  }
+
+  const constructor_name = get_payload_constructor_name(value);
+  if (constructor_name === 'Date') {
+    const date_value = value.toJSON();
+    if (date_value === null) return null;
+    return get_bounded_payload_string(date_value, state);
+  }
+
+  if (ancestors.has(value)) {
+    return get_bounded_payload_string('[Circular]', state);
+  }
+  if (depth >= state.max_depth) {
+    state.truncated = true;
+    return get_bounded_payload_string(payload_depth_marker, state);
+  }
+  if (!consume_payload_budget(state, 2)) return payload_truncation_marker;
+
+  ancestors.add(value);
+  try {
+    if (Array.isArray(value)) {
+      const output = [];
+      for (let index = 0; index < value.length; index += 1) {
+        if (state.truncated) break;
+        if (index > 0 && !consume_payload_budget(state, 1)) {
+          output.push(payload_truncation_marker);
+          break;
+        }
+        output.push(get_bounded_payload_value(
+          value[index],
+          state,
+          depth + 1,
+          ancestors,
+        ));
+      }
+      return output;
+    }
+
+    const output = {};
+    let property_count = 0;
+    for (const key in value) {
+      if (!Object.prototype.hasOwnProperty.call(value, key)) continue;
+      if (state.truncated) break;
+      const property_cost = key.length + 3 + (property_count > 0 ? 1 : 0);
+      if (!consume_payload_budget(state, property_cost)) {
+        output['...'] = payload_truncation_marker;
+        break;
+      }
+      output[key] = get_bounded_payload_value(
+        value[key],
+        state,
+        depth + 1,
+        ancestors,
+      );
+      property_count += 1;
+    }
+    return output;
+  } finally {
+    ancestors.delete(value);
+  }
+}
+
+/**
+ * @param {unknown} value
+ * @param {object} [params={}]
+ * @param {number} [params.max_depth]
+ * @param {number} [params.max_length]
+ * @returns {{ text: string, truncated: boolean }}
+ */
+function get_payload_value_result(value, params = {}) {
+  const normalized_max_depth = normalize_payload_limit(
+    params.max_depth,
+    max_payload_depth,
+  );
+  const normalized_max_length = normalize_payload_limit(
+    params.max_length,
+    max_payload_output_length,
+  );
+
+  if (typeof value === 'string') {
+    return truncate_payload_text(value, normalized_max_length);
+  }
+  if (typeof value === 'bigint') {
+    return truncate_payload_text(`${value}n`, normalized_max_length);
+  }
+  if (typeof value === 'function') {
+    return truncate_payload_text(
+      `[Function${value.name ? ` ${value.name}` : ''}]`,
+      normalized_max_length,
+    );
+  }
+  if (typeof value === 'symbol') {
+    return truncate_payload_text(String(value), normalized_max_length);
+  }
+
+  const object_descriptor = get_payload_object_descriptor(value);
+  if (object_descriptor) {
+    return truncate_payload_text(object_descriptor, normalized_max_length);
+  }
+
+  try {
+    const state = {
+      max_depth: normalized_max_depth,
+      remaining_length: normalized_max_length,
+      truncated: false,
+    };
+    const bounded_value = get_bounded_payload_value(
+      value,
+      state,
+      0,
+      new Set(),
+    );
+    const payload_text = JSON.stringify(bounded_value);
+    const next_result = truncate_payload_text(
+      typeof payload_text === 'string'
+        ? payload_text
+        : get_payload_value_fallback_text(value),
+      normalized_max_length,
+    );
+    return {
+      text: next_result.text,
+      truncated: state.truncated || next_result.truncated,
+    };
+  } catch {
+    return truncate_payload_text(
+      get_payload_value_fallback_text(value),
+      normalized_max_length,
+    );
+  }
+}
+
+/**
+ * @param {object} entry
+ * @param {object} [params={}]
+ * @param {number} [params.max_depth]
+ * @param {number} [params.max_output_length]
+ * @returns {string}
+ */
+export function get_entry_payload_text(entry, params = {}) {
+  const normalized_max_depth = normalize_payload_limit(
+    params.max_depth,
+    max_payload_depth,
+  );
+  const normalized_max_output_length = normalize_payload_limit(
+    params.max_output_length,
+    max_payload_output_length,
+  );
+  const event_obj = entry?.event && typeof entry.event === 'object' ? entry.event : {};
+  const event_descriptor = get_payload_object_descriptor(event_obj);
+  if (event_descriptor) {
+    return truncate_payload_text(
+      `  event: ${event_descriptor}`,
+      normalized_max_output_length,
+    ).text;
+  }
+
+  const truncation_line = `  ...: ${payload_truncation_marker}`;
+  const content_limit = Math.max(
+    0,
+    normalized_max_output_length - truncation_line.length - 1,
+  );
+  const payload_lines = [];
+  let payload_length = 0;
+  let truncated = false;
+
+  try {
+    for (const key in event_obj) {
+      if (!Object.prototype.hasOwnProperty.call(event_obj, key)) continue;
+      if (omitted_payload_keys.has(key)) continue;
+
+      const separator_length = payload_lines.length > 0 ? 1 : 0;
+      const line_prefix = `  ${key}: `;
+      const remaining_length = content_limit
+        - payload_length
+        - separator_length
+        - line_prefix.length
+      ;
+      if (remaining_length <= 0) {
+        truncated = true;
+        break;
+      }
+
+      let value_result;
+      try {
+        value_result = get_payload_value_result(event_obj[key], {
+          max_depth: normalized_max_depth,
+          max_length: remaining_length,
+        });
+      } catch {
+        value_result = truncate_payload_text(
+          '[Unserializable Property]',
+          remaining_length,
+        );
+      }
+
+      const line = `${line_prefix}${value_result.text}`;
+      payload_lines.push(line);
+      payload_length += separator_length + line.length;
+      if (value_result.truncated) {
+        truncated = true;
+        break;
+      }
+    }
+  } catch {
+    return truncate_payload_text(
+      `  event: ${get_payload_value_fallback_text(event_obj)}`,
+      normalized_max_output_length,
+    ).text;
+  }
+
+  const payload_text = payload_lines.join('\n');
+  if (!truncated) return payload_text;
+  if (!payload_text) {
+    return truncation_line.slice(0, normalized_max_output_length);
+  }
+  return `${payload_text}\n${truncation_line}`;
 }
 
 /**

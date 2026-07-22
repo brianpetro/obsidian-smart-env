@@ -5,6 +5,7 @@ import {
   create_all_levels_set,
   debug_levels_filter_key,
   get_entry_summary_action,
+  get_entry_payload_text,
   get_canonical_entry_level,
   get_entry_level,
   get_filtered_entries,
@@ -130,6 +131,126 @@ test('get_filtered_entries and get_level_counts use derived levels plus debug co
     info: 1,
     debug: 1,
   });
+});
+
+test('get_entry_payload_text safely renders circular runtime payloads', (t) => {
+  class Window {}
+
+  const runtime_window = new Window();
+  runtime_window.window = runtime_window;
+
+  class NoteThread {
+    constructor() {
+      this.env = { runtime_window };
+    }
+  }
+
+  const circular_payload = { status: 'ready' };
+  circular_payload.self = circular_payload;
+
+  t.is(get_entry_payload_text({
+    event: {
+      note_thread: new NoteThread(),
+      runtime_window,
+      circular_payload,
+      nested_payload: { runtime_window },
+      processed_count: 2n,
+    },
+  }), [
+    '  note_thread: [NoteThread]',
+    '  runtime_window: [Window]',
+    '  circular_payload: {"status":"ready","self":"[Circular]"}',
+    '  nested_payload: {"runtime_window":"[Window]"}',
+    '  processed_count: 2n',
+  ].join('\n'));
+
+  t.is(get_entry_payload_text({ event: runtime_window }), '  event: [Window]');
+});
+
+test('get_entry_payload_text contains property serialization failures', (t) => {
+  const broken_payload = {};
+  Object.defineProperty(broken_payload, 'value', {
+    enumerable: true,
+    get() {
+      throw new Error('unreadable');
+    },
+  });
+
+  t.is(get_entry_payload_text({
+    event: { broken_payload },
+  }), '  broken_payload: [Unserializable Object]');
+});
+
+
+test('get_entry_payload_text limits nested payload depth', (t) => {
+  const deep_payload = {
+    level_1: {
+      level_2: {
+        level_3: 'not rendered',
+      },
+    },
+  };
+
+  t.is(get_entry_payload_text({
+    event: { deep_payload },
+  }, {
+    max_depth: 2,
+    max_output_length: 500,
+  }), [
+    '  deep_payload: {"level_1":{"level_2":"[MaxDepth]"}}',
+    '  ...: [Truncated]',
+  ].join('\n'));
+});
+
+test('get_entry_payload_text caps output while bounding property traversal', (t) => {
+  const wide_payload = {};
+  let payload_reads = 0;
+  let later_reads = 0;
+
+  for (let index = 0; index < 1000; index += 1) {
+    Object.defineProperty(wide_payload, `field_${index}`, {
+      enumerable: true,
+      get() {
+        payload_reads += 1;
+        return 'x'.repeat(40);
+      },
+    });
+  }
+
+  const event = { wide_payload };
+  Object.defineProperty(event, 'later_payload', {
+    enumerable: true,
+    get() {
+      later_reads += 1;
+      return 'should not be read';
+    },
+  });
+
+  const max_output_length = 180;
+  const payload_text = get_entry_payload_text({ event }, {
+    max_output_length,
+  });
+
+  t.true(payload_text.length <= max_output_length);
+  t.true(payload_text.includes('[Truncated]'));
+  t.true(payload_reads < 10);
+  t.is(later_reads, 0);
+  t.false(payload_text.includes('field_999'));
+});
+
+test('get_entry_payload_text truncates a single oversized string within the entry cap', (t) => {
+  const max_output_length = 120;
+  const payload_text = get_entry_payload_text({
+    event: {
+      details_payload: 'x'.repeat(10000),
+    },
+  }, {
+    max_output_length,
+  });
+
+  t.true(payload_text.length <= max_output_length);
+  t.true(payload_text.includes('[Truncated]'));
+  t.true(payload_text.startsWith('  details_payload: '));
 });
 
 test('get_entry_summary_action returns only valid CTA payloads', (t) => {
