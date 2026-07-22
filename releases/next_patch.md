@@ -124,3 +124,6 @@ Added: command and ribbon action registration
 
 
 Added generic release notes opener as command action (migrating away from ItemView registering it's own commands)
+
+
+Improved: Prevent erroneous event values from crashing modal/renderer
