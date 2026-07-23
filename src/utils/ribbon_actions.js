@@ -149,11 +149,18 @@ function create_ribbon_callback({
       );
       if (!available) return false;
 
-      void run_action_entry(scope, action_key, params, {
-        event_source: `ribbon:${plugin.manifest.id}:${ribbon_id}`,
-      }).catch((error) => {
+      try {
+        const action_result = run_action_entry(scope, action_key, params, {
+          event_source: `ribbon:${plugin.manifest.id}:${ribbon_id}`,
+        });
+        if (action_result && typeof action_result.catch === 'function') {
+          void action_result.catch((error) => {
+            console.error(`Ribbon action failed: ${ribbon_id}`, error);
+          });
+        }
+      } catch (error) {
         console.error(`Ribbon action failed: ${ribbon_id}`, error);
-      });
+      }
 
       return true;
     } catch (error) {

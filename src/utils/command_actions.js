@@ -180,11 +180,18 @@ function create_command_callback({
       if (!available) return false;
       if (checking) return true;
 
-      void run_action_entry(scope, action_key, params, {
-        event_source: `command:${plugin.manifest.id}:${command_id}`,
-      }).catch((error) => {
+      try {
+        const action_result = run_action_entry(scope, action_key, params, {
+          event_source: `command:${plugin.manifest.id}:${command_id}`,
+        });
+        if (action_result && typeof action_result.catch === 'function') {
+          void action_result.catch((error) => {
+            console.error(`Command action failed: ${command_id}`, error);
+          });
+        }
+      } catch (error) {
         console.error(`Command action failed: ${command_id}`, error);
-      });
+      }
 
       return true;
     } catch (error) {

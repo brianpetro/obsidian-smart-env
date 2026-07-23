@@ -275,3 +275,36 @@ test('repeated registration does not duplicate commands', (t) => {
     'stable_action',
   );
 });
+
+test('a synchronous action failure is reported without changing command availability', (t) => {
+  const {
+    plugin,
+    registered_commands,
+  } = create_plugin({
+    failing_action: {
+      action() {
+        throw new Error('Expected command failure.');
+      },
+      commands: {
+        failing_command: {
+          register_when() {
+            return true;
+          },
+        },
+      },
+    },
+  });
+  const original_error = console.error;
+  const errors = [];
+  console.error = (...args) => errors.push(args);
+
+  try {
+    register_command_actions(plugin);
+    t.true(registered_commands[0].checkCallback(false));
+  } finally {
+    console.error = original_error;
+  }
+
+  t.is(errors.length, 1);
+  t.regex(errors[0][0], /Command action failed: failing_command/);
+});

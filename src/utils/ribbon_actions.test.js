@@ -212,3 +212,37 @@ test('repeated registration does not duplicate ribbon icons', (t) => {
     'stable_action',
   );
 });
+
+test('a synchronous action failure is reported without changing ribbon availability', (t) => {
+  const {
+    plugin,
+    registered_ribbons,
+  } = create_plugin({
+    failing_action: {
+      action() {
+        throw new Error('Expected ribbon failure.');
+      },
+      ribbon_icons: {
+        failing_ribbon: {
+          icon_name: 'alert-triangle',
+          register_when() {
+            return true;
+          },
+        },
+      },
+    },
+  });
+  const original_error = console.error;
+  const errors = [];
+  console.error = (...args) => errors.push(args);
+
+  try {
+    register_ribbon_actions(plugin);
+    t.true(registered_ribbons[0].callback({}));
+  } finally {
+    console.error = original_error;
+  }
+
+  t.is(errors.length, 1);
+  t.regex(errors[0][0], /Ribbon action failed: failing_ribbon/);
+});
