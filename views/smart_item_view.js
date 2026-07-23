@@ -53,23 +53,31 @@ export class SmartItemView extends ItemView {
 
   /**
    * Registers this ItemView subclass against a plugin instance and
-   * installs ergonomic accessors, an open helper, and an `${view_type}:open` listener.
+   * installs ergonomic accessors, an open helper, and a derived `${method_name}:open` listener.
    *
    * Usage from a plugin class:
    *   SubClass.register_item_view(this);
+   * Call during plugin.onload, after SmartEnv.create, so Obsidian can restore
+   * persisted leaves before the environment loads.
    *
    * This will:
    * - call plugin.registerView(view_type, ...)
    * - add a command "Open: <display_text> view" when enabled
    * - define a getter on plugin: plugin[method_name] -> the view instance
    * - define a method on plugin: plugin["open_" + method_name]() -> opens the view
-   * - listen for env events named `${view_type}:open` and open the view when emitted
+   * - listen for env events named `${method_name}:open` and open the view when emitted
    *
    * @param {import('obsidian').Plugin} plugin
+   * @param {object} [params={}]
+   * @param {boolean} [params.skip_command_registration=false]
+   * @param {boolean} [params.skip_event_registration=false]
    * @returns {{method_name:string, open_method_name:string, event_name:string}}
    */
   static register_item_view(plugin, params = {}) {
     const View = /** @type {typeof SmartItemView} */ (this);
+    const method_name = View.view_type.replace(/^smart-/, "").replace(/-/g, "_");
+    const open_method_name = "open_" + method_name;
+    const event_name = `${method_name}:open`;
 
     // check if already registered
     if (plugin.app.viewRegistry?.viewByType?.[View.view_type]) {
@@ -86,15 +94,12 @@ export class SmartItemView extends ItemView {
         id: View.view_type,
         name: "Open: " + View.display_text + " view",
         callback: () => {
-          View.open(plugin.app.workspace);
+          plugin[open_method_name]();
         }
       });
     }
 
     // Derive ergonomic API on the plugin instance
-    const method_name = View.view_type.replace(/^smart-/, "").replace(/-/g, "_");
-    const open_method_name = "open_" + method_name;
-
     if (!Object.getOwnPropertyDescriptor(plugin, method_name)) {
       Object.defineProperty(plugin, method_name, {
         configurable: true,
@@ -104,25 +109,24 @@ export class SmartItemView extends ItemView {
     }
 
     // Always (re)bind the open method to the latest View.open behavior
-    plugin[open_method_name] = (params = {}) => {
+    plugin[open_method_name] = (...args) => {
       if (!plugin.app.viewRegistry?.viewByType?.[View.view_type]) {
         console.warn(`View type "${View.view_type}" not registered when calling ${open_method_name}. Registering now. This should NOT happen frequently.`);
         plugin.registerView(View.view_type, (leaf) => new View(leaf, plugin));
       }
-      View.open(plugin.app.workspace, params);
+      View.open(plugin.app.workspace, ...args);
     };
 
-    // Register `${view_type}:open` event listener on SmartEnv events, if available
-    const event_name = `${method_name}:open`;
-    const handler = (payload = {}) => {
-      const active = typeof payload?.active === "boolean" ? payload.active : true;
-      View.open(plugin.app.workspace, { ...payload, active });
-    };
-    const unsubscribe = plugin?.env?.events.on(event_name, handler);
-
-    // Ensure cleanup on plugin unload
-    if (typeof plugin.register === "function" && typeof unsubscribe === "function") {
-      plugin.register(() => unsubscribe());
+    // Register `${method_name}:open` after all plugins have selected the final SmartEnv instance.
+    if (!params.skip_event_registration) {
+      const handler = (payload = {}) => {
+        const active = typeof payload?.active === "boolean" ? payload.active : true;
+        plugin[open_method_name]({ ...payload, active });
+      };
+      plugin.app.workspace.onLayoutReady(() => {
+        const unsubscribe = plugin.env?.events?.on(event_name, handler);
+        if (typeof unsubscribe === "function") plugin.register(unsubscribe);
+      });
     }
 
     return { method_name, open_method_name, event_name };
@@ -206,7 +210,7 @@ export class SmartItemView extends ItemView {
 
         // trigger render
         setTimeout(() => {
-          this.get_view(workspace)?.render_view(params);
+          this.get_view(workspace)?.render_view_when_ready(params);
         }, 100);
       })
       .catch((error) => {
@@ -236,7 +240,10 @@ export class SmartItemView extends ItemView {
     this.container?.empty?.();
     this.register_plugin_events();
     this.app.workspace.registerHoverLinkSource(this.constructor.view_type, { display: this.getDisplayText(), defaultMod: true });
-    this.render_view();
+    const render_params = this._pending_render_params;
+    this._pending_render_params = undefined;
+    this._smart_item_view_initialized = true;
+    this.render_view(render_params);
   }
 
   async render_mobile_status_bar() {
@@ -255,6 +262,13 @@ export class SmartItemView extends ItemView {
     } catch (error) {
       console.error('Failed to render mobile Smart Env status bar', error);
     }
+  }
+  render_view_when_ready(params = {}) {
+    if (!this._smart_item_view_initialized) {
+      this._pending_render_params = params;
+      return;
+    }
+    return this.render_view(params);
   }
   register_plugin_events() { /* OVERRIDE AS NEEDED */ }
   render_view(params = {}) { throw new Error("render_view must be implemented in subclass"); }

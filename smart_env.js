@@ -121,13 +121,17 @@ export class SmartEnv extends BaseSmartEnv {
       }
     }
 
-    return super.create(plugin, opts).then((env) => {
+    const create_promise = super.create(plugin, opts);
+    // Register environment-owned views before Obsidian restores the workspace layout.
+    this.global_env?.register_env_item_views?.();
+
+    return create_promise.then((env) => {
       clearTimeout(env.load_timeout); // prevent base-level load in favor of using onLayoutReady for better timing with Obsidian's startup process
       env.load_timeout = null;
   
       if (!env._startup_load_registration) {
         env._startup_load_registration = true;
-        plugin.registerEvent(plugin.app.workspace.onLayoutReady(async () => {
+        plugin.app.workspace.onLayoutReady(async () => {
           if (env.state !== 'init') {
             console.warn(`Skipping SmartEnv (v${env.constructor.version}) load on layout ready; env.state: "${env.state}".`);
             return;
@@ -138,7 +142,7 @@ export class SmartEnv extends BaseSmartEnv {
             return;
           }
           await env.load(); // calls after_load internally and sets state to 'loaded' at the end
-        }));
+        });
       }
       return env;
     });
@@ -266,7 +270,8 @@ export class SmartEnv extends BaseSmartEnv {
   }
 
   /**
-   * Register environment-owned item views once per plugin.
+   * Register environment-owned item views once per environment instance.
+   * A superseding SmartEnv replaces the view class without duplicating its command or event listener.
    * @returns {void}
    */
   register_env_item_views() {
@@ -282,10 +287,16 @@ export class SmartEnv extends BaseSmartEnv {
 
     view_classes.forEach((ViewClass) => {
       const registration_key = `${plugin_key}:${ViewClass.view_type}`;
-      if (this._registered_env_item_views.has(registration_key)) return;
+      const helpers_registered = this._registered_env_item_views.has(registration_key);
+      const view_registered = Boolean(plugin.app.viewRegistry?.viewByType?.[ViewClass.view_type]);
+      if (helpers_registered && view_registered) return;
 
       try {
-        ViewClass.register_item_view(plugin);
+        const skip_helpers = helpers_registered || view_registered;
+        ViewClass.register_item_view(plugin, {
+          skip_command_registration: skip_helpers,
+          skip_event_registration: skip_helpers,
+        });
         this._registered_env_item_views.add(registration_key);
       } catch (error) {
         console.error(`Failed to register item view "${ViewClass.view_type}"`, error);
