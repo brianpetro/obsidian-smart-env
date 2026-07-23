@@ -127,3 +127,6 @@ Added generic release notes opener as command action (migrating away from ItemVi
 
 
 Improved: Prevent erroneous event values from crashing modal/renderer
+
+
+Fixed: item view registrations should register before workspace rendering so that the icons display properly
