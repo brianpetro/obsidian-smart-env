@@ -133,3 +133,6 @@ Fixed: item view registrations should register before workspace rendering so tha
 
 
 Improved: Add params handling for menu actions and ribbon actions to support event propagation
+
+
+Improved: Implement drag-and-drop functionality with Smart item identity handling
