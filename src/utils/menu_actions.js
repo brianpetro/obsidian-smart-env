@@ -1,5 +1,6 @@
 import {
   get_scope_env,
+  is_action_scope_compatible,
   run_action_entry,
 } from 'smart-environment';
 
@@ -124,6 +125,13 @@ function resolve_menu_contexts(env, menu_key, menu, scope, params) {
 
   return collect_menu_entries(env, menu_key)
     .sort(compare_entries)
+    .filter(({ action_entry }) => {
+      return is_action_scope_compatible(
+        env,
+        action_entry.action_scope,
+        scope,
+      );
+    })
     .map((entry) => {
       return create_menu_ctx(env, menu_key, menu, scope, params, entry);
     })
@@ -172,20 +180,39 @@ function create_menu_ctx(env, menu_key, menu, scope, params, entry) {
         : entry.action_entry?.action?.bind(scope)
       ;
     },
-    async run(run_params = {}) {
-      const spec_params = resolve_params(menu_spec.params, menu_ctx);
-      return await run_action_entry(scope, entry.action_key, {
-        ...params,
+    async run(run_params = {}, event = null) {
+      const spec_params = resolve_params(
+        menu_spec.params,
+        menu_ctx,
+        event,
+      );
+      const {
+        event: _event,
+        click_event: _click_event,
+        click_args: _click_args,
+        ...base_params
+      } = params || {};
+      const {
+        menu_ctx: _menu_ctx,
+        menu_key: _menu_key,
+        action_key: _action_key,
+        event_source: _event_source,
+        ...action_params
+      } = {
+        ...base_params,
         ...spec_params,
         ...run_params,
-        menu_ctx,
-        menu_key,
-        action_key: entry.action_key,
-      }, {
-        event_source: run_params.event_source
-          || menu_spec.event_source
-          || menu_ctx.event_source,
-      });
+      };
+
+      return await run_action_entry(
+        scope,
+        entry.action_key,
+        action_params,
+        {
+          event_source: menu_spec.event_source
+            || menu_ctx.event_source,
+        },
+      );
     },
   };
 
@@ -208,12 +235,9 @@ function add_item(menu_ctx) {
     if (title) item.setTitle?.(title);
     if (icon) item.setIcon?.(icon);
     item.setDisabled?.(disabled);
-    item.onClick?.(async (event, ...click_args) => {
+    item.onClick?.(async (event) => {
       if (disabled) return false;
-      return await menu_ctx.run({
-        click_event: event,
-        click_args,
-      });
+      return await menu_ctx.run({}, event);
     });
   });
 }
@@ -292,8 +316,11 @@ function get_value(value, menu_ctx) {
   ;
 }
 
-function resolve_params(value, menu_ctx) {
-  const resolved = get_value(value, menu_ctx);
+function resolve_params(value, menu_ctx, event = null) {
+  const resolved = typeof value === 'function'
+    ? value.call(menu_ctx, menu_ctx, event)
+    : value
+  ;
   return is_object(resolved) ? resolved : {};
 }
 

@@ -41,6 +41,9 @@ export const menus = {
     title: 'Remove from context',
     icon: 'x',
     order: 90,
+    params(_menu_ctx, event) {
+      return { event };
+    },
     disabled() {
       return this.params.remove_disabled === true;
     },

@@ -162,9 +162,11 @@ test('resolve_menu_actions does not execute custom menu builders', (t) => {
   t.is(build_call_ct, 1);
 });
 
-test('resolved action run uses the shared runner and natural scope', async (t) => {
+test('resolved action run forwards only semantic params', async (t) => {
   let action_this = null;
   let action_params = null;
+  const base_event = { type: 'contextmenu' };
+  const explicit_click_event = { type: 'click' };
   const env = {
     config: {
       actions: {
@@ -180,6 +182,7 @@ test('resolved action run uses the shared runner and natural scope', async (t) =
               params() {
                 return {
                   from_spec: this.params.from_build,
+                  menu_ctx: 'spec menu context',
                 };
               },
             },
@@ -200,9 +203,17 @@ test('resolved action run uses the shared runner and natural scope', async (t) =
 
   const [action] = resolve_menu_actions(env, 'test:menu', scope, {
     from_build: 'build',
+    event: base_event,
+    click_event: base_event,
+    click_args: ['base click arg'],
+    menu_key: 'base menu key',
+    action_key: 'base action key',
+    event_source: 'base source',
   });
   const result = await action.run({
     from_run: 'run',
+    click_event: explicit_click_event,
+    menu_ctx: 'run menu context',
     event_source: 'test.direct',
   });
 
@@ -211,10 +222,80 @@ test('resolved action run uses the shared runner and natural scope', async (t) =
   t.is(action_params.from_build, 'build');
   t.is(action_params.from_spec, 'build');
   t.is(action_params.from_run, 'run');
-  t.is(action_params.menu_key, 'test:menu');
-  t.is(action_params.action_key, 'runnable_action');
-  t.is(action_params.event_source, 'test.direct');
-  t.is(action_params.menu_ctx.scope, scope);
+  t.is(action_params.click_event, explicit_click_event);
+  t.is(
+    action_params.event_source,
+    'menu:test:menu:runnable_action',
+  );
+  t.false(Object.hasOwn(action_params, 'event'));
+  t.false(Object.hasOwn(action_params, 'click_args'));
+  t.false(Object.hasOwn(action_params, 'menu_ctx'));
+  t.false(Object.hasOwn(action_params, 'menu_key'));
+  t.false(Object.hasOwn(action_params, 'action_key'));
+});
+
+test('native click events require explicit placement selection', async (t) => {
+  const calls = [];
+  const base_event = { type: 'contextmenu' };
+  const env = {
+    config: {
+      actions: {
+        plain_action: {
+          action(params = {}) {
+            calls.push({
+              action_key: 'plain_action',
+              params,
+            });
+            return true;
+          },
+          menus: {
+            'test:menu': true,
+          },
+        },
+        event_action: {
+          action(params = {}) {
+            calls.push({
+              action_key: 'event_action',
+              params,
+            });
+            return true;
+          },
+          menus: {
+            'test:menu': {
+              params(_menu_ctx, event) {
+                t.is(this.params.event, base_event);
+                return { event };
+              },
+            },
+          },
+        },
+      },
+    },
+  };
+  const menu = create_menu();
+  const event = { type: 'click' };
+
+  build_menu(env, 'test:menu', menu, { env }, {
+    event: base_event,
+  });
+  await menu.items[0].on_click(event, 'ignored');
+  await menu.items[1].on_click(event, 'ignored');
+
+  t.deepEqual(calls, [
+    {
+      action_key: 'event_action',
+      params: {
+        event,
+        event_source: 'menu:test:menu:event_action',
+      },
+    },
+    {
+      action_key: 'plain_action',
+      params: {
+        event_source: 'menu:test:menu:plain_action',
+      },
+    },
+  ]);
 });
 
 test('resolved disabled action fails closed without executing', async (t) => {
@@ -274,6 +355,48 @@ test('build_menu and resolve_menu_actions share presentation metadata', (t) => {
   t.is(built.icon, resolved.icon);
   t.is(built.disabled, resolved.disabled);
   t.is(built._order, resolved.order);
+});
+
+test('menu discovery validates each declared action scope', (t) => {
+  const env = {
+    config: {
+      actions: {
+        item_action: {
+          action() {},
+          action_scope: {
+            type: 'item',
+            collection_key: 'smart_sources',
+            item_arg: 'source_key',
+          },
+          menus: {
+            'test:menu': true,
+          },
+        },
+        env_action: {
+          action() {},
+          action_scope: {
+            type: 'env',
+          },
+          menus: {
+            'test:menu': true,
+          },
+        },
+      },
+    },
+  };
+  env.smart_sources = {
+    env,
+  };
+  const scope = {
+    env,
+    collection: env.smart_sources,
+  };
+
+  t.deepEqual(
+    resolve_menu_actions(env, 'test:menu', scope)
+      .map(({ action_key }) => action_key),
+    ['item_action'],
+  );
 });
 
 test('menu discovery rejects a foreign natural scope', (t) => {

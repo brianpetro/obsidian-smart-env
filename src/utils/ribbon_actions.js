@@ -1,5 +1,6 @@
 import {
-  get_scope_env,
+  is_action_scope_compatible,
+  resolve_action_scope,
   run_action_entry,
 } from 'smart-environment';
 
@@ -118,6 +119,7 @@ function create_ribbon_callback({
   ribbon_spec,
 }) {
   const { env, app } = plugin;
+  const action_entry = env.config.actions[action_key];
 
   return (click_event) => {
     const ribbon_ctx = {
@@ -133,12 +135,21 @@ function create_ribbon_callback({
       const params = resolve_params(ribbon_spec, ribbon_ctx);
       const scope = ribbon_spec.get_scope
         ? ribbon_spec.get_scope({ ...ribbon_ctx, params })
-        : env;
+        : resolve_action_scope(
+            env,
+            action_key,
+            action_entry,
+            params,
+          );
       assert_synchronous(
         scope,
         `Ribbon get_scope must be synchronous: ${ribbon_id}`,
       );
-      if (!scope || get_scope_env(scope) !== env) return false;
+      if (!is_action_scope_compatible(
+        env,
+        action_entry.action_scope,
+        scope,
+      )) return false;
 
       const available = ribbon_spec.when
         ? ribbon_spec.when({ ...ribbon_ctx, params, scope })

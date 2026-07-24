@@ -1,5 +1,6 @@
 import {
-  get_scope_env,
+  is_action_scope_compatible,
+  resolve_action_scope,
   run_action_entry,
 } from 'smart-environment';
 
@@ -146,6 +147,7 @@ function create_command_callback({
   command_spec,
 }) {
   const { env, app } = plugin;
+  const action_entry = env.config.actions[action_key];
 
   return ({ checking, editor, editor_ctx }) => {
     const command_ctx = {
@@ -163,12 +165,21 @@ function create_command_callback({
       const params = resolve_params(command_spec, command_ctx);
       const scope = command_spec.get_scope
         ? command_spec.get_scope({ ...command_ctx, params })
-        : env;
+        : resolve_action_scope(
+            env,
+            action_key,
+            action_entry,
+            params,
+          );
       assert_synchronous(
         scope,
         `Command get_scope must be synchronous: ${command_id}`,
       );
-      if (!scope || get_scope_env(scope) !== env) return false;
+      if (!is_action_scope_compatible(
+        env,
+        action_entry.action_scope,
+        scope,
+      )) return false;
 
       const available = command_spec.when
         ? command_spec.when({ ...command_ctx, params, scope })

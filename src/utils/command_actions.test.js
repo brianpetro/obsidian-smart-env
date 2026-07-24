@@ -249,6 +249,82 @@ test('editor command passes callback state and invokes the scoped action', async
   );
 });
 
+test('command resolves and validates a declared item scope', async (t) => {
+  let action_this = null;
+  const fixture = create_plugin({
+    scoped_action: {
+      action() {
+        action_this = this;
+      },
+      action_scope: {
+        type: 'item',
+        collection_key: 'smart_sources',
+        item_arg: 'source_key',
+      },
+      commands: {
+        scoped_action: {
+          register_when() {
+            return true;
+          },
+          params: {
+            source_key: 'Source.md',
+          },
+        },
+      },
+    },
+  });
+  const source = {
+    env: fixture.env,
+  };
+  fixture.env.smart_sources = {
+    env: fixture.env,
+    get(key) {
+      return key === 'Source.md'
+        ? source
+        : null
+      ;
+    },
+  };
+  source.collection = fixture.env.smart_sources;
+
+  register_command_actions(fixture.plugin);
+
+  t.true(fixture.registered_commands[0].checkCallback(false));
+  await flush_promises();
+  t.is(action_this, source);
+});
+
+test('command rejects a custom scope incompatible with action_scope', (t) => {
+  let action_call_ct = 0;
+  const fixture = create_plugin({
+    scoped_action: {
+      action() {
+        action_call_ct += 1;
+      },
+      action_scope: {
+        type: 'env',
+      },
+      commands: {
+        scoped_action: {
+          register_when() {
+            return true;
+          },
+          get_scope({ env }) {
+            return {
+              env,
+            };
+          },
+        },
+      },
+    },
+  });
+
+  register_command_actions(fixture.plugin);
+
+  t.false(fixture.registered_commands[0].checkCallback(false));
+  t.is(action_call_ct, 0);
+});
+
 test('repeated registration does not duplicate commands', (t) => {
   const {
     plugin,

@@ -10,6 +10,9 @@ export const menus = {
     title: 'Open source',
     icon: 'external-link',
     order: 10,
+    params(_menu_ctx, event) {
+      return { event };
+    },
   },
 };
 

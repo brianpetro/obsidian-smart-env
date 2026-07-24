@@ -184,6 +184,70 @@ test('ribbon callback resolves scope and invokes the configured action', async (
   );
 });
 
+test('ribbon resolves and validates a declared collection scope', async (t) => {
+  let action_this = null;
+  const fixture = create_plugin({
+    scoped_action: {
+      action() {
+        action_this = this;
+      },
+      action_scope: {
+        type: 'collection',
+        collection_key: 'smart_sources',
+      },
+      ribbon_icons: {
+        scoped_action: {
+          icon_name: 'sparkles',
+          register_when() {
+            return true;
+          },
+        },
+      },
+    },
+  });
+  fixture.env.smart_sources = {
+    env: fixture.env,
+  };
+
+  register_ribbon_actions(fixture.plugin);
+
+  t.true(fixture.registered_ribbons[0].callback({}));
+  await flush_promises();
+  t.is(action_this, fixture.env.smart_sources);
+});
+
+test('ribbon rejects a custom scope incompatible with action_scope', (t) => {
+  let action_call_ct = 0;
+  const fixture = create_plugin({
+    scoped_action: {
+      action() {
+        action_call_ct += 1;
+      },
+      action_scope: {
+        type: 'env',
+      },
+      ribbon_icons: {
+        scoped_action: {
+          icon_name: 'sparkles',
+          register_when() {
+            return true;
+          },
+          get_scope({ env }) {
+            return {
+              env,
+            };
+          },
+        },
+      },
+    },
+  });
+
+  register_ribbon_actions(fixture.plugin);
+
+  t.false(fixture.registered_ribbons[0].callback({}));
+  t.is(action_call_ct, 0);
+});
+
 test('repeated registration does not duplicate ribbon icons', (t) => {
   const {
     plugin,
