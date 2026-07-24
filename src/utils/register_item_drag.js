@@ -1,10 +1,12 @@
 import { parse_item_key_to_wikilink } from "obsidian-smart-env/utils/parse_item_key_to_wikilink.js";
+import { write_smart_drag_data } from "./smart_drag_drop.js";
 
 function handle_connection_drag(obsidian_app, item, params, event){
   const drag_manager = obsidian_app.dragManager;
   const link_text = parse_item_key_to_wikilink(item.key);
   const drag_data = drag_manager.dragLink(event, link_text);
   drag_manager.onDragStart(event, drag_data);
+  write_smart_drag_data(event.dataTransfer, item);
   if(params.drag_event_key) {
     item.emit_event(params.drag_event_key);
   } else {

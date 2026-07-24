@@ -1,8 +1,8 @@
 /**
- * @module parse_dropped_data
+ * @module parse_dropped_obsidian_data
  * Pure helper for the Smart Chat thread drag‑&‑drop handler.
  *
- * @function parse_dropped_data
+ * @function parse_dropped_obsidian_data
  * @description
  * Normalises the various `DataTransfer.getData()` payloads that Obsidian /
  * browsers emit during a drag operation into a **Set** of vault‑relative
@@ -16,7 +16,7 @@
  * @param {DataTransfer} dt  – the native event.dataTransfer object
  * @returns {Set<string>}      vault‑relative paths (deduplicated, decoded)
  */
-export function parse_dropped_data (dt) {
+export function parse_dropped_obsidian_data (dt) {
   /** @type {Set<string>} */
   const out = new Set();
 
@@ -103,7 +103,7 @@ export function parse_dropped_data (dt) {
     }
     out.add(val);
   });
-  // console.log('parse_dropped_data out ', out);
+  // console.log('parse_dropped_obsidian_data out ', out);
 
   return out;
 }

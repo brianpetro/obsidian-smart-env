@@ -39,6 +39,7 @@ import { render as suggest_display_right_component } from './src/components/sugg
 import { render as supporter_callout_component } from './src/components/supporter_callout.js';
 import { render as user_agreement_callout_component } from './src/components/user_agreement_callout.js';
 
+import { context_add_items as context_add_items_action } from './src/actions/context/add_items.js';
 import { context_clear_context as context_clear_context_action, menus as context_clear_context_action_menus } from './src/actions/context/clear_context.js';
 import { context_copy_link_tree as context_copy_link_tree_action, menus as context_copy_link_tree_action_menus } from './src/actions/context/copy_link_tree.js';
 import { context_copy_text_to_clipboard as context_copy_text_to_clipboard_action, menus as context_copy_text_to_clipboard_action_menus } from './src/actions/context/copy_text_to_clipboard.js';
@@ -113,6 +114,7 @@ export const smart_env_config = {
     user_agreement_callout: { render: user_agreement_callout_component, version: "1.0.1" }
   },
   actions: {
+    context_add_items: { action: context_add_items_action, version: "1.0.1" },
     context_clear_context: { action: context_clear_context_action, menus: context_clear_context_action_menus, version: "1.0.1" },
     context_copy_link_tree: { action: context_copy_link_tree_action, menus: context_copy_link_tree_action_menus, version: "1.0.1" },
     context_copy_text_to_clipboard: { action: context_copy_text_to_clipboard_action, menus: context_copy_text_to_clipboard_action_menus, version: "1.0.1" },

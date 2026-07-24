@@ -130,3 +130,6 @@ Improved: Prevent erroneous event values from crashing modal/renderer
 
 
 Fixed: item view registrations should register before workspace rendering so that the icons display properly
+
+
+Improved: Add params handling for menu actions and ribbon actions to support event propagation
