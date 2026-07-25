@@ -15,6 +15,10 @@ const iframe_reply_timeout_ms = Object.freeze({
   load: 120000,
   default: 30000,
 });
+const transformers_default_batch_sizes = Object.freeze({
+  webgpu: 16,
+  cpu: 8,
+});
 
 function is_retryable_webgpu_error(error_message = '') {
   const normalized_error_message = String(error_message || '');
@@ -51,7 +55,6 @@ export class TransformersIframeEmbeddingModelAdapter extends SmartEmbedTransform
     this._reload_without_webgpu_promise = null;
     this._reload_with_v3_promise = null;
     this._using_v3_connector = false;
-    console.log('transformers iframe connector', this.model);
   }
 
   get use_gpu() {
@@ -60,6 +63,44 @@ export class TransformersIframeEmbeddingModelAdapter extends SmartEmbedTransform
       return this.model.data.use_gpu;
     }
     return undefined;
+  }
+
+  /**
+   * Resolve the queue and iframe model batch size.
+   *
+   * Existing local model metadata persists `batch_size: 1`, which previously
+   * forced both the Core embed queue and the iframe pipeline into one-item
+   * calls. Treat that legacy value as an unset default while preserving any
+   * explicit multi-item configuration.
+   *
+   * @returns {number}
+   */
+  get batch_size() {
+    const configured_batch_size = Number(this.model?.data?.batch_size);
+    if (Number.isFinite(configured_batch_size) && configured_batch_size > 1) {
+      return Math.min(16, Math.floor(configured_batch_size));
+    }
+    const default_size = this.use_gpu === false
+      ? transformers_default_batch_sizes.cpu
+      : transformers_default_batch_sizes.webgpu
+    ;
+    return Math.min(16, default_size);
+  }
+
+  /**
+   * Bounded preparation window for length-aware batching
+   * @returns {number}
+   */
+  get batch_window_size() {
+    return 64;
+  }
+
+  /**
+   * Enable input-length sorting for batching
+   * @returns {boolean}
+   */
+  get batch_sort_by_input_length() {
+    return true;
   }
 
   get models () {
@@ -286,7 +327,6 @@ export class TransformersIframeEmbeddingModelAdapter extends SmartEmbedTransform
     if (!id.startsWith(this.message_prefix)) return;
 
     if (result?.model_loaded) {
-      console.log('model loaded');
       this.state = 'loaded';
       this.model.model_loaded = true; // DEPRECATED
       this.model.load_result = result;
