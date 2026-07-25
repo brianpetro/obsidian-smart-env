@@ -136,3 +136,6 @@ Improved: Add params handling for menu actions and ribbon actions to support eve
 
 
 Improved: Implement drag-and-drop functionality with Smart item identity handling
+
+
+Improved: Enhance batch size handling and add batch window and sorting configurations for TransformersIframeEmbeddingModelAdapter
