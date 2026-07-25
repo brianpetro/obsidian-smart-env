@@ -193,31 +193,7 @@ export class SmartEnv extends BaseSmartEnv {
 
     this.register_configured_modals();
     this.refresh_status_bar();
-
-    if (!this._registered_browse_smart_plugins_command) {
-      this._registered_browse_smart_plugins_command = this.plugin.manifest?.id + ':browse-smart-plugins';
-      this.plugin.addCommand({
-        id: 'browse-smart-plugins',
-        name: 'Browse Smart Plugins',
-        callback: () => {
-          this.events.emit('smart_plugins:browse', {
-            event_source: 'command_palette',
-          });
-        },
-      });
-    }
-
-    if (!this._registered_env_status_view_command) {
-      this._registered_env_status_view_command = this.plugin.manifest?.id + ':env-status-view';
-      this.plugin.addCommand({
-        id: 'env-status-view',
-        name: 'Open Environment Status View',
-        callback: () => {
-          this.open_env_status_view();
-        },
-      });
-    }
-
+    this.main?.register_command_actions?.();
 
     this.mains.forEach((main_key) => {
       const plugin_id = this.smart_env_configs[main_key]?.main?.manifest?.id || 'unknown-plugin';
@@ -271,7 +247,7 @@ export class SmartEnv extends BaseSmartEnv {
 
   /**
    * Register environment-owned item views once per environment instance.
-   * A superseding SmartEnv replaces the view class without duplicating its command or event listener.
+   * A superseding SmartEnv replaces the view class without duplicating its event listener.
    * @returns {void}
    */
   register_env_item_views() {
@@ -294,7 +270,7 @@ export class SmartEnv extends BaseSmartEnv {
       try {
         const skip_helpers = helpers_registered || view_registered;
         ViewClass.register_item_view(plugin, {
-          skip_command_registration: skip_helpers,
+          skip_command_registration: true,
           skip_event_registration: skip_helpers,
         });
         this._registered_env_item_views.add(registration_key);
@@ -316,9 +292,7 @@ export class SmartEnv extends BaseSmartEnv {
   }
 
   get env_status_view_command_id() {
-    const command_id = this._registered_env_item_views.find((id) => id.endsWith(EnvStatusView.view_type));
-    console.log({ command_id });
-    return command_id || this.plugin.manifest?.id + ':' + EnvStatusView.view_type;
+    return this.main?.manifest?.id + ':env-status-view';
   }
 
 

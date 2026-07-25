@@ -51,12 +51,13 @@ import { merge_template as context_merge_template_action, settings_config as con
 import { context_suggest_blocks as context_suggest_blocks_action, display_name as context_suggest_blocks_action_display_name } from './src/actions/context-suggest/blocks.js';
 import { context_suggest_contexts as context_suggest_contexts_action, display_name as context_suggest_contexts_action_display_name } from './src/actions/context-suggest/contexts.js';
 import { context_suggest_sources as context_suggest_sources_action, display_name as context_suggest_sources_action_display_name } from './src/actions/context-suggest/sources.js';
-import { env_browse_smart_plugins as env_browse_smart_plugins_action, menus as env_browse_smart_plugins_action_menus } from './src/actions/env/browse_smart_plugins.js';
+import { env_browse_smart_plugins as env_browse_smart_plugins_action, commands as env_browse_smart_plugins_action_commands, menus as env_browse_smart_plugins_action_menus } from './src/actions/env/browse_smart_plugins.js';
 import { env_export_data as env_export_data_action, menus as env_export_data_action_menus } from './src/actions/env/export_data.js';
 import { env_inspect_active_note as env_inspect_active_note_action, menus as env_inspect_active_note_action_menus } from './src/actions/env/inspect_active_note.js';
 import { env_open_milestones as env_open_milestones_action, menus as env_open_milestones_action_menus } from './src/actions/env/open_milestones.js';
 import { env_open_notifications as env_open_notifications_action, menus as env_open_notifications_action_menus } from './src/actions/env/open_notifications.js';
 import { env_open_pro_link as env_open_pro_link_action, menus as env_open_pro_link_action_menus } from './src/actions/env/open_pro_link.js';
+import { env_open_status_view as env_open_status_view_action, commands as env_open_status_view_action_commands } from './src/actions/env/open_status_view.js';
 import { env_show_stats as env_show_stats_action, menus as env_show_stats_action_menus } from './src/actions/env/show_stats.js';
 import { pre_process as lookup_list_pre_process_action, pre_process as lookup_list_pre_process_action_pre_process } from './src/actions/lookup-list/pre_process.js';
 import { plugin_open_release_notes as plugin_open_release_notes_action, commands as plugin_open_release_notes_action_commands } from './src/actions/plugin/open_release_notes.js';
@@ -126,12 +127,13 @@ export const smart_env_config = {
     context_suggest_blocks: { action: context_suggest_blocks_action, display_name: context_suggest_blocks_action_display_name, version: "1.0.1" },
     context_suggest_contexts: { action: context_suggest_contexts_action, display_name: context_suggest_contexts_action_display_name, version: "1.0.1" },
     context_suggest_sources: { action: context_suggest_sources_action, display_name: context_suggest_sources_action_display_name, version: "1.0.1" },
-    env_browse_smart_plugins: { action: env_browse_smart_plugins_action, menus: env_browse_smart_plugins_action_menus, version: "1.0.1" },
+    env_browse_smart_plugins: { action: env_browse_smart_plugins_action, commands: env_browse_smart_plugins_action_commands, menus: env_browse_smart_plugins_action_menus, version: "1.0.1" },
     env_export_data: { action: env_export_data_action, menus: env_export_data_action_menus, version: "1.0.1" },
     env_inspect_active_note: { action: env_inspect_active_note_action, menus: env_inspect_active_note_action_menus, version: "1.0.1" },
     env_open_milestones: { action: env_open_milestones_action, menus: env_open_milestones_action_menus, version: "1.0.1" },
     env_open_notifications: { action: env_open_notifications_action, menus: env_open_notifications_action_menus, version: "1.0.1" },
     env_open_pro_link: { action: env_open_pro_link_action, menus: env_open_pro_link_action_menus, version: "1.0.1" },
+    env_open_status_view: { action: env_open_status_view_action, commands: env_open_status_view_action_commands, version: "1.0.1" },
     env_show_stats: { action: env_show_stats_action, menus: env_show_stats_action_menus, version: "1.0.1" },
     lookup_list_pre_process: { action: lookup_list_pre_process_action, pre_process: lookup_list_pre_process_action_pre_process, version: "1.0.1" },
     plugin_open_release_notes: { action: plugin_open_release_notes_action, commands: plugin_open_release_notes_action_commands, version: "1.0.1" },
