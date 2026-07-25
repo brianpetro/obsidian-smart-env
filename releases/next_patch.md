@@ -139,3 +139,6 @@ Improved: Implement drag-and-drop functionality with Smart item identity handlin
 
 
 Improved: Enhance batch size handling and add batch window and sorting configurations for TransformersIframeEmbeddingModelAdapter
+
+
+Improved: Refactor command registration for Smart Plugins and Environment Status View, adding parameter handling and tests
