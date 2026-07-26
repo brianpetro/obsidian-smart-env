@@ -2,8 +2,8 @@ import { SmartFs } from 'smart-file-system';
 import { ObsidianFsAdapter } from './src/adapters/smart-fs/obsidian.js';
 import { SmartView } from 'smart-view';
 import { SmartViewObsidianAdapter } from 'smart-view/adapters/obsidian.js';
-import { SmartSources, SmartSource } from 'smart-sources';
-import { AjsonMultiFileSourcesDataAdapter } from "smart-sources/adapters/data/ajson_multi_file.js";
+import { SmartSources } from './src/collections/smart_sources.js';
+import { AjsonShardedSourcesDataAdapter } from './src/adapters/data/ajson_sharded_sources.js';
 import { ObsidianMarkdownSourceContentAdapter } from "./adapters/smart-sources/obsidian_markdown.js";
 import { BasesSourceContentAdapter } from "./adapters/smart-sources/bases.js";
 import { RenderedSourceContentAdapter } from "./adapters/smart-sources/rendered.js";
@@ -57,7 +57,7 @@ const smart_env_config = {
     smart_sources: {
       collection_key: 'smart_sources',
       class: SmartSources,
-      data_adapter: AjsonMultiFileSourcesDataAdapter,
+      data_adapter: AjsonShardedSourcesDataAdapter,
       source_adapters: {
         "md": ObsidianMarkdownSourceContentAdapter,
         "txt": ObsidianMarkdownSourceContentAdapter,
@@ -116,5 +116,9 @@ merge_env_config(smart_env_config, dist_config);
 smart_env_config.items.smart_block.actions = {
   ...smart_block.actions,
   ...smart_env_config.items.smart_block.actions,
+};
+smart_env_config.items.smart_source.actions = {
+  ...smart_source.actions,
+  ...smart_env_config.items.smart_source.actions,
 };
 export default smart_env_config;

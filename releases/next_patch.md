@@ -142,3 +142,9 @@ Improved: Enhance batch size handling and add batch window and sorting configura
 
 
 Improved: Refactor command registration for Smart Plugins and Environment Status View, adding parameter handling and tests
+
+Improved: source persistence and vector files
+
+- Added `AjsonShardedSourcesDataAdapter` with numeric sequential replay, bounded append rotation, explicit compaction, and legacy base-last commit protection.
+- Changed source shard rotation and compaction from record-count limits to byte limits
+- Moved collection-scoped binary vector loading, durable `file_i` refs, vector-before-ref checkpoints, and typed-array similarity into Smart Env v2.

@@ -5,11 +5,15 @@ import event_logs from './src/collections/event_logs.js';
 import lookup_lists from './src/collections/lookup_lists.js';
 import smart_blocks from './src/collections/smart_blocks.js';
 import smart_contexts from './src/collections/smart_contexts.js';
+import smart_sources from './src/collections/smart_sources.js';
 
 import { EmbeddingModel } from './src/items/embedding_model.js';
 import { LookupList } from './src/items/lookup_list.js';
 import { SmartBlock } from './src/items/smart_block.js';
 import { SmartContext } from './src/items/smart_context.js';
+import { SmartSource } from './src/items/smart_source.js';
+
+import embeddings from './src/modules/embeddings.js';
 
 import { render as context_item_leaf_component } from './src/components/context-item/leaf.js';
 import { render as default_notification_component } from './src/components/default_notification.js';
@@ -74,16 +78,18 @@ export const smart_env_config = {
     event_logs,
     lookup_lists,
     smart_blocks,
-    smart_contexts
+    smart_contexts,
+    smart_sources
   },
   items: {
     embedding_model: { class: EmbeddingModel, version: "1.0.1" },
     lookup_list: { class: LookupList, version: "1.0.1" },
-    smart_block: { class: SmartBlock, version: "1.0.1" },
-    smart_context: { class: SmartContext, version: "2.1.0" }
+    smart_block: { class: SmartBlock, version: 2 },
+    smart_context: { class: SmartContext, version: "2.1.0" },
+    smart_source: { class: SmartSource, version: 2 }
   },
   modules: {
-
+    embeddings
   },
   components: {
     context_item_leaf: { render: context_item_leaf_component, version: "1.0.1" },
