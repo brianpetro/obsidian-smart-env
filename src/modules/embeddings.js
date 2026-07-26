@@ -342,7 +342,30 @@ export class Embeddings {
         throw new Error(message);
       }
 
-      const ref = this.get_item_embedding_ref(item, type, model_fingerprint);
+      let ref = this.get_item_embedding_ref(item, type, model_fingerprint);
+      if (
+        ref?.file
+        && ref.file !== active_file
+        && ref.read_hash === item.read_hash
+        && expected_dims
+      ) {
+        await this.load_vectors(ref.file, expected_dims);
+        if (
+          this._dims_by_file[ref.file] === expected_dims
+          && this.get_vector_value_count(ref.file) % expected_dims === 0
+        ) {
+          const legacy_vec = this.get_vector(ref.file, ref.file_i);
+          if (legacy_vec) {
+            ref = this.set_item_vector(item, legacy_vec, type, {
+              model_fingerprint,
+              file: active_file,
+              read_hash: ref.read_hash,
+              at: ref.at,
+            });
+          }
+        }
+      }
+
       if (
         ref?.file === active_file
         && ref.read_hash === item.read_hash

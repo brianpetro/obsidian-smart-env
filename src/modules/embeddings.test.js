@@ -283,6 +283,73 @@ test('legacy default and history refs migrate into the model fingerprint map', (
   t.true(item.save_queued);
 });
 
+test('embed_batch migrates a compatible legacy file ref without calling the provider', async (t) => {
+  const legacy_file = 'legacy-default-vectors';
+  let embed_call_count = 0;
+  const { collection, embeddings, file: active_file } = create_embeddings({
+    vectors: [],
+    model_results() {
+      embed_call_count += 1;
+      return [{ vec: [9, 9, 9] }];
+    },
+  });
+  const data_fs = create_memory_data_fs();
+  collection.data_fs = data_fs;
+  data_fs.files.set(
+    embeddings.get_file_path(legacy_file),
+    new Float32Array(default_vector).buffer,
+  );
+  embeddings.clear_runtime_cache();
+
+  const item = create_item(collection);
+  item.data.embedding.default = {
+    model_fingerprint: embeddings.model_fingerprint,
+    ...create_ref(legacy_file),
+  };
+
+  const results = await embeddings.embed_batch([item]);
+  await embeddings.save_dirty_files();
+  const migrated_ref = get_item_ref(item, embeddings.model_fingerprint);
+
+  t.is(embed_call_count, 0);
+  t.true(results[0].skipped);
+  t.deepEqual(Array.from(results[0].vec), default_vector);
+  t.is(migrated_ref.file, active_file);
+  t.is(migrated_ref.file_i, 0);
+  t.is(migrated_ref.read_hash, item.read_hash);
+  t.deepEqual(Array.from(embeddings.get_item_vector(item)), default_vector);
+  t.deepEqual(Array.from(
+    new Float32Array(data_fs.files.get(embeddings.get_file_path(active_file))),
+  ), default_vector);
+  t.true(item.data.embedding.history.some((history_ref) => {
+    return history_ref.model_fingerprint === embeddings.model_fingerprint
+      && history_ref.file === legacy_file
+      && history_ref.file_i === 0
+    ;
+  }));
+});
+
+test('embed_batch does not relabel an unattributed legacy file ref', async (t) => {
+  const legacy_file = 'unknown-model-vectors';
+  let embed_call_count = 0;
+  const { collection, embeddings, file: active_file } = create_embeddings({
+    vectors: [],
+    model_results() {
+      embed_call_count += 1;
+      return [{ vec: default_vector }];
+    },
+  });
+  const item = create_item(collection);
+  item.data.embedding.default = create_ref(legacy_file);
+  set_vector_file(embeddings, legacy_file, [9, 9, 9]);
+
+  await embeddings.embed_batch([item]);
+
+  t.is(embed_call_count, 1);
+  t.is(get_item_ref(item, embeddings.model_fingerprint).file, active_file);
+  t.is(get_item_ref(item, legacy_file).file, legacy_file);
+});
+
 test('get_item_vector rejects a stale read_hash', (t) => {
   const { collection, embeddings, file } = create_embeddings({
     vectors: default_vector,
