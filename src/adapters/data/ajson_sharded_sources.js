@@ -30,6 +30,10 @@ export class AjsonShardedSourcesDataAdapter extends AjsonSingleFileCollectionDat
     return 'multi';
   }
 
+  get max_bytes_per_shard() {
+    return AJSON_MAX_BYTES_PER_SHARD;
+  }
+
   get_ajson_file_name(file_i = 0) {
     const collection_key = this.collection.collection_key;
     return file_i > 0
@@ -169,7 +173,7 @@ export class AjsonShardedSourcesDataAdapter extends AjsonSingleFileCollectionDat
 
     const size_bytes = Number(file_info.size_bytes || 0);
     if (!size_bytes && pending_record_count <= 1) return false;
-    return size_bytes + pending_size_bytes > AJSON_MAX_BYTES_PER_SHARD;
+    return size_bytes + pending_size_bytes > this.max_bytes_per_shard;
   }
 
   get_next_append_file_info(file_info = null) {
@@ -224,7 +228,7 @@ export class AjsonShardedSourcesDataAdapter extends AjsonSingleFileCollectionDat
       loaded = await this.parse_ajson_files(data_files, prepare_context);
       if (this._needs_minimal_rewrite) should_offer_compaction = true;
       if (data_files.some((file) => {
-        return file.size_bytes > AJSON_MAX_BYTES_PER_SHARD && file.record_count > 1;
+        return file.size_bytes > this.max_bytes_per_shard && file.record_count > 1;
       })) should_offer_compaction = true;
     } else if (await this.fs.exists(this.legacy_data_dir)) {
       loaded = await this.load_legacy_multi_files(prepare_context);
@@ -529,7 +533,7 @@ export class AjsonShardedSourcesDataAdapter extends AjsonSingleFileCollectionDat
       const separator_size_bytes = lines.length ? 1 : 0;
       if (
         lines.length
-        && shard_size_bytes + separator_size_bytes + line_size_bytes > AJSON_MAX_BYTES_PER_SHARD
+        && shard_size_bytes + separator_size_bytes + line_size_bytes > this.max_bytes_per_shard
       ) {
         await flush_lines();
       }
@@ -558,7 +562,11 @@ export class AjsonShardedSourcesDataAdapter extends AjsonSingleFileCollectionDat
       }
       for (const old_file of old_files) {
         if (old_file.path === base_path || final_paths.has(old_file.path)) continue;
-        if (await this.fs.exists(old_file.path)) await remove_file(this.fs, old_file.path);
+        if (!(await this.fs.exists(old_file.path))) continue;
+        await remove_file(this.fs, old_file.path);
+        if (await this.fs.exists(old_file.path)) {
+          throw new Error(`Failed to remove obsolete AJSON shard ${old_file.path}`);
+        }
       }
       const base_temp = temp_paths.find(({ path }) => path === base_path);
       await replace_file_with_temp(this.fs, base_temp.temp_path, base_temp.path);
@@ -568,7 +576,11 @@ export class AjsonShardedSourcesDataAdapter extends AjsonSingleFileCollectionDat
       }
       for (const old_file of old_files) {
         if (final_paths.has(old_file.path)) continue;
-        if (await this.fs.exists(old_file.path)) await remove_file(this.fs, old_file.path);
+        if (!(await this.fs.exists(old_file.path))) continue;
+        await remove_file(this.fs, old_file.path);
+        if (await this.fs.exists(old_file.path)) {
+          throw new Error(`Failed to remove obsolete AJSON shard ${old_file.path}`);
+        }
       }
     }
 

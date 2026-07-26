@@ -2,10 +2,11 @@ import test from 'ava';
 import { Platform } from 'obsidian';
 import { AjsonShardedSourcesDataAdapter } from './ajson_sharded_sources.js';
 
-const AJSON_MAX_BYTES_PER_SHARD = Platform.isMobile
-  ? 2 * 1024 * 1024
-  : 16 * 1024 * 1024
+const DEFAULT_MAX_BYTES_PER_SHARD = Platform.isMobile
+  ? 8 * 1024 * 1024
+  : 64 * 1024 * 1024
 ;
+const TEST_MAX_BYTES_PER_SHARD = 1024;
 
 function get_utf8_byte_length(value = '') {
   return new TextEncoder().encode(value).byteLength;
@@ -145,8 +146,15 @@ function create_adapter(params = {}) {
     },
   };
 
+  const adapter = new AjsonShardedSourcesDataAdapter(collection);
+  if (params.max_bytes_per_shard !== undefined) {
+    Object.defineProperty(adapter, 'max_bytes_per_shard', {
+      value: params.max_bytes_per_shard,
+    });
+  }
+
   return {
-    adapter: new AjsonShardedSourcesDataAdapter(collection),
+    adapter,
     block_collection,
     collection,
     directories,
@@ -210,6 +218,12 @@ function create_sized_source(adapter, collection, key, size_bytes) {
   source.data.payload = 'x'.repeat(size_bytes - empty_size_bytes);
   return source;
 }
+
+test('adapter exposes the current platform byte threshold', (t) => {
+  const { adapter } = create_adapter();
+
+  t.is(adapter.max_bytes_per_shard, DEFAULT_MAX_BYTES_PER_SHARD);
+});
 
 test('source save serializes blocks_data directly without a blocks index or recursive sanitizer', (t) => {
   const { adapter, collection } = create_adapter();
@@ -336,12 +350,12 @@ test('append rotation and compaction keep shards within the byte threshold', asy
     adapter,
     collection,
     files,
-  } = create_adapter();
+  } = create_adapter({ max_bytes_per_shard: TEST_MAX_BYTES_PER_SHARD });
   const exact_source = create_sized_source(
     adapter,
     collection,
     'Notes/Exact.md',
-    AJSON_MAX_BYTES_PER_SHARD,
+    TEST_MAX_BYTES_PER_SHARD,
   );
   const small_source = create_sized_source(adapter, collection, 'Notes/Small.md', 256);
   const stale_source = {
@@ -354,12 +368,12 @@ test('append rotation and compaction keep shards within the byte threshold', asy
 
   const base_path = adapter.get_ajson_file_path(0);
   const next_path = adapter.get_ajson_file_path(1);
-  t.is(get_utf8_byte_length(files.get(base_path)), AJSON_MAX_BYTES_PER_SHARD);
+  t.is(get_utf8_byte_length(files.get(base_path)), TEST_MAX_BYTES_PER_SHARD);
   t.is(files.get(next_path).split('\n').length, 2);
-  t.false(adapter.should_rotate_append_file({ size_bytes: AJSON_MAX_BYTES_PER_SHARD - 10 }, 10, 1));
-  t.true(adapter.should_rotate_append_file({ size_bytes: AJSON_MAX_BYTES_PER_SHARD - 10 }, 11, 1));
-  t.false(adapter.should_rotate_append_file({ size_bytes: 0 }, AJSON_MAX_BYTES_PER_SHARD + 1, 1));
-  t.true(adapter.should_rotate_append_file({ size_bytes: 0 }, AJSON_MAX_BYTES_PER_SHARD + 2, 2));
+  t.false(adapter.should_rotate_append_file({ size_bytes: TEST_MAX_BYTES_PER_SHARD - 10 }, 10, 1));
+  t.true(adapter.should_rotate_append_file({ size_bytes: TEST_MAX_BYTES_PER_SHARD - 10 }, 11, 1));
+  t.false(adapter.should_rotate_append_file({ size_bytes: 0 }, TEST_MAX_BYTES_PER_SHARD + 1, 1));
+  t.true(adapter.should_rotate_append_file({ size_bytes: 0 }, TEST_MAX_BYTES_PER_SHARD + 2, 2));
 
   collection.items = {
     [exact_source.key]: exact_source,
@@ -368,7 +382,7 @@ test('append rotation and compaction keep shards within the byte threshold', asy
 
   const result = await adapter.compact_shards();
 
-  t.is(get_utf8_byte_length(files.get(base_path)), AJSON_MAX_BYTES_PER_SHARD);
+  t.is(get_utf8_byte_length(files.get(base_path)), TEST_MAX_BYTES_PER_SHARD);
   t.is(files.get(next_path).split('\n').length, 1);
   t.is(result.before.records, 3);
   t.is(result.before.shards, 2);
@@ -380,12 +394,15 @@ test('append rotation and compaction keep shards within the byte threshold', asy
 
 test('a later process discovers shard size without reading and rotates past full or oversized shards', async (t) => {
   const files = new Map();
-  const first_process = create_adapter({ files });
+  const first_process = create_adapter({
+    files,
+    max_bytes_per_shard: TEST_MAX_BYTES_PER_SHARD,
+  });
   const base_source = create_sized_source(
     first_process.adapter,
     first_process.collection,
     'Notes/Base.md',
-    AJSON_MAX_BYTES_PER_SHARD,
+    TEST_MAX_BYTES_PER_SHARD,
   );
   const base_path = first_process.adapter.get_ajson_file_path(0);
   files.set(base_path, first_process.adapter.get_source_ajson(base_source));
@@ -404,11 +421,14 @@ test('a later process discovers shard size without reading and rotates past full
     first_process.adapter,
     first_process.collection,
     'Notes/Oversized.md',
-    AJSON_MAX_BYTES_PER_SHARD + 1,
+    TEST_MAX_BYTES_PER_SHARD + 1,
   );
   files.set(shard_1_path, first_process.adapter.get_source_ajson(oversized_source));
 
-  const next_process = create_adapter({ files });
+  const next_process = create_adapter({
+    files,
+    max_bytes_per_shard: TEST_MAX_BYTES_PER_SHARD,
+  });
   next_process.fs.on_read = async () => t.fail('append discovery should not read shard content');
   await next_process.adapter.append_sources([{
     key: 'Notes/After-Oversized.md',
@@ -417,26 +437,28 @@ test('a later process discovers shard size without reading and rotates past full
   }]);
 
   const shard_2_path = next_process.adapter.get_ajson_file_path(2);
-  t.is(get_utf8_byte_length(files.get(shard_1_path)), AJSON_MAX_BYTES_PER_SHARD + 1);
+  t.is(get_utf8_byte_length(files.get(shard_1_path)), TEST_MAX_BYTES_PER_SHARD + 1);
   t.is(files.get(shard_2_path).split('\n').length, 1);
 });
 
 test('one oversized source record is written alone before the next shard rotates', async (t) => {
-  const { adapter, collection, files } = create_adapter();
+  const { adapter, collection, files } = create_adapter({
+    max_bytes_per_shard: TEST_MAX_BYTES_PER_SHARD,
+  });
   const oversized_source = {
     key: 'Notes/Oversized.md',
     collection_key: 'smart_sources',
     collection,
     data: {
-      payload: 'é'.repeat(Math.ceil(AJSON_MAX_BYTES_PER_SHARD / 2)),
+      payload: 'é'.repeat(Math.ceil(TEST_MAX_BYTES_PER_SHARD / 2)),
     },
   };
   const small_source = create_sized_source(adapter, collection, 'Notes/Small.md', 256);
   const oversized_line = adapter.get_source_ajson(oversized_source);
   const oversized_size_bytes = get_utf8_byte_length(oversized_line);
 
-  t.true(oversized_line.length < AJSON_MAX_BYTES_PER_SHARD);
-  t.true(oversized_size_bytes > AJSON_MAX_BYTES_PER_SHARD);
+  t.true(oversized_line.length < TEST_MAX_BYTES_PER_SHARD);
+  t.true(oversized_size_bytes > TEST_MAX_BYTES_PER_SHARD);
 
   await adapter.append_sources([oversized_source, small_source]);
 
@@ -694,6 +716,58 @@ test('invalid legacy AJSON aborts before committing the sharded base marker', as
   t.false(block_migration_called);
   t.false(files.has(adapter.get_ajson_file_path(0)));
   t.true(files.has(legacy_path));
+});
+
+test('compaction fails when an obsolete shard remains after removal', async (t) => {
+  const {
+    adapter,
+    collection,
+    files,
+    fs,
+  } = create_adapter({ max_bytes_per_shard: TEST_MAX_BYTES_PER_SHARD });
+  const source = create_source(collection, { key: 'Notes/Active.md' });
+  const base_path = adapter.get_ajson_file_path(0);
+  const obsolete_path = adapter.get_ajson_file_path(1);
+  const obsolete_content = '"smart_sources:Notes/Stale.md": {"stale":true},';
+
+  files.set(base_path, adapter.get_source_ajson(source));
+  files.set(obsolete_path, obsolete_content);
+  fs.on_remove = async (path) => {
+    if (path === obsolete_path) files.set(path, obsolete_content);
+  };
+
+  await t.throwsAsync(
+    () => adapter.compact_shards(),
+    { message: `Failed to remove obsolete AJSON shard ${obsolete_path}` },
+  );
+
+  t.true(files.has(obsolete_path));
+});
+
+test('legacy migration does not commit the base while an obsolete shard remains', async (t) => {
+  const {
+    adapter,
+    collection,
+    files,
+    fs,
+  } = create_adapter({ max_bytes_per_shard: TEST_MAX_BYTES_PER_SHARD });
+  create_source(collection, { key: 'Notes/Active.md' });
+  const base_path = adapter.get_ajson_file_path(0);
+  const obsolete_path = adapter.get_ajson_file_path(1);
+  const obsolete_content = '"smart_sources:Notes/Stale.md": {"stale":true},';
+
+  files.set(obsolete_path, obsolete_content);
+  fs.on_remove = async (path) => {
+    if (path === obsolete_path) files.set(path, obsolete_content);
+  };
+
+  await t.throwsAsync(
+    () => adapter.commit_legacy_migration(),
+    { message: `Failed to remove obsolete AJSON shard ${obsolete_path}` },
+  );
+
+  t.false(files.has(base_path));
+  t.true(files.has(obsolete_path));
 });
 
 test('save, append, and rewrite operations share one AJSON write chain', async (t) => {
