@@ -14,7 +14,7 @@ import { ExcalidrawSourceContentAdapter } from "./adapters/smart-sources/excalid
 // import { MarkdownBlockContentAdapter } from "smart-blocks/adapters/markdown_block.js";
 // local embedding model
 import { SmartEmbedModel } from "smart-embed-model";
-import { SmartEmbedTransformersIframeAdapter } from "smart-embed-model/adapters/transformers_iframe.js";
+import { TransformersWorkerEmbeddingModelAdapter } from "./src/adapters/embedding-model/transformers_v4_worker.js";
 // actions architecture
 import smart_block from "smart-blocks/smart_block.js";
 import smart_source from "smart-sources/smart_source.js";
@@ -46,7 +46,7 @@ const smart_env_config = {
     smart_embed_model: {
       class: SmartEmbedModel,
       adapters: {
-        transformers: SmartEmbedTransformersIframeAdapter,
+        transformers: TransformersWorkerEmbeddingModelAdapter,
       },
     },
   },
