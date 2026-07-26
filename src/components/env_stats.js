@@ -17,11 +17,18 @@ import { format_collection_name } from "../utils/format_collection_name.js";
 
 export async function build_html(env, opts = {}) {
   const lines = [];
-  const embedding_vector_memory_usage = await run_action_entry(
+  const {
+    used_bytes,
+    allocated_bytes,
+    unused_capacity_bytes,
+  } = await run_action_entry(
     env,
     'env_get_embedding_vector_memory_usage',
   );
-  lines.push(`<p><strong>Embedding vector memory usage:</strong> ${convert_to_human_readable_size(embedding_vector_memory_usage)} (${embedding_vector_memory_usage} bytes)</p>`);
+  lines.push(`<h2>Embedding vector memory</h2>`);
+  lines.push(`<p><strong>Used:</strong> ${convert_to_human_readable_size(used_bytes)} (${used_bytes} bytes)</p>`);
+  lines.push(`<p><strong>Allocated:</strong> ${convert_to_human_readable_size(allocated_bytes)} (${allocated_bytes} bytes)</p>`);
+  lines.push(`<p><strong>Unused capacity:</strong> ${convert_to_human_readable_size(unused_capacity_bytes)} (${unused_capacity_bytes} bytes)</p>`);
   lines.push(`<h2>Collections</h2>`);
 
   const collection_keys = Object.keys(env.collections)
