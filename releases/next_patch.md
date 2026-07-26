@@ -151,3 +151,6 @@ Improved: source persistence and vector files
 
 
 Add memory usage calculation for embedding vectors and update env_stats display
+
+
+Added: worker implementation for better default built-in model performance.
