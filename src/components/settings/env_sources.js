@@ -42,19 +42,10 @@ export async function post_process(env, container, opts = {}) {
 export function highlight_reset_data(env, container) {
   return async (payload) => {
     if (payload.collection_key !== 'embedding_models') return;
-    const re_import_setting = container.querySelector('.re-import-sources');
-    // add notice to re-import sources to update embeddings
-    re_import_setting.classList.add('env-setting-highlight');
-    const notice = re_import_setting.querySelector('.reimport-notice')
-      ? re_import_setting.querySelector('.reimport-notice')
-      : re_import_setting.createEl('div', { cls: 'reimport-notice env-setting-note' })
+    const notice = container.querySelector('.embedding-model-change-notice')
+      || container.createEl('div', { cls: 'embedding-model-change-notice env-setting-note' })
     ;
-    notice.textContent = 'Embedding model changed. Please re-import your sources to update their embeddings.';
-    re_import_setting.appendChild(notice);
-    env.events.once('sources:reimported', () => {
-      re_import_setting.classList.remove('env-setting-highlight');
-      notice.remove();
-    });
+    notice.textContent = 'Embedding model changed. Stored vectors are loading and missing embeddings are being generated.';
   };
 }
 

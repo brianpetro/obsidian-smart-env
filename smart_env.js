@@ -186,6 +186,12 @@ export class SmartEnv extends BaseSmartEnv {
   async after_load() {
     this.smart_sources?.register_source_watchers?.(this.smart_sources);
     this.register_workspace_source_events();
+    if (!this._embedding_model_change_unsubscribe) {
+      this._embedding_model_change_unsubscribe = this.events.on('model:changed', (event = {}) => {
+        if (event.collection_key !== 'embedding_models') return;
+        this.handle_embedding_model_change();
+      });
+    }
 
     if (this._config.collections.smart_completions?.completion_adapters?.SmartCompletionVariableAdapter) {
       register_completion_variable_adapter_replacements(this._config.collections.smart_completions.completion_adapters.SmartCompletionVariableAdapter);
@@ -209,8 +215,46 @@ export class SmartEnv extends BaseSmartEnv {
     handle_env_load_attempt_after_loaded(this);
   }
 
+  handle_embedding_model_change() {
+    const change_id = (this._embedding_model_change_id || 0) + 1;
+    this._embedding_model_change_id = change_id;
+
+    this.smart_sources?.mark_embed_queue_dirty?.();
+    this.smart_blocks?.mark_embed_queue_dirty?.();
+
+    const vec_index_runtime = this.smart_vec_index_runtime;
+    vec_index_runtime?.unload?.();
+
+    const previous_change = this._embedding_model_change_promise || Promise.resolve();
+    const change_promise = previous_change.then(async () => {
+      if (change_id !== this._embedding_model_change_id) return;
+
+      await Promise.all([
+        this.smart_sources?.embeddings?.load_vectors(),
+        this.smart_blocks?.embeddings?.load_vectors(),
+      ]);
+      if (change_id !== this._embedding_model_change_id) return;
+
+      this.smart_sources?.mark_embed_queue_dirty?.();
+      this.smart_blocks?.mark_embed_queue_dirty?.();
+      await this.smart_sources?.process_embed_queue?.();
+      if (change_id !== this._embedding_model_change_id) return;
+
+      await vec_index_runtime?.refresh_vec_index_state?.();
+    }).catch((error) => {
+      if (change_id !== this._embedding_model_change_id) return;
+      console.warn('[smart_env] Failed to switch embedding model', error);
+    });
+
+    this._embedding_model_change_promise = change_promise;
+    return change_promise;
+  }
+
   unload() {
     console.warn('Unloading SmartEnv');
+    this._embedding_model_change_unsubscribe?.();
+    this._embedding_model_change_unsubscribe = null;
+    this._embedding_model_change_id = (this._embedding_model_change_id || 0) + 1;
     if (typeof this._onboarding_events_teardown === 'function') {
       this._onboarding_events_teardown();
       this._onboarding_events_teardown = null;

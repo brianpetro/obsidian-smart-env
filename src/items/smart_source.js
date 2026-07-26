@@ -1,9 +1,5 @@
 import { SmartSource as BaseSmartSource } from 'smart-sources/smart_source.js';
-import {
-  DEFAULT_EMBEDDING_TYPE,
-  ensure_embedding_data,
-  get_embedding_ref,
-} from '../utils/embedding_item.js';
+import { DEFAULT_EMBEDDING_TYPE } from '../utils/embedding_item.js';
 
 export class SmartSource extends BaseSmartSource {
   static version = 2;
@@ -70,18 +66,24 @@ export class SmartSource extends BaseSmartSource {
   }
 
   get last_embed() {
-    return get_embedding_ref(this, DEFAULT_EMBEDDING_TYPE) || {};
+    return this.collection.embeddings?.get_item_embedding_ref(
+      this,
+      DEFAULT_EMBEDDING_TYPE,
+    ) || {};
   }
 
   get embed_hash() {
-    return get_embedding_ref(this, DEFAULT_EMBEDDING_TYPE)?.read_hash;
+    return this.last_embed.read_hash;
   }
 
   set embed_hash(hash) {
-    const embedding = ensure_embedding_data(this);
-    if (embedding.error) return;
-    if (!embedding[DEFAULT_EMBEDDING_TYPE]) return;
-    embedding[DEFAULT_EMBEDDING_TYPE].read_hash = hash;
+    if (this.data.embedding?.error) return;
+    const embedding_ref = this.collection.embeddings?.get_item_embedding_ref(
+      this,
+      DEFAULT_EMBEDDING_TYPE,
+    );
+    if (!embedding_ref) return;
+    embedding_ref.read_hash = hash;
   }
 
   get is_unembedded() {

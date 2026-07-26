@@ -1,5 +1,6 @@
 import { AjsonSingleFileCollectionDataAdapter } from 'smart-collections/adapters/ajson_single_file.js';
 import { Notice, Platform } from 'obsidian';
+import { has_legacy_embedding_refs } from '../../utils/embedding_item.js';
 
 const class_to_collection_key = {
   SmartSource: 'smart_sources',
@@ -1098,7 +1099,11 @@ function set_loaded_block_refs(block, source, sub_key, data) {
 }
 
 function has_legacy_embedding_data(data = {}) {
-  return Boolean(data?.embeddings || data?.last_embed);
+  return Boolean(
+    data?.embeddings
+    || data?.last_embed
+    || has_legacy_embedding_refs(data)
+  );
 }
 
 function build_load_prepare_context(source_collection, block_collection, loaded_at = Date.now()) {

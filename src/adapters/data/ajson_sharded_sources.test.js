@@ -582,6 +582,40 @@ test('legacy read errors abort before vector migration and base commit', async (
   t.true(files.has(legacy_path));
 });
 
+test('flat embedding refs trigger model fingerprint migration on load', async (t) => {
+  const {
+    adapter,
+    collection,
+    files,
+  } = create_adapter();
+  const source_key = 'Notes/Test.md';
+  const source = create_source(collection, { key: source_key });
+  files.set(adapter.get_ajson_file_path(0), [
+    `\"smart_sources:${source_key}\": {`,
+    '"blocks_data":{},',
+    '"embedding":{',
+    '"default":{"file":"mf_test","file_i":0,"read_hash":"source-hash","at":1},',
+    '"history":[]',
+    '}',
+    '},',
+  ].join(''));
+
+  let migration_called = false;
+  collection.embeddings.migrate_legacy_item_vectors = async () => {
+    migration_called = true;
+    const legacy_ref = source.data.embedding.default;
+    source.data.embedding.default = {
+      mf_test: legacy_ref,
+    };
+    return 1;
+  };
+
+  await adapter.process_load_queue();
+
+  t.true(migration_called);
+  t.is(source.data.embedding.default.mf_test.file_i, 0);
+});
+
 test('initial V2 migration preserves vectors from concatenated source and block records', async (t) => {
   const {
     adapter,
@@ -607,10 +641,10 @@ test('initial V2 migration preserves vectors from concatenated source and block 
   ].join('\n'));
 
   collection.embeddings.has_current_vector_ref = (item) => {
-    return item.data.embedding?.default?.read_hash === item.read_hash;
+    return item.data.embedding?.default?.mf_test?.read_hash === item.read_hash;
   };
   block_collection.embeddings.has_current_vector_ref = (item) => {
-    return item.data.embedding?.default?.read_hash === item.read_hash;
+    return item.data.embedding?.default?.mf_test?.read_hash === item.read_hash;
   };
 
   const order = [];
@@ -620,10 +654,12 @@ test('initial V2 migration preserves vectors from concatenated source and block 
     delete source.data.last_embed;
     source.data.embedding = {
       default: {
-        file: 'mf_test',
-        file_i: 0,
-        read_hash: 'source-hash',
-        at: 1,
+        mf_test: {
+          file: 'mf_test',
+          file_i: 0,
+          read_hash: 'source-hash',
+          at: 1,
+        },
       },
       history: [],
     };
@@ -639,10 +675,12 @@ test('initial V2 migration preserves vectors from concatenated source and block 
     delete block.data.last_embed;
     block.data.embedding = {
       default: {
-        file: 'mf_test',
-        file_i: 0,
-        read_hash: 'block-hash',
-        at: 1,
+        mf_test: {
+          file: 'mf_test',
+          file_i: 0,
+          read_hash: 'block-hash',
+          at: 1,
+        },
       },
       history: [],
     };
@@ -663,8 +701,8 @@ test('initial V2 migration preserves vectors from concatenated source and block 
   t.deepEqual(Object.keys(saved.blocks_data), ['#Shared']);
   t.deepEqual(saved.blocks_data['#Shared'].lines, [1, 3]);
   t.is(saved.blocks_data['#Shared'].payload, 'legacy');
-  t.is(saved.embedding.default.file_i, 0);
-  t.is(saved.blocks_data['#Shared'].embedding.default.file_i, 0);
+  t.is(saved.embedding.default.mf_test.file_i, 0);
+  t.is(saved.blocks_data['#Shared'].embedding.default.mf_test.file_i, 0);
   t.false(Object.prototype.hasOwnProperty.call(saved.blocks_data, '#StandaloneOnly'));
   t.deepEqual(order, ['source_vectors', 'block_vectors', 'base_commit']);
   t.false(source._queue_save);

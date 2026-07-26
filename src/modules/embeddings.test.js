@@ -1,4 +1,5 @@
 import test from 'ava';
+import { get_embedding_ref } from '../utils/embedding_item.js';
 import { Embeddings } from './embeddings.js';
 
 const default_dims = 3;
@@ -74,7 +75,12 @@ function create_item(collection, params = {}) {
   const embedding = {
     history: [],
   };
-  if (params.ref) embedding.default = { ...params.ref };
+  if (params.ref) {
+    const model_fingerprint = params.model_fingerprint || params.ref.model_fingerprint || params.ref.file;
+    embedding.default = {
+      [model_fingerprint]: { ...params.ref },
+    };
+  }
 
   return {
     key: params.key || 'Notes/Test.md',
@@ -104,6 +110,36 @@ function set_vector_file(embeddings, file, values, dims = default_dims) {
   embeddings._persisted_lengths_by_file[file] = vectors.length;
 }
 
+function create_memory_data_fs() {
+  const directories = new Set();
+  const files = new Map();
+
+  return {
+    files,
+    adapter: {
+      async remove(path) {
+        files.delete(path);
+      },
+      async rename(old_path, new_path) {
+        files.set(new_path, files.get(old_path));
+        files.delete(old_path);
+      },
+    },
+    async exists(path) {
+      return directories.has(path) || files.has(path);
+    },
+    async mkdir(path) {
+      directories.add(path);
+    },
+    async read_binary(path) {
+      return files.get(path)?.slice(0);
+    },
+    async write_binary(path, buffer) {
+      files.set(path, buffer.slice(0));
+    },
+  };
+}
+
 function create_ref(file, params = {}) {
   return {
     file,
@@ -111,6 +147,18 @@ function create_ref(file, params = {}) {
     read_hash: params.read_hash ?? 'current-hash',
     at: 1,
   };
+}
+
+function get_item_ref(item, model_fingerprint = '') {
+  return get_embedding_ref(item, 'default', model_fingerprint);
+}
+
+function create_deferred() {
+  let resolve;
+  const promise = new Promise((promise_resolve) => {
+    resolve = promise_resolve;
+  });
+  return { promise, resolve };
 }
 
 test('get_item_vector returns a matching current vector', (t) => {
@@ -125,6 +173,114 @@ test('get_item_vector returns a matching current vector', (t) => {
     Array.from(embeddings.get_item_vector(item)),
     default_vector,
   );
+});
+
+test('switching embedding models reuses each model fingerprint vector', async (t) => {
+  const second_vector = [3, 2, 1];
+  let embed_call_count = 0;
+  const { collection, embeddings, file: first_file } = create_embeddings({
+    vectors: default_vector,
+    model_results() {
+      embed_call_count += 1;
+      return [{ vec: second_vector }];
+    },
+  });
+  const first_model_fingerprint = embeddings.model_fingerprint;
+  const item = create_item(collection, {
+    ref: create_ref(first_file),
+  });
+
+  collection.env.embedding_models.default.data.model_key = 'second-embedding-model';
+  const second_model_fingerprint = embeddings.model_fingerprint;
+  const second_file = embeddings.active_file;
+  set_vector_file(embeddings, second_file, []);
+
+  await embeddings.embed_batch([item]);
+
+  t.is(embed_call_count, 1);
+  t.deepEqual(Array.from(embeddings.get_item_vector(item)), second_vector);
+  t.deepEqual(
+    Object.keys(item.data.embedding.default).sort(),
+    [first_model_fingerprint, second_model_fingerprint].sort(),
+  );
+
+  collection.env.embedding_models.default.data.model_key = 'test-embedding-model';
+  const results = await embeddings.embed_batch([item]);
+
+  t.is(results.length, 1);
+  t.true(results[0].skipped);
+  t.is(embed_call_count, 1);
+  t.deepEqual(Array.from(embeddings.get_item_vector(item)), default_vector);
+  t.is(get_item_ref(item, first_model_fingerprint).file, first_file);
+  t.is(get_item_ref(item, second_model_fingerprint).file, second_file);
+});
+
+test('switching embedding models survives vector cache reloads', async (t) => {
+  const first_vector = [1, 2, 3];
+  const second_vector = [3, 2, 1];
+  let embed_call_count = 0;
+  const { collection, embeddings } = create_embeddings({
+    model_results() {
+      embed_call_count += 1;
+      const model_key = collection.env.embedding_models.default.data.model_key;
+      return [{
+        vec: model_key === 'second-embedding-model' ? second_vector : first_vector,
+      }];
+    },
+  });
+  const data_fs = create_memory_data_fs();
+  collection.data_fs = data_fs;
+  embeddings.clear_runtime_cache();
+  const item = create_item(collection);
+
+  await embeddings.embed_batch([item]);
+  const first_model_fingerprint = embeddings.model_fingerprint;
+  await embeddings.save_dirty_files();
+
+  collection.env.embedding_models.default.data.model_key = 'second-embedding-model';
+  embeddings.clear_runtime_cache();
+  await embeddings.embed_batch([item]);
+  const second_model_fingerprint = embeddings.model_fingerprint;
+  await embeddings.save_dirty_files();
+
+  collection.env.embedding_models.default.data.model_key = 'test-embedding-model';
+  embeddings.clear_runtime_cache();
+  const results = await embeddings.embed_batch([item]);
+
+  t.is(embed_call_count, 2);
+  t.true(results[0].skipped);
+  t.deepEqual(Array.from(embeddings.get_item_vector(item)), first_vector);
+  t.true(data_fs.files.has(embeddings.get_file_path(first_model_fingerprint)));
+  t.true(data_fs.files.has(embeddings.get_file_path(second_model_fingerprint)));
+  t.deepEqual(
+    Object.keys(item.data.embedding.default).sort(),
+    [first_model_fingerprint, second_model_fingerprint].sort(),
+  );
+});
+
+test('legacy default and history refs migrate into the model fingerprint map', (t) => {
+  const { collection, embeddings, file: first_file } = create_embeddings({
+    vectors: default_vector,
+  });
+  const first_model_fingerprint = embeddings.model_fingerprint;
+
+  collection.env.embedding_models.default.data.model_key = 'second-embedding-model';
+  const second_file = embeddings.active_file;
+  const second_ref = create_ref(second_file, { file_i: 2 });
+
+  collection.env.embedding_models.default.data.model_key = 'test-embedding-model';
+  const item = create_item(collection);
+  item.data.embedding.default = second_ref;
+  item.data.embedding.history = [{
+    type: 'default',
+    ...create_ref(first_file),
+  }];
+
+  t.deepEqual(Array.from(embeddings.get_item_vector(item)), default_vector);
+  t.deepEqual(get_item_ref(item, first_model_fingerprint), create_ref(first_file));
+  t.deepEqual(get_item_ref(item, second_file), second_ref);
+  t.is(item.data.embedding.default.file, undefined);
+  t.true(item.save_queued);
 });
 
 test('get_item_vector rejects a stale read_hash', (t) => {
@@ -235,6 +391,35 @@ test('set_item_vector null clears a source ref without changing vector bytes', (
   t.false(embeddings._dirty_files.has(file));
 });
 
+test('set_item_vector null clears only the active model fingerprint ref', (t) => {
+  const second_vector = [3, 2, 1];
+  const { collection, embeddings, file: first_file } = create_embeddings({
+    vectors: default_vector,
+  });
+  const first_model_fingerprint = embeddings.model_fingerprint;
+  const item = create_item(collection, {
+    ref: create_ref(first_file),
+  });
+
+  collection.env.embedding_models.default.data.model_key = 'second-embedding-model';
+  const second_model_fingerprint = embeddings.model_fingerprint;
+  const second_file = embeddings.active_file;
+  set_vector_file(embeddings, second_file, []);
+  embeddings.set_item_vector(item, second_vector);
+
+  collection.env.embedding_models.default.data.model_key = 'test-embedding-model';
+  embeddings.set_item_vector(item, null);
+
+  t.is(get_item_ref(item, first_model_fingerprint), null);
+  const second_ref = get_item_ref(item, second_model_fingerprint);
+  t.is(second_ref.file, second_file);
+  t.is(second_ref.file_i, 0);
+  t.is(second_ref.read_hash, item.read_hash);
+  t.deepEqual(Object.keys(item.data.embedding.default), [second_model_fingerprint]);
+  t.deepEqual(Array.from(embeddings._vectors_by_file[first_file]), default_vector);
+  t.deepEqual(Array.from(embeddings._vectors_by_file[second_file]), second_vector);
+});
+
 test('set_item_vector null queues block persistence through its parent source', (t) => {
   const { collection, embeddings, file } = create_embeddings({
     vectors: default_vector,
@@ -326,7 +511,7 @@ test('embed_batch validates all responses before updating embedding refs', async
     );
 
     t.deepEqual(
-      item.data.embedding.default,
+      get_item_ref(item, previous_ref.file),
       previous_ref,
       `${invalid_case.name}: previous ref remains unchanged`,
     );
@@ -389,7 +574,7 @@ test('embed_batch stores a fully valid response', async (t) => {
   const results = await embeddings.embed_batch([item]);
 
   t.is(results.length, 1);
-  t.is(item.data.embedding.default.read_hash, item.read_hash);
+  t.is(get_item_ref(item, embeddings.model_fingerprint).read_hash, item.read_hash);
   t.deepEqual(
     Array.from(embeddings.get_item_vector(item)),
     default_vector,
@@ -408,7 +593,7 @@ test('embed_batch replaces an invalid current file_i with a new row', async (t) 
 
   await embeddings.embed_batch([item]);
 
-  t.is(item.data.embedding.default.file_i, 1);
+  t.is(get_item_ref(item, embeddings.model_fingerprint).file_i, 1);
   t.deepEqual(Array.from(embeddings.get_item_vector(item)), replacement_vector);
   t.is(item.data.embedding.history.length, 1);
   t.is(item.data.embedding.history[0].file_i, 4);
@@ -454,13 +639,12 @@ test('process_embed_queue does not mark invalid or missing responses successfull
     Object.defineProperty(item, 'embed_hash', {
       configurable: true,
       get() {
-        return this.data.embedding.default?.read_hash;
+        return get_item_ref(this, embeddings.model_fingerprint)?.read_hash;
       },
       set(read_hash) {
         embed_hash_set_count += 1;
-        if (this.data.embedding.default) {
-          this.data.embedding.default.read_hash = read_hash;
-        }
+        const embedding_ref = get_item_ref(this, embeddings.model_fingerprint);
+        if (embedding_ref) embedding_ref.read_hash = read_hash;
       },
     });
 
@@ -614,6 +798,53 @@ test('process_embed_queue loads existing vectors before reserving new rows', asy
   t.is(reserved_rows, 1);
   t.is(embeddings.get_vector_value_count(file), default_vector.length);
   t.true(embeddings._vectors_by_file[file].length >= default_vector.length * 2);
+});
+
+test('process_embed_queue reruns when requested during an active run', async (t) => {
+  const first_batch_started = create_deferred();
+  const release_first_batch = create_deferred();
+  let embed_call_count = 0;
+  const { collection, embeddings } = create_embeddings({
+    async model_results() {
+      embed_call_count += 1;
+      if (embed_call_count === 1) {
+        first_batch_started.resolve();
+        await release_first_batch.promise;
+      }
+      return [{ vec: default_vector }];
+    },
+  });
+  collection.data_fs = create_memory_data_fs();
+  const first_item = create_item(collection, {
+    key: 'Notes/First.md',
+    read_hash: 'first-hash',
+  });
+  const second_item = create_item(collection, {
+    key: 'Notes/Second.md',
+    read_hash: 'second-hash',
+  });
+
+  collection._test_embed_queue = [first_item];
+  Object.defineProperty(collection, 'embed_queue', {
+    configurable: true,
+    get() {
+      return this._test_embed_queue;
+    },
+  });
+
+  const adapter = embeddings.entities_vector_adapter;
+  const first_run = adapter.process_embed_queue();
+  await first_batch_started.promise;
+
+  collection._test_embed_queue = [second_item];
+  const second_run = adapter.process_embed_queue();
+  release_first_batch.resolve();
+
+  await Promise.all([first_run, second_run]);
+
+  t.is(embed_call_count, 2);
+  t.truthy(get_item_ref(first_item, embeddings.model_fingerprint));
+  t.truthy(get_item_ref(second_item, embeddings.model_fingerprint));
 });
 
 test('process_embed_queue restores all defer flags before final vector saves', async (t) => {

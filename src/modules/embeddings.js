@@ -2,8 +2,11 @@ import { DefaultEntitiesVectorAdapter } from 'smart-entities/adapters/default.js
 import { murmur_hash_32_alphanumeric } from 'smart-utils/create_hash.js';
 import {
   DEFAULT_EMBEDDING_TYPE,
+  delete_embedding_ref,
   ensure_embedding_data,
   get_embedding_ref,
+  get_embedding_refs,
+  migrate_embedding_refs,
   prune_legacy_embedding_data,
   set_embedding_ref,
 } from '../utils/embedding_item.js';
@@ -11,7 +14,30 @@ import {
 const EMBEDDING_SAVE_CHECKPOINT_SIZE = 1000;
 
 class EmbeddingsVectorAdapter extends DefaultEntitiesVectorAdapter {
-  async process_embed_queue() {
+  process_embed_queue() {
+    if (this._process_embed_queue_promise) {
+      this._rerun_embed_queue = true;
+      return this._process_embed_queue_promise;
+    }
+
+    this._process_embed_queue_promise = (async () => {
+      try {
+        do {
+          this._rerun_embed_queue = false;
+          await this.process_embed_queue_once();
+          if (this._rerun_embed_queue) {
+            this.collection?.mark_embed_queue_dirty?.();
+          }
+        } while (this._rerun_embed_queue);
+      } finally {
+        this._process_embed_queue_promise = null;
+      }
+    })();
+
+    return this._process_embed_queue_promise;
+  }
+
+  async process_embed_queue_once() {
     const embed_queue = this.collection?.embed_queue || [];
     if (!embed_queue.length) return;
 
@@ -220,7 +246,7 @@ export class Embeddings {
     return Number.isFinite(dims) && dims > 0 ? dims : 0;
   }
 
-  get active_file() {
+  get model_fingerprint() {
     const model_data = this.embed_model_data;
     const fingerprint_data = {
       provider_key: model_data.provider_key || '',
@@ -229,16 +255,21 @@ export class Embeddings {
       max_tokens: Number(model_data.max_tokens || 0),
     };
     const fingerprint_key = JSON.stringify(fingerprint_data);
-    if (this._active_file_fingerprint_key !== fingerprint_key) {
-      this._active_file_fingerprint_key = fingerprint_key;
-      this._active_file = `mf_${murmur_hash_32_alphanumeric(fingerprint_key)}`;
+    if (this._model_fingerprint_key !== fingerprint_key) {
+      this._model_fingerprint_key = fingerprint_key;
+      this._model_fingerprint = `mf_${murmur_hash_32_alphanumeric(fingerprint_key)}`;
     }
-    return this._active_file;
+    return this._model_fingerprint;
+  }
+
+  get active_file() {
+    return this.model_fingerprint;
   }
 
   get_active_file_info(file = this.active_file) {
     const dims = this._dims_by_file[file] || this.dims;
     return {
+      model_fingerprint: this.model_fingerprint,
       file,
       dims,
       value_count: this.get_vector_value_count(file),
@@ -247,6 +278,20 @@ export class Embeddings {
 
   get_file_path(file = this.active_file) {
     return `${this.data_dir}/${file}`;
+  }
+
+  get_item_embedding_ref(
+    item,
+    type = DEFAULT_EMBEDDING_TYPE,
+    model_fingerprint = this.model_fingerprint,
+  ) {
+    if (migrate_embedding_refs(item, type)) item.queue_save?.();
+    return get_embedding_ref(item, type, model_fingerprint);
+  }
+
+  get_item_embedding_refs(item, type = DEFAULT_EMBEDDING_TYPE) {
+    if (migrate_embedding_refs(item, type)) item.queue_save?.();
+    return get_embedding_refs(item, type);
   }
 
   async flush() {
@@ -273,13 +318,16 @@ export class Embeddings {
   }
 
   async embed_batch(items = [], type = DEFAULT_EMBEDDING_TYPE) {
-    if (!this.embed_model) {
+    const embed_model = this.embed_model;
+    if (!embed_model) {
       throw new Error(`No embed_model found for ${this.collection?.collection_key || 'collection'}`);
     }
 
+    const model_fingerprint = this.model_fingerprint;
     const active_file = this.active_file;
-    await this.load_vectors(active_file);
-    const expected_dims = this._dims_by_file[active_file] || this.dims;
+    const model_dims = this.dims;
+    await this.load_vectors(active_file, model_dims);
+    const expected_dims = this._dims_by_file[active_file] || model_dims;
 
     const prepared_items = [];
     const results = new Array(items.length).fill(null);
@@ -294,7 +342,7 @@ export class Embeddings {
         throw new Error(message);
       }
 
-      const ref = get_embedding_ref(item, type);
+      const ref = this.get_item_embedding_ref(item, type, model_fingerprint);
       if (
         ref?.file === active_file
         && ref.read_hash === item.read_hash
@@ -316,7 +364,7 @@ export class Embeddings {
 
     if (!prepared_items.length) return results.filter(Boolean);
 
-    const embeddings = await this.embed_model.embed_batch(
+    const embeddings = await embed_model.embed_batch(
       prepared_items.map((entry) => ({ embed_input: entry.embed_input }))
     );
 
@@ -346,6 +394,7 @@ export class Embeddings {
       const entry = prepared_items[result_i];
       const result = embeddings[result_i];
       const stored_ref = this.set_item_vector(entry.item, validated_vecs[result_i], entry.type, {
+        model_fingerprint,
         file: active_file,
         read_hash: entry.item.read_hash,
       });
@@ -363,19 +412,20 @@ export class Embeddings {
   }
 
   get_item_vector(item, type = DEFAULT_EMBEDDING_TYPE) {
-    const ref = get_embedding_ref(item, type);
+    const model_fingerprint = this.model_fingerprint;
+    const active_file = this.active_file;
+    const ref = this.get_item_embedding_ref(item, type, model_fingerprint);
     if (!ref?.file) return undefined;
-    if (ref.file !== this.active_file) return undefined;
+    if (ref.file !== active_file) return undefined;
     if (!ref.read_hash || ref.read_hash !== item.read_hash) return undefined;
     return this.get_vector(ref.file, ref.file_i);
   }
 
   set_item_vector(item, vec, type = DEFAULT_EMBEDDING_TYPE, params = {}) {
+    const model_fingerprint = params.model_fingerprint || this.model_fingerprint;
     if (vec === null) {
-      const embedding = item.data?.embedding;
-      if (!embedding?.[type]) return null;
+      if (!delete_embedding_ref(item, type, model_fingerprint)) return null;
 
-      delete embedding[type];
       item._embed_input = null;
       item.collection?.mark_embed_queue_dirty?.();
       item.source_collection?.mark_embed_queue_dirty?.();
@@ -386,7 +436,7 @@ export class Embeddings {
 
     const file = params.file || this.active_file;
     const source_vec = vec instanceof Float32Array ? vec : new Float32Array(vec);
-    const current_ref = get_embedding_ref(item, type);
+    const current_ref = this.get_item_embedding_ref(item, type, model_fingerprint);
     const read_hash = params.read_hash || item.read_hash || '';
     const file_i = (
       current_ref?.file === file
@@ -406,7 +456,7 @@ export class Embeddings {
       file_i,
       read_hash,
       at: params.at || Date.now(),
-    }, type);
+    }, type, model_fingerprint);
 
     item._queue_embed = false;
     item._embed_input = null;
@@ -415,7 +465,7 @@ export class Embeddings {
     item.source_collection?.mark_embed_queue_dirty?.();
     item.queue_save?.();
     this.queue_save_vectors();
-    return get_embedding_ref(item, type);
+    return get_embedding_ref(item, type, model_fingerprint);
   }
 
   async migrate_legacy_item_vectors(type = DEFAULT_EMBEDDING_TYPE) {
@@ -429,23 +479,25 @@ export class Embeddings {
     let changed_count = 0;
     try {
       Object.values(this.collection.items).forEach((item) => {
+        let item_changed = migrate_embedding_refs(item, type);
         const legacy = item.data?.embeddings?.[this.embed_model_key];
         const had_legacy_data = Boolean(item.data?.embeddings || item.data?.last_embed);
 
         if (legacy?.vec?.length) {
           this.set_item_vector(item, legacy.vec, type, {
+            model_fingerprint: this.model_fingerprint,
             read_hash: legacy.last_embed?.hash || item.data?.last_embed?.hash || item.read_hash || '',
             at: legacy.last_embed?.at || item.data?.last_embed?.at || Date.now(),
           });
-          changed_count += 1;
-          return;
+          item_changed = true;
+        } else if (had_legacy_data) {
+          prune_legacy_embedding_data(item);
+          item_changed = true;
         }
 
-        if (had_legacy_data) {
-          prune_legacy_embedding_data(item);
-          item.queue_save?.();
-          changed_count += 1;
-        }
+        if (!item_changed) return;
+        item.queue_save?.();
+        changed_count += 1;
       });
     } finally {
       this.defer_vector_saves = previous_defer_vector_saves;
@@ -455,7 +507,7 @@ export class Embeddings {
     return changed_count;
   }
 
-  async load_vectors(file = this.active_file) {
+  async load_vectors(file = this.active_file, expected_dims = 0) {
     if (!file) return new Float32Array(0);
     if (this._vectors_by_file[file]) return this._vectors_by_file[file];
 
@@ -481,7 +533,7 @@ export class Embeddings {
     this._vectors_by_file[file] = vectors;
     this._vector_lengths_by_file[file] = vectors.length;
     this._persisted_lengths_by_file[file] = vectors.length;
-    this._dims_by_file[file] = this.resolve_file_dims(file, vectors.length);
+    this._dims_by_file[file] = this.resolve_file_dims(file, vectors.length, expected_dims);
     return vectors;
   }
 
@@ -595,8 +647,9 @@ export class Embeddings {
   }
 
   has_current_vector_ref(item, type = DEFAULT_EMBEDDING_TYPE, file_info = null) {
+    const model_fingerprint = file_info?.model_fingerprint || this.model_fingerprint;
     const file = file_info?.file || this.active_file;
-    const ref = get_embedding_ref(item, type);
+    const ref = this.get_item_embedding_ref(item, type, model_fingerprint);
     if (ref?.file !== file || !Number.isInteger(ref.file_i) || ref.file_i < 0) return false;
     if (!ref.read_hash || ref.read_hash !== item.read_hash) return false;
 
@@ -611,7 +664,8 @@ export class Embeddings {
     return end <= value_count;
   }
 
-  resolve_file_dims(file, vector_value_count = 0) {
+  resolve_file_dims(file, vector_value_count = 0, expected_dims = 0) {
+    if (expected_dims) return expected_dims;
     if (this.dims) return this.dims;
     const row_count = this.get_file_row_count(file);
     if (row_count && vector_value_count % row_count === 0) {
@@ -622,9 +676,12 @@ export class Embeddings {
 
   get_file_row_count(file) {
     return Object.values(this.collection?.items || {}).reduce((max_file_i, item) => {
-      const ref = get_embedding_ref(item);
-      if (ref?.file !== file || !Number.isInteger(ref.file_i)) return max_file_i;
-      return Math.max(max_file_i, ref.file_i + 1);
+      const refs = this.get_item_embedding_refs(item);
+      Object.values(refs).forEach((ref) => {
+        if (ref?.file !== file || !Number.isInteger(ref.file_i)) return;
+        max_file_i = Math.max(max_file_i, ref.file_i + 1);
+      });
+      return max_file_i;
     }, 0);
   }
 
