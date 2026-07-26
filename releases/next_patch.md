@@ -154,3 +154,6 @@ Add memory usage calculation for embedding vectors and update env_stats display
 
 
 Added: worker implementation for better default built-in model performance.
+
+
+Improved: embedding model handling: make switching between models possible without losing embedding data
