@@ -57,6 +57,7 @@ import { context_suggest_contexts as context_suggest_contexts_action, display_na
 import { context_suggest_sources as context_suggest_sources_action, display_name as context_suggest_sources_action_display_name } from './src/actions/context-suggest/sources.js';
 import { env_browse_smart_plugins as env_browse_smart_plugins_action, commands as env_browse_smart_plugins_action_commands, menus as env_browse_smart_plugins_action_menus } from './src/actions/env/browse_smart_plugins.js';
 import { env_export_data as env_export_data_action, menus as env_export_data_action_menus } from './src/actions/env/export_data.js';
+import { env_get_embedding_vector_memory_usage as env_get_embedding_vector_memory_usage_action, action_scope as env_get_embedding_vector_memory_usage_action_action_scope } from './src/actions/env/get_embedding_vector_memory_usage.js';
 import { env_inspect_active_note as env_inspect_active_note_action, menus as env_inspect_active_note_action_menus } from './src/actions/env/inspect_active_note.js';
 import { env_open_milestones as env_open_milestones_action, menus as env_open_milestones_action_menus } from './src/actions/env/open_milestones.js';
 import { env_open_notifications as env_open_notifications_action, menus as env_open_notifications_action_menus } from './src/actions/env/open_notifications.js';
@@ -135,6 +136,7 @@ export const smart_env_config = {
     context_suggest_sources: { action: context_suggest_sources_action, display_name: context_suggest_sources_action_display_name, version: "1.0.1" },
     env_browse_smart_plugins: { action: env_browse_smart_plugins_action, commands: env_browse_smart_plugins_action_commands, menus: env_browse_smart_plugins_action_menus, version: "1.0.1" },
     env_export_data: { action: env_export_data_action, menus: env_export_data_action_menus, version: "1.0.1" },
+    env_get_embedding_vector_memory_usage: { action: env_get_embedding_vector_memory_usage_action, action_scope: env_get_embedding_vector_memory_usage_action_action_scope, version: "1.0.1" },
     env_inspect_active_note: { action: env_inspect_active_note_action, menus: env_inspect_active_note_action_menus, version: "1.0.1" },
     env_open_milestones: { action: env_open_milestones_action, menus: env_open_milestones_action_menus, version: "1.0.1" },
     env_open_notifications: { action: env_open_notifications_action, menus: env_open_notifications_action_menus, version: "1.0.1" },

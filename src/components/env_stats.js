@@ -11,10 +11,17 @@
  *  - calculate_embed_coverage(itemArr) => { needed, embedded, percent, display }
  */
 
+import { run_action_entry } from "smart-environment/utils/action_entry.js";
+import { convert_to_human_readable_size } from "smart-utils/convert_to_human_readable_size.js";
 import { format_collection_name } from "../utils/format_collection_name.js";
 
 export async function build_html(env, opts = {}) {
   const lines = [];
+  const embedding_vector_memory_usage = await run_action_entry(
+    env,
+    'env_get_embedding_vector_memory_usage',
+  );
+  lines.push(`<p><strong>Embedding vector memory usage:</strong> ${convert_to_human_readable_size(embedding_vector_memory_usage)} (${embedding_vector_memory_usage} bytes)</p>`);
   lines.push(`<h2>Collections</h2>`);
 
   const collection_keys = Object.keys(env.collections)
