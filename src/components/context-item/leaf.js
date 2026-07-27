@@ -1,3 +1,5 @@
+// V1 compatibility. Retained for:
+// - ../smart-context/tree.js
 import { register_item_hover_popover } from '../../utils/register_item_hover_popover.js';
 import { Menu, Platform, setIcon } from 'obsidian';
 import { escape_html } from 'smart-utils/escape_html.js';

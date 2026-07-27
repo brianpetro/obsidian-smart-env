@@ -49,3 +49,12 @@ export function context_suggest_sources(params = {}) {
 }
 
 export const display_name = 'Add sources';
+export const display_description = 'Search indexed notes and supported vault files.';
+
+export const menus = {
+  'smart_context:suggest': {
+    title: 'Notes',
+    icon: 'file-text',
+    order: 0,
+  },
+};

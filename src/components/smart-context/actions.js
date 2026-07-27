@@ -1,3 +1,5 @@
+// V1 compatibility. Retained for:
+// - ./item.js
 import {
   render_btn_clear_context,
   render_btn_copy_menu,

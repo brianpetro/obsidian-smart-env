@@ -25,7 +25,6 @@ import smart_components from 'smart-components';
 import context_items from 'smart-contexts/context_items.js';
 import event_logs from './src/collections/event_logs.js';
 // base context UX
-import { ContextModal } from './src/modals/context_selector.js';
 import { NotificationsFeedModal } from './src/modals/notifications_feed_modal.js';
 import { MilestonesModal } from './src/modals/milestones_modal.js';
 import { BrowseSmartPlugins } from './src/modals/browse_plugins_modal.js';
@@ -95,7 +94,6 @@ const smart_env_config = {
   // begin obsidian-smart-env specific modules (need to update build_env_config.js to handle)
   modals: {
     context_selector: {
-      class: ContextModal,
       default_suggest_action_keys: [
         'context_suggest_sources',
       ]

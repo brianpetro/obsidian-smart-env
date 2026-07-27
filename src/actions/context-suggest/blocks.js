@@ -33,3 +33,12 @@ export function context_suggest_blocks(params={}) {
 }
 
 export const display_name = 'Add blocks';
+export const display_description = 'Choose a heading or block from a note.';
+
+export const menus = {
+  'smart_context:suggest': {
+    title: 'Sections',
+    icon: 'heading',
+    order: 20,
+  },
+};

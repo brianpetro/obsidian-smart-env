@@ -1,3 +1,4 @@
+/* V1 compatibility. Retained for: ./item.js */
 /* Modal view adjustments */
 .modal-container .sc-context-view {
   max-height: 42vh;

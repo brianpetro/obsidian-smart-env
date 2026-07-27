@@ -18,6 +18,15 @@ import { Platform } from 'obsidian';
  */
 
 export const display_name = 'Add named contexts';
+export const display_description = 'Reuse a saved context or browse its sources.';
+
+export const menus = {
+  'smart_context:suggest': {
+    title: 'Named contexts',
+    icon: 'smart-named-contexts',
+    order: 30,
+  },
+};
 
 const MOD_CHAR = Platform.isMacOS ? '⌘' : 'Ctrl';
 

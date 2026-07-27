@@ -52,9 +52,9 @@ import { merge_template as context_item_merge_template_action, settings_config a
 import { context_item_open as context_item_open_action, menus as context_item_open_action_menus } from './src/actions/context-item/open.js';
 import { context_item_remove as context_item_remove_action, menus as context_item_remove_action_menus } from './src/actions/context-item/remove.js';
 import { merge_template as context_merge_template_action, settings_config as context_merge_template_action_settings_config, default_settings as context_merge_template_action_default_settings } from './src/actions/context/merge_template.js';
-import { context_suggest_blocks as context_suggest_blocks_action, display_name as context_suggest_blocks_action_display_name } from './src/actions/context-suggest/blocks.js';
-import { context_suggest_contexts as context_suggest_contexts_action, display_name as context_suggest_contexts_action_display_name } from './src/actions/context-suggest/contexts.js';
-import { context_suggest_sources as context_suggest_sources_action, display_name as context_suggest_sources_action_display_name } from './src/actions/context-suggest/sources.js';
+import { context_suggest_blocks as context_suggest_blocks_action, display_name as context_suggest_blocks_action_display_name, display_description as context_suggest_blocks_action_display_description, menus as context_suggest_blocks_action_menus } from './src/actions/context-suggest/blocks.js';
+import { context_suggest_contexts as context_suggest_contexts_action, display_name as context_suggest_contexts_action_display_name, display_description as context_suggest_contexts_action_display_description, menus as context_suggest_contexts_action_menus } from './src/actions/context-suggest/contexts.js';
+import { context_suggest_sources as context_suggest_sources_action, display_name as context_suggest_sources_action_display_name, display_description as context_suggest_sources_action_display_description, menus as context_suggest_sources_action_menus } from './src/actions/context-suggest/sources.js';
 import { env_browse_smart_plugins as env_browse_smart_plugins_action, commands as env_browse_smart_plugins_action_commands, menus as env_browse_smart_plugins_action_menus } from './src/actions/env/browse_smart_plugins.js';
 import { env_export_data as env_export_data_action, menus as env_export_data_action_menus } from './src/actions/env/export_data.js';
 import { env_get_embedding_vector_memory_usage as env_get_embedding_vector_memory_usage_action, action_scope as env_get_embedding_vector_memory_usage_action_action_scope } from './src/actions/env/get_embedding_vector_memory_usage.js';
@@ -131,9 +131,9 @@ export const smart_env_config = {
     context_item_open: { action: context_item_open_action, menus: context_item_open_action_menus, version: "1.0.1" },
     context_item_remove: { action: context_item_remove_action, menus: context_item_remove_action_menus, version: "1.0.1" },
     context_merge_template: { action: context_merge_template_action, settings_config: context_merge_template_action_settings_config, default_settings: context_merge_template_action_default_settings, version: "1.0.1" },
-    context_suggest_blocks: { action: context_suggest_blocks_action, display_name: context_suggest_blocks_action_display_name, version: "1.0.1" },
-    context_suggest_contexts: { action: context_suggest_contexts_action, display_name: context_suggest_contexts_action_display_name, version: "1.0.1" },
-    context_suggest_sources: { action: context_suggest_sources_action, display_name: context_suggest_sources_action_display_name, version: "1.0.1" },
+    context_suggest_blocks: { action: context_suggest_blocks_action, display_name: context_suggest_blocks_action_display_name, display_description: context_suggest_blocks_action_display_description, menus: context_suggest_blocks_action_menus, version: "1.0.1" },
+    context_suggest_contexts: { action: context_suggest_contexts_action, display_name: context_suggest_contexts_action_display_name, display_description: context_suggest_contexts_action_display_description, menus: context_suggest_contexts_action_menus, version: "1.0.1" },
+    context_suggest_sources: { action: context_suggest_sources_action, display_name: context_suggest_sources_action_display_name, display_description: context_suggest_sources_action_display_description, menus: context_suggest_sources_action_menus, version: "1.0.1" },
     env_browse_smart_plugins: { action: env_browse_smart_plugins_action, commands: env_browse_smart_plugins_action_commands, menus: env_browse_smart_plugins_action_menus, version: "1.0.1" },
     env_export_data: { action: env_export_data_action, menus: env_export_data_action_menus, version: "1.0.1" },
     env_get_embedding_vector_memory_usage: { action: env_get_embedding_vector_memory_usage_action, action_scope: env_get_embedding_vector_memory_usage_action_action_scope, version: "1.0.1" },

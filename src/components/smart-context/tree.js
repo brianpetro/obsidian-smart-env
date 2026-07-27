@@ -1,3 +1,7 @@
+// V1 compatibility. Retained for:
+// - ./item.js
+// - ../../../../smart-chat-obsidian-early/src/components/completion/context_item.js
+// - ../../../../smart-chat-obsidian-early/src/components/completion/context_included.js
 import { build_path_tree } from '../../utils/smart-context/build_path_tree.js';
 import tree_styles from './tree.css';
 import { create_render_scheduler } from '../../utils/render_utils.js';

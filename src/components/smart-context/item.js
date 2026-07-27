@@ -1,3 +1,5 @@
+// V1 compatibility. Retained for:
+// - ../../modals/context_selector.js
 import styles from './styles.css';
 import { Menu } from 'obsidian';
 import { create_render_scheduler } from '../../utils/render_utils.js';
