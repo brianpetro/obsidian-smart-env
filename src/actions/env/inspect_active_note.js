@@ -1,4 +1,4 @@
-import { SmartNoteInspectModal } from '../../../views/source_inspector.js';
+import { Modal } from 'obsidian';
 
 /**
  * Inspect the Smart Source backing the active note.
@@ -39,3 +39,54 @@ export const menus = {
     order: 10,
   },
 };
+
+class SmartNoteInspectModal extends Modal {
+  constructor(smart_connections_plugin, entity) {
+    super(smart_connections_plugin.app);
+    this.smart_connections_plugin = smart_connections_plugin;
+    this.entity = entity;
+  }
+
+  get env() {
+    return this.smart_connections_plugin.env;
+  }
+
+  onOpen() {
+    this.titleEl.setText('Source inspector');
+    this.modalEl?.classList?.add('smart-source-inspector-modal');
+    this.render();
+  }
+
+  onClose() {
+    this.modalEl?.classList?.remove('smart-source-inspector-modal');
+    this.contentEl.empty();
+  }
+
+  async render() {
+    this.contentEl.empty();
+    const loading_el = this.contentEl.createEl('p', {
+      cls: 'smart-source-inspector-modal__loading',
+      text: 'Opening source inspector...',
+    });
+    loading_el.setAttribute('aria-live', 'polite');
+
+    try {
+      const component = await this.env.smart_components.render_component(
+        'source_inspector',
+        this.entity,
+      );
+      this.contentEl.empty();
+      if (component) {
+        this.contentEl.appendChild(component);
+        return;
+      }
+      this.contentEl.createEl('p', { text: 'Failed to load source inspector.' });
+    } catch (error) {
+      console.error('[source_inspector] Failed to render source inspector modal', error);
+      this.contentEl.empty();
+      this.contentEl.createEl('p', {
+        text: 'Failed to load source inspector. See the developer console for details.',
+      });
+    }
+  }
+}
