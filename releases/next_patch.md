@@ -175,3 +175,6 @@ feat: support long source paths and improve embedding unload lifecycle
 
 
 Improved: New v2 context builder UI
+
+
+Improved environment statistics handling and source inspection
