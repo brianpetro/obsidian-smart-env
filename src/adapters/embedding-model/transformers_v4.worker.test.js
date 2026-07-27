@@ -107,6 +107,139 @@ test('worker contains no v3 runtime or dtype probing path', (t) => {
   t.false(worker_source.includes('load_v3_pipeline'));
   t.false(worker_source.includes('ModelRegistry'));
   t.false(worker_source.includes('available_dtypes'));
+  t.false(worker_source.includes('retryable_webgpu_error_patterns'));
+  t.false(worker_source.includes('reload_pipeline'));
+});
+
+test('embed batch preserves cardinality when the backend batch size changes', async (t) => {
+  const model = create_model();
+  const processed_inputs = [];
+  model.pipeline = async () => [];
+  model.active_config_key = 'webgpu_auto';
+  model.process_batch = async (batch) => {
+    processed_inputs.push(Array.from(batch, (item) => item.embed_input));
+    model.active_config_key = 'wasm_auto';
+    return Array.from(batch, (item) => ({
+      vec: new Float32Array([1, 2, 3]),
+      tokens: Number(item.embed_input),
+    }));
+  };
+
+  const inputs = Array.from({ length: 20 }, (_value, input_i) => ({
+    embed_input: String(input_i + 1),
+  }));
+  const results = await model.embed_batch(inputs);
+
+  t.deepEqual(processed_inputs, [
+    inputs.slice(0, 16).map((item) => item.embed_input),
+    inputs.slice(16).map((item) => item.embed_input),
+  ]);
+  t.deepEqual(
+    Array.from(results, (result) => result.tokens),
+    inputs.map((item) => Number(item.embed_input)),
+  );
+});
+
+test('embed batch returns one positional result for empty inputs', async (t) => {
+  const model = create_model();
+  const processed_inputs = [];
+  model.pipeline = async () => [];
+  model.process_batch = async (batch) => {
+    processed_inputs.push(...Array.from(batch, (item) => item.embed_input));
+    return Array.from(batch, (item) => ({
+      vec: new Float32Array([1, 2, 3]),
+      tokens: item.embed_input.length,
+    }));
+  };
+
+  const results = await model.embed_batch([
+    { embed_input: 'first' },
+    { embed_input: '' },
+    { embed_input: 'third' },
+  ]);
+
+  t.deepEqual(processed_inputs, ['first', 'third']);
+  t.is(results.length, 3);
+  t.is(results[0].tokens, 5);
+  t.deepEqual(Array.from(results[1].vec), []);
+  t.is(results[1].tokens, 0);
+  t.is(results[1].error, 'Embedding input is empty');
+  t.is(results[2].tokens, 5);
+});
+
+test('embed batch rejects an internal result cardinality mismatch', async (t) => {
+  const model = create_model();
+  model.pipeline = async () => [];
+  model.process_batch = async () => [];
+
+  const error = await t.throwsAsync(
+    () => model.embed_batch([{ embed_input: 'first' }]),
+  );
+
+  t.is(error.message, 'Embedding batch returned 0 results for 1 inputs');
+});
+
+test('WebGPU inference recovery transitions to WASM only once', async (t) => {
+  const model = create_model();
+  const batch_attempts = [];
+  let wasm_loads = 0;
+  let individual_attempts = 0;
+  model.active_config_key = 'webgpu_auto';
+  model.use_gpu = true;
+  model.has_gpu = true;
+  model.embed_prepared_batch = async () => {
+    batch_attempts.push(model.active_config_key);
+    throw new Error(
+      model.active_config_key.includes('webgpu')
+        ? 'GPU device lost'
+        : 'WASM batch failed',
+    );
+  };
+  model.load_wasm_pipeline = async () => {
+    wasm_loads += 1;
+    model.use_gpu = false;
+    model.has_gpu = false;
+    model.pipeline = async () => [];
+    model.active_config_key = 'wasm_auto';
+  };
+  model.retry_items_individually = async (batch) => {
+    individual_attempts += 1;
+    return Array.from(batch, () => ({
+      vec: new Float32Array([1, 2, 3]),
+      tokens: 1,
+    }));
+  };
+
+  const batch = [{ embed_input: 'first' }];
+  await model.process_batch(batch);
+  await model.process_batch(batch);
+
+  t.deepEqual(batch_attempts, ['webgpu_auto', 'wasm_auto', 'wasm_auto']);
+  t.is(wasm_loads, 1);
+  t.is(individual_attempts, 2);
+});
+
+test('WebGPU recovery attempts WASM once and propagates load failure', async (t) => {
+  const model = create_model();
+  let wasm_loads = 0;
+  model.active_config_key = 'webgpu_auto';
+  model.embed_prepared_batch = async () => {
+    throw new Error('GPU device lost');
+  };
+  model.load_wasm_pipeline = async () => {
+    wasm_loads += 1;
+    model.use_gpu = false;
+    model.has_gpu = false;
+    throw new Error('WASM load failed');
+  };
+
+  const error = await t.throwsAsync(
+    () => model.process_batch([{ embed_input: 'first' }]),
+  );
+
+  t.is(error.message, 'WASM load failed');
+  t.is(wasm_loads, 1);
+  t.false(model.use_gpu);
 });
 
 test('default profile preserves unprefixed mean-pooling behavior', async (t) => {
@@ -236,6 +369,63 @@ test('message adapter forwards purpose to the worker', async (t) => {
     embed_input: 'find this',
     purpose: 'query',
   }]);
+});
+
+test('message adapter preserves one result for every input', async (t) => {
+  class TestMessageAdapter extends SmartEmbedMessageAdapter {
+    _post_message(message_data) {
+      this.posted_message = message_data;
+      queueMicrotask(() => {
+        this._handle_message_result(message_data.id, [
+          { vec: new Float32Array([1]), tokens: 1 },
+          { vec: [], tokens: 0, error: 'Embedding input is empty' },
+          { vec: new Float32Array([3]), tokens: 1 },
+        ]);
+      });
+    }
+  }
+
+  const inputs = [
+    { embed_input: 'first' },
+    { embed_input: '' },
+    { embed_input: 'third' },
+  ];
+  const adapter = new TestMessageAdapter({ data: {}, settings: {} });
+  const results = await adapter.embed_batch(inputs);
+
+  t.deepEqual(adapter.posted_message.params.inputs, [
+    { embed_input: 'first', purpose: undefined },
+    { embed_input: '', purpose: undefined },
+    { embed_input: 'third', purpose: undefined },
+  ]);
+  t.is(results.length, inputs.length);
+  t.is(results[0], inputs[0]);
+  t.is(results[1], inputs[1]);
+  t.is(results[2], inputs[2]);
+  t.is(results[1].error, 'Embedding input is empty');
+});
+
+test('message adapter rejects a worker result cardinality mismatch', async (t) => {
+  class TestMessageAdapter extends SmartEmbedMessageAdapter {
+    _post_message(message_data) {
+      queueMicrotask(() => {
+        this._handle_message_result(message_data.id, [{
+          vec: new Float32Array([1]),
+          tokens: 1,
+        }]);
+      });
+    }
+  }
+
+  const adapter = new TestMessageAdapter({ data: {}, settings: {} });
+  const error = await t.throwsAsync(
+    () => adapter.embed_batch([
+      { embed_input: 'first' },
+      { embed_input: 'second' },
+    ]),
+  );
+
+  t.is(error.message, 'Embedding model returned 1 results for 2 inputs.');
 });
 
 test('lookup preprocessing marks its input as a query', async (t) => {

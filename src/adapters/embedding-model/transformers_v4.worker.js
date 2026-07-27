@@ -3,20 +3,8 @@ globalThis.process = undefined;
 
 const transformers_v4_url = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0';
 
-const retryable_webgpu_error_patterns = [
-  /\bWEBGPU_RETRYABLE_ERROR\b/i,
-  /no available backend found/i,
-  /webgpuinit is not a function/i,
-  /subgroupminsize/i,
-];
-
 function get_error_message(error) {
   return error?.message || String(error || 'Unknown error');
-}
-
-function is_retryable_webgpu_error(error) {
-  const error_message = get_error_message(error);
-  return retryable_webgpu_error_patterns.some((pattern) => pattern.test(error_message));
 }
 
 async function is_webgpu_available() {
@@ -141,10 +129,6 @@ class TransformersWorkerModel {
     await this.load_pipeline('wasm');
   }
 
-  async reload_pipeline() {
-    await this.load();
-  }
-
   async dispose_pipeline() {
     const pipeline = this.pipeline;
     this.pipeline = null;
@@ -170,22 +154,46 @@ class TransformersWorkerModel {
   }
 
   async embed_batch(inputs) {
-    if (!this.pipeline) await this.load();
-    const filtered_inputs = inputs.filter((item) => item.embed_input?.length > 0);
-    if (!filtered_inputs.length) return [];
+    if (!inputs.length) return [];
 
-    const results = [];
-    for (let i = 0; i < filtered_inputs.length; i += this.batch_size) {
-      const batch = filtered_inputs.slice(i, i + this.batch_size);
-      results.push(...await this.process_batch(batch));
+    const results = new Array(inputs.length);
+    const pending_inputs = [];
+
+    inputs.forEach((item, input_i) => {
+      if (!item.embed_input?.length) {
+        results[input_i] = {
+          vec: [],
+          tokens: 0,
+          error: 'Embedding input is empty',
+        };
+        return;
+      }
+      pending_inputs.push({ input_i, item });
+    });
+
+    if (!pending_inputs.length) return results;
+    if (!this.pipeline) await this.load();
+
+    let pending_i = 0;
+    while (pending_i < pending_inputs.length) {
+      const batch_size = this.batch_size;
+      const batch_entries = pending_inputs.slice(pending_i, pending_i + batch_size);
+      const batch_inputs = batch_entries.map((entry) => entry.item);
+      const batch_results = await this.process_batch(batch_inputs);
+      const result_count = Array.isArray(batch_results) ? batch_results.length : 0;
+
+      if (result_count !== batch_inputs.length) {
+        throw new Error(
+          `Embedding batch returned ${result_count} results for ${batch_inputs.length} inputs`,
+        );
+      }
+
+      batch_entries.forEach((entry, result_i) => {
+        results[entry.input_i] = batch_results[result_i];
+      });
+      pending_i += batch_entries.length;
     }
     return results;
-  }
-
-  is_active_webgpu_error(error) {
-    return this.active_config_key?.includes('webgpu')
-      && is_retryable_webgpu_error(error)
-    ;
   }
 
   async process_batch(batch_inputs) {
@@ -197,8 +205,8 @@ class TransformersWorkerModel {
       batch_error = error;
     }
 
-    if (this.is_active_webgpu_error(batch_error)) {
-      console.warn('[Transformers worker] retrying batch on WASM', batch_error);
+    if (this.active_config_key?.includes('webgpu')) {
+      console.warn('[Transformers worker] WebGPU batch failed, retrying on WASM', batch_error);
       await this.load_wasm_pipeline();
       try {
         return await this.embed_prepared_batch(batch_inputs);
@@ -208,33 +216,7 @@ class TransformersWorkerModel {
     }
 
     console.error('[Transformers worker] batch failed, retrying items individually', batch_error);
-    let individual_results = null;
-    try {
-      individual_results = await this.retry_items_individually(batch_inputs);
-    } catch (error) {
-      if (this.is_active_webgpu_error(error)) {
-        console.warn('[Transformers worker] retrying individual items on WASM', error);
-        await this.load_wasm_pipeline();
-        individual_results = await this.retry_items_individually(batch_inputs);
-      } else {
-        batch_error = error;
-      }
-    }
-
-    if (individual_results?.some((result) => !result.error)) {
-      return individual_results;
-    }
-
-    console.warn('[Transformers worker] individual retries failed, reloading pipeline', batch_error);
-    await this.reload_pipeline();
-    try {
-      return await this.retry_items_individually(batch_inputs);
-    } catch (error) {
-      if (!this.is_active_webgpu_error(error)) throw error;
-      console.warn('[Transformers worker] retrying individual items on WASM', error);
-      await this.load_wasm_pipeline();
-      return await this.retry_items_individually(batch_inputs);
-    }
+    return this.retry_items_individually(batch_inputs);
   }
 
   async embed_prepared_batch(batch_inputs) {
@@ -294,7 +276,6 @@ class TransformersWorkerModel {
           tokens: prepared.tokens,
         });
       } catch (error) {
-        if (this.is_active_webgpu_error(error)) throw error;
         console.error('[Transformers worker] single item failed', error);
         results.push({
           vec: [],
