@@ -251,14 +251,10 @@ async function build_plugin(options = {}) {
     }
 
     for (const vault_name of destination_vaults) {
-      const dest_dir = path.join(
-        cwd,
-        '..',
-        vault_name,
-        '.obsidian',
-        'plugins',
-        options.plugin_id,
-      );
+      const destination_dir = path.join(cwd, '..', vault_name);
+      const dest_dir = path.basename(destination_dir) === 'plugins'
+        ? path.join(destination_dir, options.plugin_id)
+        : path.join(destination_dir, '.obsidian', 'plugins', options.plugin_id);
       console.log(`Copying files to ${dest_dir}`);
       ensure_dir(dest_dir);
 
