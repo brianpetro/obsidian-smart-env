@@ -19,13 +19,13 @@ class TestFolder {
   }
 }
 
-const excluded_long_path = [
+const configured_excluded_long_path = [
   'Cases/Lastname, Firstname',
   'Doe v. X, 193 S.W.3d 727, 727 (Tex. App. 2006), review granted',
   'x'.repeat(160) + '.md',
 ].join('/');
 
-const auto_excluded_long_path = [
+const included_long_path = [
   'Other Cases',
   'Roe v. Y, 200 S.W.3d 100, 101 (Tex. App. 2007)',
   'y'.repeat(160) + '.md',
@@ -34,12 +34,12 @@ const auto_excluded_long_path = [
 const runtime_long_path = `Runtime/${'z'.repeat(220)}.md`;
 const included_comma_path = 'Cases/Other/Doe v. X, 193 S.W.3d 727, 727 (Tex. App. 2006).md';
 
-test('v2 length exclusions remain runtime-only and apply outside full scans', async (t) => {
+test('core includes long paths while preserving configured exclusions', async (t) => {
   const vault_files = [
     new TestFolder('Cases'),
     new TestFolder('Cases/Lastname, Firstname'),
-    new TestFile(excluded_long_path),
-    new TestFile(auto_excluded_long_path),
+    new TestFile(configured_excluded_long_path),
+    new TestFile(included_long_path),
     new TestFile(included_comma_path),
   ];
   const app = {
@@ -65,24 +65,16 @@ test('v2 length exclusions remain runtime-only and apply outside full scans', as
 
   await smart_fs.load_files();
 
-  t.deepEqual(smart_fs.auto_excluded_files, [auto_excluded_long_path]);
+  t.true(smart_fs.file_paths.includes(included_long_path));
   t.true(smart_fs.file_paths.includes(included_comma_path));
-  t.false(smart_fs.auto_excluded_files.includes(excluded_long_path));
-
-  // Source lifecycle handlers call SmartFs.is_excluded(), so the same v2
-  // length policy also blocks long paths created after the initial scan.
-  t.true(smart_fs.is_excluded(runtime_long_path));
-  t.true(smart_fs.auto_excluded_files.includes(runtime_long_path));
-
-  await smart_fs.load_files();
-
-  // A complete scan rebuilds diagnostics instead of accumulating old paths.
-  t.deepEqual(smart_fs.auto_excluded_files, [auto_excluded_long_path]);
+  t.false(smart_fs.file_paths.includes(configured_excluded_long_path));
+  t.false(smart_fs.is_excluded(runtime_long_path));
+  t.deepEqual(smart_fs.auto_excluded_files, []);
 });
 
-class NoPathLengthLimitObsidianFsAdapter extends ObsidianFsAdapter {
-  should_exclude_path_for_length() {
-    return false;
+class PathLengthLimitObsidianFsAdapter extends ObsidianFsAdapter {
+  should_exclude_path_for_length(file_path) {
+    return file_path.length > 200;
   }
 }
 
@@ -105,13 +97,13 @@ test('SmartFs honors an adapter path-length policy override', async (t) => {
     },
   };
   const smart_fs = new SmartFs(env, {
-    adapter: NoPathLengthLimitObsidianFsAdapter,
+    adapter: PathLengthLimitObsidianFsAdapter,
   });
   smart_fs.adapter.obsidian = { TFile: TestFile, TFolder: TestFolder };
 
   await smart_fs.load_files();
 
-  t.true(smart_fs.file_paths.includes(long_path));
-  t.false(smart_fs.is_excluded(long_path));
-  t.deepEqual(smart_fs.auto_excluded_files, []);
+  t.false(smart_fs.file_paths.includes(long_path));
+  t.true(smart_fs.is_excluded(long_path));
+  t.deepEqual(smart_fs.auto_excluded_files, [long_path]);
 });

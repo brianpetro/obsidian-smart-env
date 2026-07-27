@@ -225,6 +225,20 @@ test('adapter exposes the current platform byte threshold', (t) => {
   t.is(adapter.max_bytes_per_shard, DEFAULT_MAX_BYTES_PER_SHARD);
 });
 
+test('long source paths persist in fixed shards without legacy filename probes', async (t) => {
+  const { adapter, collection, files } = create_adapter();
+  const source_key = `Notes/${'x'.repeat(220)}.md`;
+  const source = create_source(collection, { key: source_key });
+
+  t.deepEqual(await adapter.list_legacy_files(), []);
+
+  await adapter.append_sources([source]);
+
+  const base_path = adapter.get_ajson_file_path(0);
+  t.true(files.has(base_path));
+  t.true(files.get(base_path).includes(source_key));
+});
+
 test('source save serializes blocks_data directly without a blocks index or recursive sanitizer', (t) => {
   const { adapter, collection } = create_adapter();
   const source_key = 'Notes/Test.md';

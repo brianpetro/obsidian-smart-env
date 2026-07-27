@@ -133,14 +133,13 @@ export class ObsidianFsAdapter {
     return files;
   }
   /**
-   * Preserve the v2 path-length limit used to protect its path-derived data
-   * filenames. Environments with path-safe persistence can override this method.
+   * Source persistence uses fixed shard filenames, so source path length does
+   * not require an additional Smart Environment exclusion.
    *
-   * @param {string} file_path
    * @returns {boolean}
    */
-  should_exclude_path_for_length(file_path) {
-    return file_path.length > 200;
+  should_exclude_path_for_length() {
+    return false;
   }
 
   // NOTE: currently does not handle hidden files and folders

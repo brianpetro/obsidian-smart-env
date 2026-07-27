@@ -1,3 +1,13 @@
+feat: support long source paths with shared sharded persistence
+
+- Removed the legacy 200-character runtime exclusion from the core Obsidian filesystem adapter.
+- Kept the V2 per-source filename limit only inside the one-time legacy migration path.
+
+fix: own embedding-store unload lifecycle in core
+
+- Flush and clear source and block embedding stores during environment unload.
+
+
 
 
 feat: Update badge HTML generation to use aria-label for tooltips and optimize icon display
@@ -104,10 +114,8 @@ Add resolve_menu_actions function and corresponding tests
 
 
 - Update default settings to use arrays for file and folder exclusions.
-- Introduce should_exclude_path_for_length method in ObsidianFsAdapter to enforce path length limits.
-- Modify ExcludedFoldersFuzzy and ExcludedSourcesModal to utilize the new path length policy.
 - Normalize exclusion lists in utils to ensure consistent handling.
-- Add tests for exclusion logic and path length policy.
+- Add tests for exclusion logic.
 - Enhance CSS for fuzzy header display.
 
 

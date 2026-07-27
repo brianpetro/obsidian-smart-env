@@ -262,7 +262,25 @@ export class SmartEnv extends BaseSmartEnv {
       this._onboarding_events_teardown = null;
     }
     this._workspace_source_events_registered = false;
+    this.unload_embeddings();
     return super.unload?.();
+  }
+
+  async unload_embeddings() {
+    const embeddings = [
+      this.smart_sources?.embeddings,
+      this.smart_blocks?.embeddings,
+    ].filter(Boolean);
+
+    const results = await Promise.allSettled(
+      embeddings.map((embedding) => embedding.unload?.())
+    );
+
+    results.forEach((result) => {
+      if (result.status === 'rejected') {
+        console.warn('[smart_env] Failed to unload embeddings cleanly', result.reason);
+      }
+    });
   }
 
   /**

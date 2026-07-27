@@ -875,8 +875,15 @@ export class AjsonShardedSourcesDataAdapter extends AjsonSingleFileCollectionDat
   }
 
   async list_legacy_files() {
-    const paths = Object.keys(this.collection.items || {}).map((key) => {
-      return 'multi' + this.fs.sep + key.split('#')[0].replace(/[\s\/.]/g, '_').replace('.md', '') + '.ajson';
+    const paths = [];
+    Object.keys(this.collection.items || {}).forEach((key) => {
+      const source_key = key.split('#')[0];
+      // V2 excluded these paths before deriving per-source data filenames, so
+      // there is no legacy file to probe during the one-time migration.
+      if (source_key.length > 200) return;
+      paths.push(
+        'multi' + this.fs.sep + source_key.replace(/[\s\/.]/g, '_').replace('.md', '') + '.ajson'
+      );
     });
     return [...new Set(paths)];
   }
