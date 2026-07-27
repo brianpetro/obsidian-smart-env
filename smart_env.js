@@ -155,6 +155,8 @@ export class SmartEnv extends BaseSmartEnv {
     this.register_notification_dispatchers();
     this.register_env_item_views();
     this.register_env_settings_tab();
+    // Keep environment commands available while loading is deferred or in progress.
+    this.main?.register_command_actions?.();
   
     if (typeof this._onboarding_events_teardown !== 'function') {
       this._onboarding_events_teardown = register_first_of_event_notifications(this);
