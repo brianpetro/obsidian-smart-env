@@ -39,16 +39,21 @@ export class LookupList extends CollectionItem {
     const { results: raw_results } = Object.values(collection.items)
       .reduce((acc, target) => {
         const scored = target.filter_and_score(params);
-        if(!scored?.score){
+        if(!Number.isFinite(scored?.score)){
           if(scored?.error) score_errors.push(scored.error);
           return acc; // skip if errored/filtered out
         }
         results_acc(acc, scored, params.limit || 20); // update acc
         return acc;
-      }, { min: 0, results: new Set() })
+      }, {
+        min: Number.POSITIVE_INFINITY,
+        minResult: null,
+        results: new Set(),
+      })
     ;
     const results = Array.from(raw_results).sort(sort_by_score_descending);
     if(!results.length) return results;
+    if(!results.some(r => r.score > 0)) return results;
     while(!results.some(r => r.score > 0.5)) {
       results.forEach(r => r.score *= 2);
     }
