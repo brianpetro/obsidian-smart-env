@@ -178,3 +178,5 @@ Improved: New v2 context builder UI
 
 
 Improved environment statistics handling and source inspection
+
+Improved: Environment data export
