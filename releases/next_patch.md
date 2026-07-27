@@ -165,3 +165,10 @@ Added: worker implementation for better default built-in model performance.
 
 
 Improved: embedding model handling: make switching between models possible without losing embedding data
+
+
+feat: support long source paths and improve embedding unload lifecycle
+
+- Removed the 200-character limit for source paths in the filesystem adapter.
+- Updated the unload process to flush and clear embedding stores during environment unload.
+- Enhanced tests to validate handling of long source paths and legacy filename exclusions.
