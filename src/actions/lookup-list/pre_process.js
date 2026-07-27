@@ -9,7 +9,10 @@ export async function pre_process(params) {
   if(!embed_model) {
     throw new Error('No embed model available in environment for lookup list.');
   }
-  const embedding = await embed_model.embed(query);
+  const embedding = await embed_model.embed({
+    embed_input: query,
+    purpose: 'query',
+  });
   params.to_item = { ...embedding };
   // default use similarity as score algorithm
   if(!params.score_algo_key) params.score_algo_key = 'similarity';

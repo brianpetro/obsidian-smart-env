@@ -236,6 +236,29 @@ export class Embeddings {
     return this.embed_model_data.model_key || this.embed_model_item?.model_key || '';
   }
 
+  get embedding_space_id() {
+    const models = this.embed_model_item?.ProviderAdapterClass?.defaults?.models;
+    return models?.[this.embed_model_key]?.semantic_profile?.embedding_space_id || '';
+  }
+
+  get_model_fingerprint_key(embedding_space_id = '') {
+    const model_data = this.embed_model_data;
+    const fingerprint_data = {
+      provider_key: model_data.provider_key || '',
+      model_key: model_data.model_key || this.embed_model_key || '',
+      dimensions: model_data.dimensions || model_data.dims || '',
+      max_tokens: Number(model_data.max_tokens || 0),
+    };
+    if (embedding_space_id) {
+      fingerprint_data.embedding_space_id = embedding_space_id;
+    }
+    return JSON.stringify(fingerprint_data);
+  }
+
+  get legacy_model_fingerprint() {
+    return `mf_${murmur_hash_32_alphanumeric(this.get_model_fingerprint_key())}`;
+  }
+
   get dims() {
     const dims = Number(
       this.embed_model_data.dimensions
@@ -247,14 +270,7 @@ export class Embeddings {
   }
 
   get model_fingerprint() {
-    const model_data = this.embed_model_data;
-    const fingerprint_data = {
-      provider_key: model_data.provider_key || '',
-      model_key: model_data.model_key || this.embed_model_key || '',
-      dimensions: model_data.dimensions || model_data.dims || '',
-      max_tokens: Number(model_data.max_tokens || 0),
-    };
-    const fingerprint_key = JSON.stringify(fingerprint_data);
+    const fingerprint_key = this.get_model_fingerprint_key(this.embedding_space_id);
     if (this._model_fingerprint_key !== fingerprint_key) {
       this._model_fingerprint_key = fingerprint_key;
       this._model_fingerprint = `mf_${murmur_hash_32_alphanumeric(fingerprint_key)}`;
@@ -388,7 +404,10 @@ export class Embeddings {
     if (!prepared_items.length) return results.filter(Boolean);
 
     const embeddings = await embed_model.embed_batch(
-      prepared_items.map((entry) => ({ embed_input: entry.embed_input }))
+      prepared_items.map((entry) => ({
+        embed_input: entry.embed_input,
+        purpose: 'document',
+      }))
     );
 
     let validated_vecs;
@@ -494,7 +513,12 @@ export class Embeddings {
   async migrate_legacy_item_vectors(type = DEFAULT_EMBEDDING_TYPE) {
     if (!this.collection?.items) return 0;
 
-    await this.load_vectors();
+    // Inline vectors predate semantic profiles and belong to the legacy space.
+    const migration_model_fingerprint = this.embedding_space_id
+      ? this.legacy_model_fingerprint
+      : this.model_fingerprint
+    ;
+    await this.load_vectors(migration_model_fingerprint, this.dims);
 
     const previous_defer_vector_saves = this.defer_vector_saves;
     this.defer_vector_saves = true;
@@ -508,7 +532,8 @@ export class Embeddings {
 
         if (legacy?.vec?.length) {
           this.set_item_vector(item, legacy.vec, type, {
-            model_fingerprint: this.model_fingerprint,
+            model_fingerprint: migration_model_fingerprint,
+            file: migration_model_fingerprint,
             read_hash: legacy.last_embed?.hash || item.data?.last_embed?.hash || item.read_hash || '',
             at: legacy.last_embed?.at || item.data?.last_embed?.at || Date.now(),
           });

@@ -38,9 +38,9 @@ function create_embeddings(params = {}) {
     embed_model: {
       is_loaded: true,
       batch_size: 10,
-      async embed_batch() {
+      async embed_batch(inputs) {
         return typeof model_results === 'function'
-          ? await model_results()
+          ? await model_results(inputs)
           : model_results
         ;
       },
@@ -171,6 +171,95 @@ test('get_item_vector returns a matching current vector', (t) => {
 
   t.deepEqual(
     Array.from(embeddings.get_item_vector(item)),
+    default_vector,
+  );
+});
+
+test('semantic profile keeps or migrates the model fingerprint as configured', async (t) => {
+  let received_inputs;
+  const corrected_vector = [3, 2, 1];
+  const { collection, embeddings, file: legacy_file } = create_embeddings({
+    vectors: default_vector,
+    model_results(inputs) {
+      received_inputs = inputs;
+      return [{ vec: corrected_vector }];
+    },
+  });
+  const legacy_model_fingerprint = embeddings.model_fingerprint;
+
+  collection.env.embedding_models.default.ProviderAdapterClass = {
+    defaults: {
+      models: {
+        'test-embedding-model': {
+          semantic_profile: {
+            pooling: 'mean',
+            normalize: true,
+          },
+        },
+      },
+    },
+  };
+  t.is(embeddings.model_fingerprint, legacy_model_fingerprint);
+
+  const item = create_item(collection, {
+    ref: create_ref(legacy_file),
+  });
+  collection.env.embedding_models.default.ProviderAdapterClass.defaults.models[
+    'test-embedding-model'
+  ].semantic_profile.embedding_space_id = 'test-embedding-model/retrieval-v1';
+  const corrected_model_fingerprint = embeddings.model_fingerprint;
+  set_vector_file(embeddings, corrected_model_fingerprint, []);
+
+  t.not(corrected_model_fingerprint, legacy_model_fingerprint);
+  t.false(embeddings.has_current_vector_ref(item));
+
+  await embeddings.embed_batch([item]);
+
+  t.deepEqual(received_inputs, [{
+    embed_input: 'test input',
+    purpose: 'document',
+  }]);
+  t.deepEqual(Array.from(embeddings.get_item_vector(item)), corrected_vector);
+  t.truthy(get_item_ref(item, legacy_model_fingerprint));
+  t.truthy(get_item_ref(item, corrected_model_fingerprint));
+});
+
+test('semantic migration keeps inline legacy vectors out of the corrected space', async (t) => {
+  const data_fs = create_memory_data_fs();
+  const { collection, embeddings } = create_embeddings();
+  collection.data_fs = data_fs;
+  collection.env.embedding_models.default.ProviderAdapterClass = {
+    defaults: {
+      models: {
+        'test-embedding-model': {
+          semantic_profile: {
+            embedding_space_id: 'test-embedding-model/retrieval-v1',
+          },
+        },
+      },
+    },
+  };
+  const item = create_item(collection);
+  item.data.embeddings = {
+    'test-embedding-model': {
+      vec: default_vector,
+      last_embed: {
+        hash: item.read_hash,
+        at: 1,
+      },
+    },
+  };
+  collection.items = { [item.key]: item };
+
+  const active_model_fingerprint = embeddings.model_fingerprint;
+  const legacy_model_fingerprint = embeddings.legacy_model_fingerprint;
+  await embeddings.migrate_legacy_item_vectors();
+  const legacy_ref = get_item_ref(item, legacy_model_fingerprint);
+
+  t.is(get_item_ref(item, active_model_fingerprint), null);
+  t.is(legacy_ref.file, legacy_model_fingerprint);
+  t.deepEqual(
+    Array.from(embeddings.get_vector(legacy_ref.file, legacy_ref.file_i)),
     default_vector,
   );
 });
