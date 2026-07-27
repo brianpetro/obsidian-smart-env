@@ -3,8 +3,8 @@ import { copy_to_clipboard } from '../utils/copy_to_clipboard.js';
 import {
   load_source_inspector_records,
   materialize_block_content,
-} from '../utils/source_inspector.js';
-import { yield_to_main_thread } from '../utils/env_stats.js';
+} from '../actions/env/inspect_active_note.js';
+import { yield_to_main_thread } from '../utils/embedding_diagnostics.js';
 
 const PAGE_SIZE = 30;
 const BLOCK_PREVIEW_CHAR_LIMIT = 4000;

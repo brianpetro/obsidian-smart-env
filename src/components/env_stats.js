@@ -11,11 +11,11 @@ import { run_action_entry } from 'smart-environment/utils/action_entry.js';
 import { convert_to_human_readable_size } from 'smart-utils/convert_to_human_readable_size.js';
 import styles from './env_stats.css';
 import { format_collection_name } from '../utils/format_collection_name.js';
+import { collect_environment_stats } from '../actions/env/show_stats.js';
 import {
-  collect_environment_stats,
   get_embeddings_file_info,
   has_current_embedding,
-} from '../utils/env_stats.js';
+} from '../utils/embedding_diagnostics.js';
 
 const COLLECTION_KEYS = [
   'smart_sources',
