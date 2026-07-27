@@ -1,11 +1,15 @@
 import { setIcon } from 'obsidian';
 import { register_status_bar_context_menu } from '../utils/register_status_bar_context_menu.js';
-import { get_status_bar_state, should_poll_env_activity } from '../utils/status_bar_state.js';
+import {
+  get_env_activity_state,
+  get_status_bar_state,
+  should_poll_env_activity,
+} from '../utils/status_bar_state.js';
 import styles from './status_bar.css';
 
 /**
- * Build HTML for the status bar anchor. Includes dedicated icon and indicator slots to
- * avoid setIcon clobbering content.
+ * Build HTML for the status bar anchor. Includes dedicated icon, progress,
+ * and indicator slots to avoid setIcon clobbering content.
  * @returns {string}
  */
 export function build_html() {
@@ -18,6 +22,16 @@ export function build_html() {
     >
       <span class="smart-env-status-icon" aria-hidden="true"></span>
       <span class="smart-env-status-msg" aria-live="polite"></span>
+      <span
+        class="smart-env-status-progress"
+        role="progressbar"
+        aria-label="Smart Environment progress"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        hidden
+      >
+        <span class="smart-env-status-progress-fill"></span>
+      </span>
       <span
         class="smart-env-status-indicator"
         title="Open events feed"
@@ -52,6 +66,8 @@ function post_process(env, container, opts = {}) {
   const icon_slot = container?.querySelector?.('.smart-env-status-icon');
   const status_indicator = container?.querySelector?.('.smart-env-status-indicator');
   const status_msg = container?.querySelector?.('.smart-env-status-msg');
+  const progress_el = container?.querySelector?.('.smart-env-status-progress');
+  const progress_fill_el = container?.querySelector?.('.smart-env-status-progress-fill');
 
   const pause_embedding = () => {
     return env?.smart_sources?.entities_vector_adapter?.halt_embed_queue_processing?.();
@@ -74,6 +90,26 @@ function post_process(env, container, opts = {}) {
     event.preventDefault?.();
     event.stopPropagation?.();
     env.open_notifications_feed_modal?.();
+  };
+
+  const update_progress = (activity_state) => {
+    if (!progress_el || !progress_fill_el) return;
+
+    const progress_pct = activity_state?.kind === 'exporting'
+      && typeof activity_state.progress_pct === 'number'
+      ? Math.max(0, Math.min(100, activity_state.progress_pct))
+      : null
+    ;
+    if (progress_pct === null) {
+      progress_el.hidden = true;
+      progress_fill_el.style.width = '0%';
+      progress_el.removeAttribute('aria-valuenow');
+      return;
+    }
+
+    progress_el.hidden = false;
+    progress_fill_el.style.width = `${progress_pct}%`;
+    progress_el.setAttribute('aria-valuenow', String(progress_pct));
   };
 
   const update_indicator = (status_state) => {
@@ -131,6 +167,7 @@ function post_process(env, container, opts = {}) {
   };
 
   const render_status_elm = () => {
+    const activity_state = get_env_activity_state(env);
     const status_state = get_status_bar_state(env);
     const {
       message,
@@ -142,6 +179,7 @@ function post_process(env, container, opts = {}) {
     }
 
     update_indicator(status_state);
+    update_progress(activity_state);
     set_status_message(message);
 
     // no aria-label AND title attribute to avoid redundant tooltips (title seems to display better in bottom of screen status bar)

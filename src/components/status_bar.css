@@ -13,6 +13,24 @@
   }
 }
 
+.smart-env-status-progress {
+  width: 7em;
+  flex-shrink: 0;
+  height: 0.5em;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--status-bar-text-color) 18%, transparent);
+}
+
+.smart-env-status-progress-fill {
+  display: block;
+  width: 0%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-accent);
+  transition: width 120ms linear;
+}
+
 .smart-env-status-indicator {
   --smart-env-status-indicator-color: var(--status-bar-text-color);
   --smart-env-status-indicator-glow-size: 0.28em;

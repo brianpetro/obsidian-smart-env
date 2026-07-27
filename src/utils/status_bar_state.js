@@ -152,6 +152,14 @@ export function get_embed_progress_state(env) {
 
 /**
  * @param {import('../../smart_env.js').SmartEnv} env
+ * @returns {object|null}
+ */
+export function get_export_progress_state(env) {
+  return env?.export_progress_state || null;
+}
+
+/**
+ * @param {import('../../smart_env.js').SmartEnv} env
  * @returns {number}
  */
 export function get_reimport_queue_count(env) {
@@ -244,7 +252,7 @@ function get_collection_loading_state(env) {
  *
  * @param {import('../../smart_env.js').SmartEnv} env
  * @returns {{
- *   kind: 'embed_active'|'embed_paused'|'importing'|'reimporting'|'loading'|'reimport_queued'|'ready'|'not_loaded',
+ *   kind: 'exporting'|'embed_active'|'embed_paused'|'importing'|'reimporting'|'loading'|'reimport_queued'|'ready'|'not_loaded',
  *   message: string,
  *   title: string,
  *   click_action: string,
@@ -260,12 +268,48 @@ function get_collection_loading_state(env) {
  * }}
  */
 export function get_env_activity_state(env) {
+  const export_progress = get_export_progress_state(env);
   const import_progress = get_import_progress_state(env);
   const embed_progress = get_embed_progress_state(env);
   const reimport_queue_count = get_reimport_queue_count(env);
   // const version = `v${(env?.constructor?.version.split('.').slice(0, 2).join('.') || '')}`;
   const version = `v${(env?.constructor?.version || '')}`;
   const default_message = `${env?.is_pro ? 'Pro' : 'Smart'} ${version}`;
+
+  if (export_progress?.active) {
+    const progress = normalize_number(export_progress.progress);
+    const total = normalize_number(export_progress.total);
+    const collection_key = to_non_empty_string(export_progress.collection_key);
+    const collection_label = collection_key
+      ? format_collection_label(collection_key)
+      : 'Smart Environment data'
+    ;
+    const progress_status = total > 0
+      ? `${progress}/${total}`
+      : 'Preparing'
+    ;
+
+    return {
+      kind: 'exporting',
+      message: `Exporting ${collection_label}...`,
+      title: `Writing ${collection_label} to JSON in buffered chunks.`,
+      click_action: 'noop',
+      indicator_level: null,
+      progress_value: total > 0 ? progress : null,
+      progress_total: total > 0 ? total : null,
+      progress_pct: get_progress_pct(progress, total),
+      view_title: 'Exporting Smart Environment data',
+      view_status: `${collection_label} - ${progress_status}`,
+      view_summary:
+        'Writing selected collection data to one JSON file without building one full environment string in memory.',
+      view_details: [
+        to_non_empty_string(export_progress.file_path)
+          ? `Output file: ${export_progress.file_path}`
+          : '',
+      ].filter(Boolean),
+      view_actions: [],
+    };
+  }
 
   if (import_progress?.active) {
     const progress = normalize_number(import_progress.progress);
@@ -442,7 +486,7 @@ export function get_env_activity_state(env) {
 
 /**
  * Determine whether status surfaces should keep polling the shared activity
- * state. Polling is limited to active load/import/embed phases and the
+ * state. Polling is limited to active export/load/import/embed phases and the
  * deferred pre-load state so mobile status surfaces can transition into
  * loading without being reopened.
  *
@@ -453,6 +497,7 @@ export function should_poll_env_activity(env) {
   const activity_state = get_env_activity_state(env);
   if (get_status_bar_notice_preview(env?.event_logs)) return true;
   return [
+    'exporting',
     'embed_active',
     'embed_paused',
     'importing',
@@ -475,7 +520,7 @@ export function get_status_bar_state(env) {
   const embed_queue_count = get_reimport_queue_count(env);
   const status_bar_notice_preview = get_status_bar_notice_preview(env?.event_logs);
   const can_show_notice_preview = Boolean(status_bar_notice_preview)
-    && !['embed_active', 'embed_paused', 'importing', 'reimporting', 'loading'].includes(activity_state.kind)
+    && !['exporting', 'embed_active', 'embed_paused', 'importing', 'reimporting', 'loading'].includes(activity_state.kind)
   ;
 
   let title = activity_state.title;

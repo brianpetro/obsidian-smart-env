@@ -24,6 +24,46 @@ test('notification helpers count unseen entries and retain milestone and info di
   t.is(get_next_indicator_level('warning', 'domain:event', { level: 'info' }), 'warning');
 });
 
+test('shared activity state reports export progress before other environment work', (t) => {
+  const env = {
+    state: 'loaded',
+    export_progress_state: {
+      active: true,
+      collection_key: 'smart_sources',
+      progress: 25,
+      total: 100,
+      file_path: 'smart-env-export-test.json',
+    },
+    smart_sources: {
+      get_import_progress_state() {
+        return {
+          active: true,
+          stage: 'importing',
+          progress: 10,
+          total: 20,
+        };
+      },
+      entities_vector_adapter: {
+        get_progress_state() {
+          return null;
+        },
+      },
+      sources_re_import_queue: {},
+    },
+  };
+
+  t.like(get_env_activity_state(env), {
+    kind: 'exporting',
+    message: 'Exporting Smart Sources...',
+    click_action: 'noop',
+    progress_pct: 25,
+    view_title: 'Exporting Smart Environment data',
+  });
+  t.is(get_status_bar_state(env).message, 'Exporting Smart Sources...');
+  t.false(/\d+\/\d+/.test(get_status_bar_state(env).message));
+  t.true(should_poll_env_activity(env));
+});
+
 test('shared activity state reports import progress for both surfaces', (t) => {
   const env = {
     state: 'loading',
@@ -260,7 +300,7 @@ test('ready state still surfaces unseen notification severity when idle', (t) =>
     state: 'loaded',
     event_logs: {
       session_events: [
-        { unseen: true, event_key: 'domain:event', event: { level: 'warning' } },
+        { unseen: true, at: 0, event_key: 'domain:event', event: { level: 'warning' } },
       ],
     },
     smart_sources: {
@@ -278,7 +318,7 @@ test('ready state still surfaces unseen notification severity when idle', (t) =>
   };
 
   t.like(get_status_bar_state(env), {
-    message: 'Smart Env 2.2.12',
+    message: 'Smart v2.2.12',
     title: '1 unseen notification',
     indicator_count: 1,
     indicator_level: 'warning',
