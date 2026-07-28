@@ -41,10 +41,10 @@ export async function post_process(ctx, container, opts = {}) {
       ctx.env.smart_components.render_component('smart_context_actions', ctx, opts),
       ctx.env.smart_components.render_component('smart_context_tree', ctx, opts),
     ];
-    if (ctx.env._config.components.smart_context_exclusions_list) {
-      component_renderers.push(ctx.env.smart_components.render_component('smart_context_exclusions_list', ctx, opts));
+    if (ctx.env._config.components.smart_context_rules_list) {
+      component_renderers.push(ctx.env.smart_components.render_component('smart_context_rules_list', ctx, opts));
     }
-    const [actions, tree, exclusions] = await Promise.all(component_renderers);
+    const [actions, tree, rules] = await Promise.all(component_renderers);
 
     const header = container.querySelector('.sc-context-view-header');
     this.empty(header);
@@ -56,7 +56,7 @@ export async function post_process(ctx, container, opts = {}) {
 
     const footer = container.querySelector('.sc-context-view-footer');
     this.empty(footer);
-    if (exclusions) footer.appendChild(exclusions);
+    if (rules) footer.appendChild(rules);
 
   };
   const schedule_render_children = create_render_scheduler(render_children);
