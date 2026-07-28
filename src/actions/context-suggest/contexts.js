@@ -19,7 +19,7 @@ import { Platform } from 'obsidian';
 
 export const display_name = 'Add named contexts';
 export const display_description = 'Reuse a saved context or browse its sources.';
-export const version = '1.0.2';
+export const version = '3.0.1';
 
 export const menus = {
   'smart_context:suggest': {
@@ -38,7 +38,7 @@ const MOD_CHAR = Platform.isMacOS ? '⌘' : 'Ctrl';
 function set_named_context_list_instructions(modal) {
   modal?.setInstructions?.([
     { command: 'Enter / →', purpose: 'Browse context items' },
-    { command: `${MOD_CHAR} + Enter`, purpose: 'Add all items from context' },
+    { command: `${MOD_CHAR} + Enter`, purpose: 'Add named context' },
   ]);
 }
 
@@ -89,39 +89,15 @@ function get_items_from_context(other_ctx) {
 }
 
 /**
- * Copy active context item data without retaining named-context origin state.
+ * Add a saved context as one reusable inclusion rule.
  *
- * @param {any} other_ctx
- * @returns {Array<{ key: string }>}
- */
-function get_copied_items_from_context(other_ctx) {
-  const context_items = other_ctx?.data?.context_items || {};
-  return get_items_from_context(other_ctx).map(({ key }) => {
-    const copied_item = {
-      ...(context_items[key] || {}),
-      key,
-    };
-    delete copied_item.from_named_context;
-    return copied_item;
-  });
-}
-
-/**
  * @param {import('smart-contexts').SmartContext} ctx
- * @param {object} params
- * @param {string} params.context_name
- * @param {Array<{ key: string }>} params.context_items
- * @param {boolean} [params.copy_context_items]
+ * @param {string} context_name
  * @returns {void}
  */
-function add_named_context(ctx, params = {}) {
-  if (params.copy_context_items === true) {
-    ctx.add_items(params.context_items || []);
-    return;
-  }
-
+function add_named_context(ctx, context_name) {
   ctx.add_item({
-    key: params.context_name,
+    key: context_name,
     named_context: true,
   });
 }
@@ -152,14 +128,11 @@ function build_named_context_item_suggestions(ctx, params = {}) {
       key: payload.key,
       display: payload.key,
       display_right: format_depth_label(payload.d),
-      select_action: ({ modal } = {}) => {
+      select_action: () => {
         ctx.add_item(payload);
       },
       arrow_left_action: ({ modal } = {}) => {
-        return context_suggest_contexts.call(ctx, {
-          modal,
-          copy_context_items: params.copy_context_items,
-        });
+        return context_suggest_contexts.call(ctx, { modal });
       },
     }));
 }
@@ -168,7 +141,6 @@ function build_named_context_item_suggestions(ctx, params = {}) {
  * @this {import('smart-contexts').SmartContext}
  * @param {object} [params]
  * @param {object} [params.modal]
- * @param {boolean} [params.copy_context_items=false]
  * @returns {Promise<Suggestion[]>}
  */
 export async function context_suggest_contexts(params = {}) {
@@ -200,18 +172,14 @@ export async function context_suggest_contexts(params = {}) {
     const other = contexts[i];
     const other_key = other?.key || other?.data?.key;
     const other_name = String(other?.data?.name || '').trim();
-    const copied_items = get_copied_items_from_context(other);
     const current_items = ctx?.data?.context_items || {};
-    const already_included = params.copy_context_items === true
-      ? copied_items.length > 0 && copied_items.every((item) => current_items[item.key])
-      : Boolean(
-        current_items[other_name]?.named_context
-        || Object.values(current_items).some(
-          (item) => item?.from_named_context === other_name
-            || item?.key === other_key
-        )
+    const already_included = Boolean(
+      current_items[other_name]?.named_context
+      || Object.values(current_items).some(
+        (item) => item?.from_named_context === other_name
+          || item?.key === other_key
       )
-    ;
+    );
     if (already_included) continue;
     const item_count = other?.item_count || Object.keys(other?.data?.context_items || {}).length;
 
@@ -226,49 +194,30 @@ export async function context_suggest_contexts(params = {}) {
             display: `Add all: ${other_name} (${item_count})`,
             item: other,
             select_action: ({ modal } = {}) => {
-              add_named_context(ctx, {
-                context_name: other_name,
-                context_items: copied_items,
-                copy_context_items: params.copy_context_items,
-              });
-              return context_suggest_contexts.call(ctx, {
-                modal,
-                copy_context_items: params.copy_context_items,
-              });
+              add_named_context(ctx, other_name);
+              return context_suggest_contexts.call(ctx, { modal });
             },
             arrow_left_action: ({ modal } = {}) => {
-              return context_suggest_contexts.call(ctx, {
-                modal,
-                copy_context_items: params.copy_context_items,
-              });
+              return context_suggest_contexts.call(ctx, { modal });
             },
           },
           ...build_named_context_item_suggestions(ctx, {
             other_ctx: other,
             context_name: other_name,
             modal,
-            copy_context_items: params.copy_context_items,
           })
-        ]
+        ];
       },
       arrow_right_action: ({ modal }) => {
         return build_named_context_item_suggestions(ctx, {
           other_ctx: other,
           context_name: other_name,
           modal,
-          copy_context_items: params.copy_context_items,
         });
       },
       mod_select_action: ({ modal } = {}) => {
-        add_named_context(ctx, {
-          context_name: other_name,
-          context_items: copied_items,
-          copy_context_items: params.copy_context_items,
-        });
-        return context_suggest_contexts.call(ctx, {
-          modal,
-          copy_context_items: params.copy_context_items,
-        });
+        add_named_context(ctx, other_name);
+        return context_suggest_contexts.call(ctx, { modal });
       },
     });
   }
