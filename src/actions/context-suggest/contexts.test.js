@@ -16,7 +16,10 @@ const build_ctx = () => {
               name: 'Alpha',
               context_items: {
                 'note-a.md': { d: 1 },
-                'note-b.md': { d: 2 },
+                'note-b.md': {
+                  d: 2,
+                  from_named_context: 'Legacy',
+                },
               },
             },
           },
@@ -60,11 +63,14 @@ const build_modal = () => ({
   },
 });
 
-test('context_suggest_contexts returns item suggestions on select', async (t) => {
+test('context_suggest_contexts copies all items from the add-all row', async (t) => {
   const { ctx, added_items } = build_ctx();
   const modal = build_modal();
 
-  const suggestions = await context_suggest_contexts.call(ctx, { modal });
+  const suggestions = await context_suggest_contexts.call(ctx, {
+    modal,
+    copy_context_items: true,
+  });
 
   t.true(modal.instructions_log.length > 0);
   t.true(modal.instructions_log[0].some((entry) => /^(⌘|Ctrl) \+ Enter$/.test(entry.command)));
@@ -76,7 +82,16 @@ test('context_suggest_contexts returns item suggestions on select', async (t) =>
   t.is(added_items.length, 0);
 
   await item_suggestions[0].select_action({ modal });
-  t.true(added_items.length > 0);
+  t.deepEqual(added_items, [
+    {
+      key: 'note-a.md',
+      d: 1,
+    },
+    {
+      key: 'note-b.md',
+      d: 2,
+    },
+  ]);
   t.true(modal.instructions_log.length > 1);
 });
 
@@ -91,15 +106,38 @@ test('context_suggest_contexts arrow_right_action mirrors select behavior', asyn
   t.true(item_suggestions.length > 0);
 });
 
-test('context_suggest_contexts mod_select_action adds all items', async (t) => {
+test('context_suggest_contexts mod_select_action copies all items when requested', async (t) => {
   const { ctx, added_items } = build_ctx();
   const modal = build_modal();
 
-  const suggestions = await context_suggest_contexts.call(ctx, { modal });
+  const suggestions = await context_suggest_contexts.call(ctx, {
+    modal,
+    copy_context_items: true,
+  });
   await suggestions[0].mod_select_action({ modal });
 
-  t.true(added_items.length > 0);
-  t.true(added_items.every((item) => item.from_named_context === 'Alpha'));
+  t.deepEqual(added_items, [
+    {
+      key: 'note-a.md',
+      d: 1,
+    },
+    {
+      key: 'note-b.md',
+      d: 2,
+    },
+  ]);
+});
+
+test('context_suggest_contexts hides a copied context when every item is already present', async (t) => {
+  const { ctx } = build_ctx();
+  ctx.data.context_items['note-b.md'] = { d: 0 };
+
+  const suggestions = await context_suggest_contexts.call(ctx, {
+    modal: build_modal(),
+    copy_context_items: true,
+  });
+
+  t.deepEqual(suggestions, []);
 });
 
 test('context_suggest_contexts stores named context line for codeblock ctx', async (t) => {
@@ -109,8 +147,10 @@ test('context_suggest_contexts stores named context line for codeblock ctx', asy
   const suggestions = await context_suggest_contexts.call(codeblock_ctx, { modal });
   await suggestions[0].mod_select_action({ modal });
 
-  t.true(added_items.length > 0);
-  t.true(added_items.every((item) => item.from_named_context === 'Alpha'));
+  t.deepEqual(added_items, [{
+    key: 'Alpha',
+    named_context: true,
+  }]);
 });
 
 test('context_suggest_contexts item select in codeblock ctx adds only selected item', async (t) => {
@@ -120,7 +160,7 @@ test('context_suggest_contexts item select in codeblock ctx adds only selected i
   const suggestions = await context_suggest_contexts.call(codeblock_ctx, { modal });
   const item_suggestions = await suggestions[0].select_action({ modal });
 
-  await item_suggestions[0].select_action({ modal });
+  await item_suggestions[1].select_action({ modal });
 
   t.is(added_items.length, 1);
   t.is(added_items[0].key, 'note-a.md');

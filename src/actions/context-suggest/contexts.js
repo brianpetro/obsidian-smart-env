@@ -19,6 +19,7 @@ import { Platform } from 'obsidian';
 
 export const display_name = 'Add named contexts';
 export const display_description = 'Reuse a saved context or browse its sources.';
+export const version = '1.0.2';
 
 export const menus = {
   'smart_context:suggest': {
@@ -88,25 +89,41 @@ function get_items_from_context(other_ctx) {
 }
 
 /**
+ * Copy active context item data without retaining named-context origin state.
+ *
+ * @param {any} other_ctx
+ * @returns {Array<{ key: string }>}
+ */
+function get_copied_items_from_context(other_ctx) {
+  const context_items = other_ctx?.data?.context_items || {};
+  return get_items_from_context(other_ctx).map(({ key }) => {
+    const copied_item = {
+      ...(context_items[key] || {}),
+      key,
+    };
+    delete copied_item.from_named_context;
+    return copied_item;
+  });
+}
+
+/**
  * @param {import('smart-contexts').SmartContext} ctx
  * @param {object} params
- * @param {any} params.other_ctx
  * @param {string} params.context_name
- * @param {boolean} [params.include_named_context]
- * @returns {Array<{ key: string, from_named_context?: string }>}
+ * @param {Array<{ key: string }>} params.context_items
+ * @param {boolean} [params.copy_context_items]
+ * @returns {void}
  */
-function build_named_context_item_payloads(ctx, params = {}) {
-  const other_ctx = params.other_ctx;
-  const context_name = params.context_name;
-  const include_named_context = Boolean(params.include_named_context);
-  const items = get_items_from_context(other_ctx);
-  for (let i = 0; i < items.length; i += 1) {
-    const item = items[i];
-    if (!item || typeof item.key !== 'string') continue;
-    if (!include_named_context) continue;
-    item.from_named_context = context_name;
+function add_named_context(ctx, params = {}) {
+  if (params.copy_context_items === true) {
+    ctx.add_items(params.context_items || []);
+    return;
   }
-  return items;
+
+  ctx.add_item({
+    key: params.context_name,
+    named_context: true,
+  });
 }
 
 /**
@@ -127,10 +144,7 @@ function format_depth_label(depth) {
  * @returns {Suggestion[]}
  */
 function build_named_context_item_suggestions(ctx, params = {}) {
-  const payloads = build_named_context_item_payloads(ctx, {
-    ...params,
-    include_named_context: false,
-  });
+  const payloads = get_items_from_context(params.other_ctx);
   set_named_context_item_instructions(params?.modal, { context_name: params.context_name });
   return payloads
     .filter((payload) => typeof payload?.key === 'string' && payload.key.length)
@@ -142,7 +156,10 @@ function build_named_context_item_suggestions(ctx, params = {}) {
         ctx.add_item(payload);
       },
       arrow_left_action: ({ modal } = {}) => {
-        return context_suggest_contexts.call(ctx, { modal });
+        return context_suggest_contexts.call(ctx, {
+          modal,
+          copy_context_items: params.copy_context_items,
+        });
       },
     }));
 }
@@ -151,6 +168,7 @@ function build_named_context_item_suggestions(ctx, params = {}) {
  * @this {import('smart-contexts').SmartContext}
  * @param {object} [params]
  * @param {object} [params.modal]
+ * @param {boolean} [params.copy_context_items=false]
  * @returns {Promise<Suggestion[]>}
  */
 export async function context_suggest_contexts(params = {}) {
@@ -182,13 +200,18 @@ export async function context_suggest_contexts(params = {}) {
     const other = contexts[i];
     const other_key = other?.key || other?.data?.key;
     const other_name = String(other?.data?.name || '').trim();
-    const already_included = Boolean(
-      ctx?.data?.context_items &&
-      Object.values(ctx.data.context_items).some(
-        (item) => item?.from_named_context === other_name
-          || item?.key === other_key
+    const copied_items = get_copied_items_from_context(other);
+    const current_items = ctx?.data?.context_items || {};
+    const already_included = params.copy_context_items === true
+      ? copied_items.length > 0 && copied_items.every((item) => current_items[item.key])
+      : Boolean(
+        current_items[other_name]?.named_context
+        || Object.values(current_items).some(
+          (item) => item?.from_named_context === other_name
+            || item?.key === other_key
+        )
       )
-    );
+    ;
     if (already_included) continue;
     const item_count = other?.item_count || Object.keys(other?.data?.context_items || {}).length;
 
@@ -203,20 +226,28 @@ export async function context_suggest_contexts(params = {}) {
             display: `Add all: ${other_name} (${item_count})`,
             item: other,
             select_action: ({ modal } = {}) => {
-              ctx.add_item({
-                key: `${other_name}`,
-                named_context: true,
+              add_named_context(ctx, {
+                context_name: other_name,
+                context_items: copied_items,
+                copy_context_items: params.copy_context_items,
               });
-              return context_suggest_contexts.call(ctx, { modal });
+              return context_suggest_contexts.call(ctx, {
+                modal,
+                copy_context_items: params.copy_context_items,
+              });
             },
             arrow_left_action: ({ modal } = {}) => {
-              return context_suggest_contexts.call(ctx, { modal });
+              return context_suggest_contexts.call(ctx, {
+                modal,
+                copy_context_items: params.copy_context_items,
+              });
             },
           },
           ...build_named_context_item_suggestions(ctx, {
             other_ctx: other,
             context_name: other_name,
             modal,
+            copy_context_items: params.copy_context_items,
           })
         ]
       },
@@ -225,14 +256,19 @@ export async function context_suggest_contexts(params = {}) {
           other_ctx: other,
           context_name: other_name,
           modal,
+          copy_context_items: params.copy_context_items,
         });
       },
       mod_select_action: ({ modal } = {}) => {
-        ctx.add_item({
-          key: `${other_name}`,
-          named_context: true,
+        add_named_context(ctx, {
+          context_name: other_name,
+          context_items: copied_items,
+          copy_context_items: params.copy_context_items,
         });
-        return context_suggest_contexts.call(ctx, { modal });
+        return context_suggest_contexts.call(ctx, {
+          modal,
+          copy_context_items: params.copy_context_items,
+        });
       },
     });
   }
