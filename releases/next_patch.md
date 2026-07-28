@@ -182,3 +182,6 @@ Improved environment statistics handling and source inspection
 Improved: Environment data export
 
 Add lookup_list_get_results action and integrate into settings configuration
+
+
+Added: block read tool action
