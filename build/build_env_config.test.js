@@ -116,9 +116,18 @@ assigned_action.version = '7.8.9';`
   write_file(
     'src/actions/launch.js',
     `export function launch(){}
-export const cli = {
-  command: 'launch',
-  description: 'Launch from CLI',
+export const tool = {
+  name: 'smart_launch',
+};
+export const action_scope = {
+  type: 'env',
+};
+export const input_schema = {
+  type: 'object',
+  properties: {},
+};
+export const output_schema = {
+  type: 'string',
 };
 export const commands = {
   launch: {
@@ -343,14 +352,25 @@ test('actions config includes display metadata when exported', async t => {
   t.false(Object.prototype.hasOwnProperty.call(log, 'display_description'));
 });
 
-test('actions config includes cli object when exported', async t => {
+test('actions config includes canonical tool metadata when exported', async t => {
   const mod_path = path.join(tmp_root, 'smart_env.config.js');
   const cfg = await import(pathToFileURL(mod_path).href);
   const { launch } = cfg.smart_env_config.actions;
-  t.deepEqual(launch.cli, {
-    command: 'launch',
-    description: 'Launch from CLI',
+
+  t.deepEqual(launch.tool, {
+    name: 'smart_launch',
   });
+  t.deepEqual(launch.action_scope, {
+    type: 'env',
+  });
+  t.deepEqual(launch.input_schema, {
+    type: 'object',
+    properties: {},
+  });
+  t.deepEqual(launch.output_schema, {
+    type: 'string',
+  });
+  t.false(Object.prototype.hasOwnProperty.call(launch, 'cli'));
 });
 
 test('actions config includes commands when exported', async t => {
