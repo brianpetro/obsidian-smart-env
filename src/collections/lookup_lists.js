@@ -3,6 +3,24 @@ import { LookupList } from '../items/lookup_list.js';
 import { murmur_hash_32_alphanumeric } from 'smart-utils/create_hash.js';
 
 export const settings_config = {
+  get_results_action_key: {
+    name: "Lookup retrieval strategy",
+    type: "dropdown",
+    description: "Choose the action used to retrieve and rank Lookup results.",
+    options_callback: (scope) => {
+      return Object.entries(scope.env.config.actions)
+        .filter(([action_key]) => {
+          return action_key === 'lookup_list_get_results'
+            || action_key.startsWith('lookup_list_get_results_')
+          ;
+        })
+        .map(([value, action]) => ({
+          value,
+          name: action.display_name || value,
+        }))
+      ;
+    }
+  },
   results_collection_key: {
     name: "Lookup results type",
     type: "dropdown",
@@ -24,6 +42,7 @@ export const settings_config = {
 export class LookupLists extends Collection {
   static get default_settings() {
     return {
+      get_results_action_key: 'lookup_list_get_results',
       results_collection_key: 'smart_blocks',
       score_algo_key: 'similarity',
       results_limit: 20,
