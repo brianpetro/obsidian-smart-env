@@ -103,3 +103,29 @@ test('filter_and_score retains zero scores when no score is positive', (t) => {
     [0, -0.1],
   );
 });
+
+test('get_results includes the query in the lookup event', async (t) => {
+  const query = 'Inspect this lookup query';
+  const emitted_events = [];
+  const lookup_list = {
+    env: {},
+    should_post_process: false,
+    async pre_process() {},
+    filter_and_score() {
+      return [];
+    },
+    emit_event(event_key, payload) {
+      emitted_events.push({ event_key, payload });
+    },
+  };
+
+  const results = await LookupList.prototype.get_results.call(lookup_list, {
+    query,
+  });
+
+  t.deepEqual(results, []);
+  t.deepEqual(emitted_events, [{
+    event_key: 'lookup:get_results',
+    payload: { query },
+  }]);
+});

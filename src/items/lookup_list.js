@@ -29,7 +29,7 @@ export class LookupList extends CollectionItem {
     }
     // Post-process if needed
     if(this.should_post_process) results = await this.post_process(results, params);
-    this.emit_event('lookup:get_results');
+    this.emit_event('lookup:get_results', { query: params.query });
     return results;
   }
 
