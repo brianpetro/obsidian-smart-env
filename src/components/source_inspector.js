@@ -42,7 +42,6 @@ export function build_html() {
     <header class="source-inspector__header">
       <div class="source-inspector__heading">
         <div class="source-inspector__eyebrow">Source diagnostics</div>
-        <h2>Source inspector</h2>
         <p class="source-inspector__path" data-source-path></p>
         <div class="source-inspector__source-status">
           <span class="source-inspector__badge" data-source-status data-tone="loading">Analyzing...</span>
@@ -606,15 +605,8 @@ function render_source_summary(elements, result) {
   set_text(elements.source_status_detail, presentation.description);
 
   set_metric(elements, 'blocks', result.summary?.total, `${format_number(result.summary?.should_embed)} eligible`);
-  set_metric(elements, 'characters', result.char_count, 'Source content');
-  set_metric(
-    elements,
-    'lines',
-    result.line_count,
-    result.source_content_changed
-      ? 'Read once / block hashes revalidated'
-      : 'Read once / content unchanged',
-  );
+  set_metric(elements, 'characters', result.char_count, '');
+  set_metric(elements, 'lines', result.line_count, '');
 
   const eligible = Number(result.summary?.should_embed || 0);
   const embedded = Number(result.summary?.embedded || 0);

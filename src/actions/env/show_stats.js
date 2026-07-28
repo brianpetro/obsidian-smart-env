@@ -42,7 +42,7 @@ class EnvStatsModal extends Modal {
   }
 
   onOpen() {
-    this.titleEl.setText('Smart Environment stats');
+    this.titleEl.setText('Smart Environment');
     this.modalEl?.classList?.add('smart-env-stats-modal');
     this.render();
   }

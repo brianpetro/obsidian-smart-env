@@ -34,7 +34,6 @@ export function build_html() {
   return `<section class="smart-env-stats" aria-busy="true">
     <header class="smart-env-stats__header">
       <div class="smart-env-stats__heading">
-        <div class="smart-env-stats__eyebrow">Index diagnostics</div>
         <h2 class="smart-env-stats__title">Embedding health</h2>
         <p class="smart-env-stats__status" aria-live="polite">Preparing exact stats...</p>
       </div>
@@ -190,10 +189,6 @@ export function post_process(env, container, opts = {}) {
       status_el,
       `Scanned ${format_number(result.totals.scanned_items)} items in ${format_duration(result.total_time_ms)}.`,
     );
-    set_text(
-      footer_el,
-      `Calculated ${format_clock_time(result.calculated_at)} / one metadata pass per collection`,
-    );
     container.setAttribute('aria-busy', 'false');
     set_button_loading(refresh_btn, false);
   };
@@ -318,7 +313,7 @@ function render_stats(container, result) {
   if (result.calculated_at) {
     set_text(
       footer_el,
-      `Calculated ${format_clock_time(result.calculated_at)} / ${format_duration(result.total_time_ms)} total`,
+      `Calculated ${format_clock_time(result.calculated_at)}`,
     );
   }
 }
@@ -408,8 +403,7 @@ function ensure_collection_card(collections_el, collection_key) {
       ${build_collection_value_html('missing', 'Missing')}
       ${build_collection_value_html('skipped', 'Skipped')}
       ${build_collection_value_html('unexpected', 'Unexpected')}
-    </div>
-    <div class="smart-env-stats__collection-footer"></div>`;
+    </div>`;
   collections_el.appendChild(card);
   return card;
 }
@@ -463,8 +457,15 @@ function render_collection_stats(card, stats) {
     ? `${format_number(stats.embedded)} of ${format_number(stats.should_embed)} eligible`
     : `${format_number(stats.total_items)} items known`
   ;
+  const queue_detail = stats.queued
+    ? ` / ${format_number(stats.queued)} queued`
+    : ''
+  ;
 
-  set_text(card.querySelector('.smart-env-stats__collection-state'), state_detail);
+  set_text(
+    card.querySelector('.smart-env-stats__collection-state'),
+    `${state_detail}${queue_detail}`,
+  );
   set_text(card.querySelector('.smart-env-stats__coverage-value'), coverage_text);
   set_collection_value(card, 'total', stats.total_items);
   set_collection_value(card, 'eligible', stats.should_embed);
@@ -473,12 +474,6 @@ function render_collection_stats(card, stats) {
   set_collection_value(card, 'skipped', stats.should_not_embed);
   set_collection_value(card, 'unexpected', stats.extraneous_embed);
   set_progress(card, stats.coverage_percent || 0, stats.embedded, stats.should_embed);
-
-  const timing_parts = [];
-  if (stats.load_time_ms) timing_parts.push(`Loaded in ${format_duration(stats.load_time_ms)}`);
-  if (is_loaded) timing_parts.push(`Scanned in ${format_duration(stats.scan_time_ms)}`);
-  if (stats.queued) timing_parts.push(`${format_number(stats.queued)} queued`);
-  set_text(card.querySelector('.smart-env-stats__collection-footer'), timing_parts.join(' / '));
 
   if (!is_loaded) card.dataset.tone = 'muted';
   else if (stats.missing_embed) card.dataset.tone = 'attention';
