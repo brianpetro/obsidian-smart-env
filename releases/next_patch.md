@@ -201,3 +201,6 @@ Improved: refine block embedding logic to exclude deselected blocks and added te
 
 
 Added: source data optimization functionality with backup validation and error handling
+
+
+Added: force re-import functionality to source inspector
