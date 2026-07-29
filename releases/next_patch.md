@@ -185,3 +185,13 @@ Add lookup_list_get_results action and integrate into settings configuration
 
 
 Added: block read tool action
+
+
+Improved: environment stats inspector with detailed diagnostics and improved UI
+
+- Added a new inspector section for inspecting skipped and unexpected items in collections.
+- Implemented search functionality and reason filtering in the inspector.
+- Improved styling for buttons and inputs within the inspector for better accessibility and usability.
+- Updated collection cards to allow inspection of items, with appropriate aria attributes for accessibility.
+- Enhanced loading states and error handling in the inspector.
+- Refactored related functions for better code organization and readability.
