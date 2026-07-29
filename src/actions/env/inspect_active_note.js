@@ -100,6 +100,33 @@ class SmartNoteInspectModal extends Modal {
 }
 
 /**
+ * Force an immediate source re-import through the collection pipeline.
+ *
+ * @param {object} source
+ * @returns {Promise<void>}
+ */
+export async function force_re_import_source(source) {
+  const source_collection = source?.collection || source?.env?.smart_sources;
+  if (!source?.key) {
+    throw new Error('Cannot re-import a source without a key');
+  }
+  if (
+    typeof source_collection?.queue_source_re_import !== 'function'
+    || typeof source_collection?.run_re_import !== 'function'
+  ) {
+    throw new Error('Source re-import is unavailable');
+  }
+
+  source_collection.queue_source_re_import(source, {
+    event_source: 'source_inspector.force_re_import',
+  });
+  await source_collection.run_re_import();
+  if (source._queue_import) {
+    throw new Error('Source re-import did not complete and remains queued');
+  }
+}
+
+/**
  * Read a source once and build lightweight source-inspector records.
  *
  * Block content and embed inputs are intentionally omitted from the initial

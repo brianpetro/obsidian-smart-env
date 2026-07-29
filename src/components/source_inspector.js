@@ -1,6 +1,7 @@
 import inspector_css from './source_inspector.css';
 import { copy_to_clipboard } from '../utils/copy_to_clipboard.js';
 import {
+  force_re_import_source,
   load_source_inspector_records,
   materialize_block_content,
 } from '../actions/env/inspect_active_note.js';
@@ -51,6 +52,9 @@ export function build_html() {
       <div class="source-inspector__header-actions">
         <button type="button" data-action="open-source">Open note</button>
         <button type="button" data-action="refresh">Refresh</button>
+        <button type="button" data-action="force-re-import" title="Re-read this source and rebuild its indexed blocks even when unchanged.">
+          Force re-import
+        </button>
       </div>
     </header>
 
@@ -146,28 +150,55 @@ export function post_process(source, container, opts = {}) {
   set_text(elements.source_path, source?.path || source?.key || 'Unknown source');
   if (typeof source?.open !== 'function') elements.open_source_btn.hidden = true;
 
-  const refresh = async () => {
+  const refresh = async ({ force_re_import = false } = {}) => {
     const current_load_id = ++state.load_id;
     state.filter_id += 1;
     state.load_result = null;
     state.filtered_records = [];
     state.visible_count = PAGE_SIZE;
+    const source_data_loading_text = force_re_import
+      ? 'Re-importing source data...'
+      : 'Refreshing source data...'
+    ;
     delete elements.source_data_pre.dataset.loaded;
     elements.source_data_pre.textContent = elements.source_data_details.open
-      ? 'Refreshing source data...'
+      ? source_data_loading_text
       : 'Expand to inspect persisted source metadata.'
     ;
     elements.source_status.dataset.tone = 'loading';
-    set_text(elements.source_status, 'Analyzing...');
-    set_text(elements.source_status_detail, 'Reading source once...');
-    set_text(elements.results_summary, 'Loading blocks...');
+    set_text(elements.source_status, force_re_import ? 'Re-importing...' : 'Analyzing...');
+    set_text(
+      elements.source_status_detail,
+      force_re_import
+        ? 'Rebuilding source data before inspection...'
+        : 'Reading source once...',
+    );
+    set_text(
+      elements.results_summary,
+      force_re_import ? 'Re-importing source...' : 'Loading blocks...',
+    );
     elements.blocks_container.innerHTML = build_loading_html(
-      'Reading source and indexing block metadata...',
+      force_re_import
+        ? 'Re-importing source and rebuilding indexed blocks...'
+        : 'Reading source and indexing block metadata...',
     );
     elements.load_more_btn.hidden = true;
-    set_loading_state(container, elements, true);
+    set_loading_state(container, elements, true, {
+      active_action: force_re_import ? 'force_re_import' : 'refresh',
+    });
 
     try {
+      if (force_re_import) {
+        await force_re_import_source(source);
+        if (state.disposed || current_load_id !== state.load_id) return;
+        set_text(elements.source_status, 'Analyzing...');
+        set_text(elements.source_status_detail, 'Reading freshly imported source once...');
+        set_text(elements.results_summary, 'Loading refreshed blocks...');
+        elements.blocks_container.innerHTML = build_loading_html(
+          'Reading freshly imported source metadata...',
+        );
+      }
+
       const result = await load_source_inspector_records(source, {
         is_cancelled: () => state.disposed || current_load_id !== state.load_id,
         on_progress: ({ processed, total }) => {
@@ -206,17 +237,25 @@ export function post_process(source, container, opts = {}) {
     }
   };
 
-  const handle_refresh = () => {
+  const start_refresh = (params = {}) => {
     if (state.start_timeout) {
       clearTimeout(state.start_timeout);
       state.start_timeout = null;
     }
-    refresh().catch((error) => {
+    refresh(params).catch((error) => {
       if (state.disposed) return;
       console.error('[source_inspector] Failed to refresh source inspector', error);
       render_error(elements, error);
       set_loading_state(container, elements, false);
     });
+  };
+
+  const handle_refresh = () => {
+    start_refresh();
+  };
+
+  const handle_force_re_import = () => {
+    start_refresh({ force_re_import: true });
   };
 
   const handle_open_source = () => {
@@ -276,6 +315,7 @@ export function post_process(source, container, opts = {}) {
   };
 
   bind_event(elements.refresh_btn, 'click', handle_refresh, cleanup_fns);
+  bind_event(elements.force_re_import_btn, 'click', handle_force_re_import, cleanup_fns);
   bind_event(elements.open_source_btn, 'click', handle_open_source, cleanup_fns);
   bind_event(elements.search_input, 'input', handle_search_input, cleanup_fns);
   bind_event(elements.filters, 'click', handle_filter_click, cleanup_fns);
@@ -310,6 +350,7 @@ function get_elements(container) {
     blocks_detail: container.querySelector('[data-blocks-detail]'),
     copy_source_data_btn: container.querySelector('[data-action="copy-source-data"]'),
     filters: container.querySelector('.source-inspector__filters'),
+    force_re_import_btn: container.querySelector('[data-action="force-re-import"]'),
     load_more_btn: container.querySelector('[data-action="load-more"]'),
     load_timing: container.querySelector('[data-load-timing]'),
     open_source_btn: container.querySelector('[data-action="open-source"]'),
@@ -680,12 +721,25 @@ function update_active_filter(filters, active_filter) {
  * @param {HTMLElement} container
  * @param {object} elements
  * @param {boolean} loading
+ * @param {object} [params]
+ * @param {'refresh'|'force_re_import'} [params.active_action]
  * @returns {void}
  */
-function set_loading_state(container, elements, loading) {
+function set_loading_state(container, elements, loading, params = {}) {
+  const active_action = params.active_action || '';
   container.setAttribute('aria-busy', String(loading));
   elements.refresh_btn.disabled = loading;
-  elements.refresh_btn.textContent = loading ? 'Refreshing...' : 'Refresh';
+  elements.refresh_btn.textContent = loading && active_action === 'refresh'
+    ? 'Refreshing...'
+    : 'Refresh'
+  ;
+  if (elements.force_re_import_btn) {
+    elements.force_re_import_btn.disabled = loading;
+    elements.force_re_import_btn.textContent = loading && active_action === 'force_re_import'
+      ? 'Re-importing...'
+      : 'Force re-import'
+    ;
+  }
   elements.search_input.disabled = loading;
   elements.filters.querySelectorAll('button').forEach((button) => {
     button.disabled = loading;
