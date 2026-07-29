@@ -198,3 +198,6 @@ Improved: environment stats inspector with detailed diagnostics and improved UI
 
 
 Improved: refine block embedding logic to exclude deselected blocks and added tests for embedding selection
+
+
+Added: source data optimization functionality with backup validation and error handling
