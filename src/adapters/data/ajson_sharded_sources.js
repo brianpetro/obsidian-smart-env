@@ -346,6 +346,361 @@ export class AjsonShardedSourcesDataAdapter extends AjsonSingleFileCollectionDat
     notice = new Notice(frag, 0);
   }
 
+  async optimize_source_data() {
+    const plan = await this.write_optimized_source_data_files();
+    this.show_finish_source_data_optimization_notice(plan);
+    return plan.stats;
+  }
+
+  async write_optimized_source_data_files() {
+    const block_collection = this.env.smart_blocks;
+    const source_embeddings = this.collection.embeddings;
+    const block_embeddings = block_collection?.embeddings;
+
+    if (this.collection?._defer_embed_saves || block_collection?._defer_embed_saves) {
+      throw new Error('Cannot optimize source data while embedding saves are deferred.');
+    }
+    if (!source_embeddings || !block_embeddings) {
+      throw new Error('Cannot optimize source data without source and block embeddings.');
+    }
+
+    await assert_no_source_data_optimization_backups([
+      source_embeddings,
+      block_embeddings,
+    ]);
+
+    const persistent_sources = Object.values(this.collection.items || {})
+      .filter((source) => {
+        return source
+          && !source.deleted
+          && source.source_adapter?.should_persist !== false
+        ;
+      })
+    ;
+
+    for (const source of persistent_sources) {
+      source.ensure_block_embedding_selection?.();
+      if (source.data.block_embedding_selection?.requires_reimport === true) {
+        throw new Error(`Cannot optimize source data while ${source.key} requires re-import.`);
+      }
+      assert_optimization_embedding_data(source.data, source.key);
+      for (const sub_key in source.data.blocks_data || {}) {
+        assert_optimization_embedding_data(
+          source.data.blocks_data[sub_key],
+          `${source.key}${sub_key}`,
+        );
+      }
+    }
+
+    source_embeddings.clear_save_timeout();
+    block_embeddings.clear_save_timeout();
+    await source_embeddings.save_dirty_files();
+    await block_embeddings.save_dirty_files();
+
+    await block_collection?.process_save_queue?.();
+    await this.collection.process_save_queue?.();
+
+    await source_embeddings.load_vectors();
+    await block_embeddings.load_vectors();
+
+    const source_file_info = source_embeddings.get_active_file_info();
+    const block_file_info = block_embeddings.get_active_file_info();
+    const old_source_files = await this.list_ajson_data_files({ require_base: false });
+    const vector_files = [
+      get_optimization_vector_file(source_embeddings, source_file_info),
+      get_optimization_vector_file(block_embeddings, block_file_info),
+    ];
+
+    for (const vector_file of vector_files) {
+      if (await vector_file.fs.exists(vector_file.backup_path)) {
+        throw new Error(`Source data optimization backup already exists: ${vector_file.backup_path}`);
+      }
+    }
+    for (const old_file of old_source_files) {
+      const backup_path = `${old_file.path}.backup`;
+      if (await this.fs.exists(backup_path)) {
+        throw new Error(`Source data optimization backup already exists: ${backup_path}`);
+      }
+    }
+
+    const optimized_source_data = new Map();
+    const source_retained_rows = new Map();
+    const block_retained_rows = new Map();
+    let unexpected_refs_removed = 0;
+
+    for (const source of persistent_sources) {
+      optimized_source_data.set(
+        source.key,
+        JSON.parse(JSON.stringify(source.data || {})),
+      );
+
+      const source_ref = get_current_optimization_ref(
+        source,
+        source_embeddings,
+        source_file_info,
+      );
+      if (source.should_embed === true && source_ref) {
+        source_retained_rows.set(source.key, source_ref.file_i);
+      } else if (source.should_embed !== true && source_ref) {
+        unexpected_refs_removed += 1;
+      }
+
+      for (const sub_key in source.data.blocks_data || {}) {
+        const block_key = `${source.key}${sub_key}`;
+        const block = block_collection.get?.(block_key);
+        const should_embed = Boolean(
+          block
+          && !block.deleted
+          && source.data.blocks_data[sub_key].should_embed === true
+        );
+        const block_ref = block
+          ? get_current_optimization_ref(block, block_embeddings, block_file_info)
+          : null
+        ;
+
+        if (should_embed && block_ref) {
+          block_retained_rows.set(block_key, block_ref.file_i);
+        } else if (!should_embed && block_ref) {
+          unexpected_refs_removed += 1;
+        }
+      }
+    }
+
+    const source_vectors = build_optimized_vectors(
+      source_embeddings,
+      source_file_info,
+      source_retained_rows.values(),
+    );
+    const block_vectors = build_optimized_vectors(
+      block_embeddings,
+      block_file_info,
+      block_retained_rows.values(),
+    );
+
+    let removed_refs = 0;
+    let removed_history_refs = 0;
+    for (const source of persistent_sources) {
+      const source_data = optimized_source_data.get(source.key);
+      const source_old_file_i = source_retained_rows.get(source.key);
+      const source_new_file_i = Number.isInteger(source_old_file_i)
+        ? source_vectors.row_map.get(source_old_file_i)
+        : null
+      ;
+      const source_rewrite = rewrite_optimized_embedding_data(
+        source_data,
+        source_file_info,
+        source_new_file_i,
+      );
+      removed_refs += source_rewrite.removed_refs;
+      removed_history_refs += source_rewrite.removed_history_refs;
+
+      for (const sub_key in source_data.blocks_data || {}) {
+        const block_key = `${source.key}${sub_key}`;
+        const block_old_file_i = block_retained_rows.get(block_key);
+        const block_new_file_i = Number.isInteger(block_old_file_i)
+          ? block_vectors.row_map.get(block_old_file_i)
+          : null
+        ;
+        const block_rewrite = rewrite_optimized_embedding_data(
+          source_data.blocks_data[sub_key],
+          block_file_info,
+          block_new_file_i,
+        );
+        removed_refs += block_rewrite.removed_refs;
+        removed_history_refs += block_rewrite.removed_history_refs;
+      }
+    }
+
+    vector_files[0].vectors = source_vectors.vectors;
+    vector_files[1].vectors = block_vectors.vectors;
+    for (const vector_file of vector_files) {
+      await vector_file.embeddings.ensure_data_dir();
+      await vector_file.fs.write_binary(
+        vector_file.temporary_path,
+        vector_file.vectors.buffer,
+      );
+      vector_file.expected_bytes = vector_file.vectors.byteLength;
+      const stat = await vector_file.fs.stat(vector_file.temporary_path);
+      if (Number(stat.size || 0) !== vector_file.expected_bytes) {
+        throw new Error(`Failed to validate optimized vector file ${vector_file.temporary_path}.`);
+      }
+      delete vector_file.vectors;
+    }
+
+    const new_source_files = [];
+    let lines = [];
+    let shard_size_bytes = 0;
+    let file_i = 0;
+
+    const flush_lines = async () => {
+      if (!lines.length) return;
+
+      const canonical_path = this.get_ajson_file_path(file_i);
+      const temporary_path = `${canonical_path}.optimize.tmp`;
+      const content = lines.join('\n');
+      await this.fs.write(temporary_path, content);
+      const stat = await this.fs.stat(temporary_path);
+      if (Number(stat.size || 0) !== shard_size_bytes) {
+        throw new Error(`Failed to validate optimized source data file ${temporary_path}.`);
+      }
+      new_source_files.push({
+        fs: this.fs,
+        canonical_path,
+        temporary_path,
+        expected_bytes: shard_size_bytes,
+      });
+      lines = [];
+      shard_size_bytes = 0;
+      file_i += 1;
+      await yield_to_event_loop();
+    };
+
+    for (const source of persistent_sources) {
+      const line = this.get_source_ajson({
+        collection_key: this.collection.collection_key,
+        key: source.key,
+        data: optimized_source_data.get(source.key),
+      });
+      const line_size_bytes = get_utf8_byte_length(line);
+      const separator_size_bytes = lines.length ? 1 : 0;
+      if (
+        lines.length
+        && shard_size_bytes + separator_size_bytes + line_size_bytes > this.max_bytes_per_shard
+      ) {
+        await flush_lines();
+      }
+
+      shard_size_bytes += (lines.length ? 1 : 0) + line_size_bytes;
+      lines.push(line);
+    }
+
+    await flush_lines();
+    if (!new_source_files.length) {
+      const canonical_path = this.get_ajson_file_path(0);
+      const temporary_path = `${canonical_path}.optimize.tmp`;
+      await this.fs.write(temporary_path, '');
+      const stat = await this.fs.stat(temporary_path);
+      if (Number(stat.size || 0) !== 0) {
+        throw new Error(`Failed to validate optimized source data file ${temporary_path}.`);
+      }
+      new_source_files.push({
+        fs: this.fs,
+        canonical_path,
+        temporary_path,
+        expected_bytes: 0,
+      });
+    }
+
+    return {
+      vector_files,
+      old_source_files: old_source_files.map((file) => ({
+        fs: this.fs,
+        canonical_path: file.path,
+        backup_path: `${file.path}.backup`,
+      })),
+      new_source_files,
+      stats: {
+        unexpected_refs_removed,
+        removed_refs,
+        removed_history_refs,
+        retained_source_rows: source_vectors.row_map.size,
+        retained_block_rows: block_vectors.row_map.size,
+        source_vector_bytes: source_vectors.vectors.byteLength,
+        block_vector_bytes: block_vectors.vectors.byteLength,
+        source_shards: new_source_files.length,
+      },
+    };
+  }
+
+  show_finish_source_data_optimization_notice(plan) {
+    if (typeof document === 'undefined') return;
+
+    const frag = document.createDocumentFragment();
+    frag.createEl('p', {
+      text: 'Optimized source data is ready. '
+        + `${plan.stats.unexpected_refs_removed} unexpected embedding references will be removed. `
+        + 'Current source and vector files will be retained as .backup files. '
+        + 'Do not change sources or the embedding model before finishing.',
+    });
+    const finish_btn = frag.createEl('button', { text: 'Finish optimization' });
+
+    finish_btn.addEventListener('click', async () => {
+      finish_btn.disabled = true;
+      finish_btn.textContent = 'Finishing...';
+
+      try {
+        await this.finish_source_data_optimization(plan);
+      } catch (error) {
+        finish_btn.textContent = 'Finishing failed';
+        console.warn('[smart_env] Failed to finish source data optimization', {
+          error,
+          plan,
+        });
+        new Notice(
+          'Failed to finish source data optimization. Close Obsidian and restore the complete .backup file set before restarting.',
+          0,
+        );
+      }
+    });
+
+    new Notice(frag, 0);
+  }
+
+  async finish_source_data_optimization(plan) {
+    const source_embeddings = this.collection.embeddings;
+    const block_embeddings = this.env.smart_blocks?.embeddings;
+
+    await assert_no_source_data_optimization_backups([
+      source_embeddings,
+      block_embeddings,
+    ]);
+
+    for (const file of [...plan.vector_files, ...plan.new_source_files]) {
+      if (!(await file.fs.exists(file.temporary_path))) {
+        throw new Error(
+          `Source data optimization temporary file is missing: ${file.temporary_path}`
+        );
+      }
+
+      const stat = await file.fs.stat(file.temporary_path);
+      if (Number(stat.size || 0) !== file.expected_bytes) {
+        throw new Error(
+          `Failed to validate source data optimization temporary file ${file.temporary_path}.`
+        );
+      }
+    }
+
+    await Promise.all([
+      source_embeddings?.unload?.(),
+      block_embeddings?.unload?.(),
+    ]);
+
+    for (const file of plan.vector_files) {
+      if (await file.fs.exists(file.backup_path)) {
+        throw new Error(`Source data optimization backup already exists: ${file.backup_path}`);
+      }
+      if (await file.fs.exists(file.canonical_path)) {
+        await rename_file(file.fs, file.canonical_path, file.backup_path);
+      }
+      await rename_file(file.fs, file.temporary_path, file.canonical_path);
+    }
+
+    for (const file of plan.old_source_files) {
+      if (await file.fs.exists(file.backup_path)) {
+        throw new Error(`Source data optimization backup already exists: ${file.backup_path}`);
+      }
+      if (await file.fs.exists(file.canonical_path)) {
+        await rename_file(file.fs, file.canonical_path, file.backup_path);
+      }
+    }
+
+    for (const file of plan.new_source_files) {
+      await rename_file(file.fs, file.temporary_path, file.canonical_path);
+    }
+
+    globalThis.window.location.reload();
+  }
+
   async process_save_queue() {
     if (this.collection?._defer_embed_saves) return;
     return await this.queue_ajson_write(() => this._process_save_queue());
@@ -1293,6 +1648,91 @@ function get_sub_key_from_block_ref(source_key, block_ref = '') {
   return `#${parts.slice(1).join('#')}`;
 }
 
+function assert_optimization_embedding_data(data = {}, item_key = '') {
+  if (data.embeddings || data.last_embed || has_legacy_embedding_refs(data)) {
+    throw new Error(`Cannot optimize source data with legacy embedding refs: ${item_key}`);
+  }
+}
+
+function get_current_optimization_ref(item, embeddings, file_info) {
+  const ref = item.data?.embedding?.default?.[file_info.model_fingerprint];
+  if (!ref) return null;
+  if (!embeddings.has_current_vector_ref(item, undefined, file_info)) return null;
+  return ref;
+}
+
+function build_optimized_vectors(embeddings, file_info, retained_file_is) {
+  const old_file_is = Array.from(new Set(retained_file_is))
+    .sort((left, right) => left - right)
+  ;
+  const dims = Number(file_info.dims || 0);
+  if (old_file_is.length && !dims) {
+    throw new Error(`Cannot optimize vector file ${file_info.file} without dimensions.`);
+  }
+
+  const vectors = new Float32Array(old_file_is.length * dims);
+  const row_map = new Map();
+  old_file_is.forEach((old_file_i, new_file_i) => {
+    const vec = embeddings.get_vector(file_info.file, old_file_i);
+    if (!vec || vec.length !== dims) {
+      throw new Error(`Cannot read vector row ${old_file_i} from ${file_info.file}.`);
+    }
+    vectors.set(vec, new_file_i * dims);
+    row_map.set(old_file_i, new_file_i);
+  });
+
+  return { vectors, row_map };
+}
+
+function rewrite_optimized_embedding_data(data = {}, file_info, next_file_i = null) {
+  const embedding = data.embedding;
+  if (!embedding) return { removed_refs: 0, removed_history_refs: 0 };
+
+  const refs = embedding.default;
+  if (refs?.file) {
+    throw new Error('Cannot optimize source data with legacy embedding refs.');
+  }
+
+  let removed_refs = 0;
+  if (refs) {
+    for (const model_fingerprint in refs) {
+      const ref = refs[model_fingerprint];
+      if (ref?.file !== file_info.file) continue;
+
+      if (
+        model_fingerprint === file_info.model_fingerprint
+        && Number.isInteger(next_file_i)
+      ) {
+        ref.file_i = next_file_i;
+        continue;
+      }
+
+      delete refs[model_fingerprint];
+      removed_refs += 1;
+    }
+    if (!Object.keys(refs).length) delete embedding.default;
+  }
+
+  const history = Array.isArray(embedding.history) ? embedding.history : [];
+  const next_history = history.filter((ref) => ref?.file !== file_info.file);
+  const removed_history_refs = history.length - next_history.length;
+  if (Array.isArray(embedding.history)) embedding.history = next_history;
+
+  return { removed_refs, removed_history_refs };
+}
+
+function get_optimization_vector_file(embeddings, file_info) {
+  const canonical_path = embeddings.get_file_path(file_info.file);
+  return {
+    embeddings,
+    fs: embeddings.data_fs,
+    canonical_path,
+    temporary_path: `${canonical_path}.optimize.tmp`,
+    backup_path: `${canonical_path}.backup`,
+    expected_bytes: 0,
+  };
+}
+
 function require_ajson_text(raw_data, path) {
   if (typeof raw_data === 'string') return raw_data;
   const detail = raw_data?.error ? `: ${raw_data.error}` : '';
@@ -1343,6 +1783,26 @@ async function replace_file_with_temp(fs, temp_path, final_path) {
   }
 
   if (await fs.exists(backup_path)) await remove_file(fs, backup_path);
+}
+
+async function assert_no_source_data_optimization_backups(embeddings_list = []) {
+  for (const embeddings of embeddings_list) {
+    const fs = embeddings.data_fs;
+    const data_dir = embeddings.data_dir;
+    if (!(await fs.exists(data_dir))) continue;
+
+    const files = await fs.list(data_dir);
+    for (const file of files || []) {
+      const file_path = file?.path || file?.name || file || '';
+      if (!get_path_basename(file_path).endsWith('.backup')) continue;
+
+      const backup_path = file_path.includes('/') || file_path.includes('\\')
+        ? file_path
+        : `${data_dir}/${file_path}`
+      ;
+      throw new Error(`Source data optimization backup already exists: ${backup_path}`);
+    }
+  }
 }
 
 async function rename_file(fs, old_path, new_path) {

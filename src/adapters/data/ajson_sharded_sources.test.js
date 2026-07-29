@@ -31,6 +31,87 @@ function create_embeddings() {
   };
 }
 
+function create_optimization_embeddings(fs, data_dir, values = [], dims = 2) {
+  const active_file = 'mf_test';
+  const vectors = values instanceof Float32Array
+    ? values
+    : new Float32Array(values)
+  ;
+
+  return {
+    active_file,
+    model_fingerprint: active_file,
+    data_dir,
+    data_fs: fs,
+    unloaded: false,
+    clear_save_timeout() {},
+    async save_dirty_files() {},
+    async load_vectors() { return vectors; },
+    async ensure_data_dir() {
+      if (!(await fs.exists(data_dir))) await fs.mkdir(data_dir);
+    },
+    async unload() { this.unloaded = true; },
+    get_active_file_info() {
+      return {
+        model_fingerprint: active_file,
+        file: active_file,
+        dims,
+        value_count: vectors.length,
+      };
+    },
+    get_file_path(file = active_file) {
+      return `${data_dir}/${file}`;
+    },
+    get_vector(file, file_i) {
+      if (file !== active_file || !Number.isInteger(file_i) || file_i < 0) return undefined;
+      const start = file_i * dims;
+      const end = start + dims;
+      if (end > vectors.length) return undefined;
+      return vectors.subarray(start, end);
+    },
+    has_current_vector_ref(item, _type, file_info = this.get_active_file_info()) {
+      const ref = item.data?.embedding?.default?.[file_info.model_fingerprint];
+      if (ref?.file !== file_info.file || !Number.isInteger(ref.file_i) || ref.file_i < 0) return false;
+      if (!ref.read_hash || ref.read_hash !== item.read_hash) return false;
+      return (ref.file_i + 1) * file_info.dims <= file_info.value_count;
+    },
+  };
+}
+
+function create_embedding_data(file_i, read_hash, params = {}) {
+  return {
+    default: {
+      mf_test: {
+        file: 'mf_test',
+        file_i,
+        read_hash,
+        at: params.at || 1,
+      },
+      ...(params.other_refs || {}),
+    },
+    history: params.history || [],
+  };
+}
+
+function get_float_values(files, path) {
+  return Array.from(new Float32Array(files.get(path)));
+}
+
+function parse_optimized_sources(plan, files) {
+  const source_data = {};
+  for (const file of plan.new_source_files) {
+    const content = files.get(file.temporary_path) || '';
+    for (const line of content.split('\n')) {
+      if (!line) continue;
+      const parsed = JSON.parse(`{${line.replace(/,\s*$/, '')}}`);
+      for (const [key, data] of Object.entries(parsed)) {
+        source_data[key.slice('smart_sources:'.length)] = data;
+      }
+    }
+  }
+  return source_data;
+}
+
 function create_adapter(params = {}) {
   const files = params.files || new Map();
   const directories = params.directories || new Set();
@@ -43,6 +124,7 @@ function create_adapter(params = {}) {
     on_rename: null,
     on_stat: null,
     on_write: null,
+    on_write_binary: null,
     adapter: {
       async append(path, content) {
         operations.push(`append:${path}`);
@@ -80,12 +162,25 @@ function create_adapter(params = {}) {
       await this.on_read?.(path);
       return files.get(path) || '';
     },
+    async read_binary(path) {
+      operations.push(`read_binary:${path}`);
+      const content = files.get(path);
+      return content?.slice?.(0) || content;
+    },
+    async write_binary(path, buffer) {
+      operations.push(`write_binary:${path}`);
+      files.set(path, buffer.slice(0));
+      await this.on_write_binary?.(path, buffer);
+    },
     async stat(path) {
       operations.push(`stat:${path}`);
       await this.on_stat?.(path);
       const content = files.get(path);
       return {
-        size: typeof content === 'string' ? get_utf8_byte_length(content) : 1,
+        size: typeof content === 'string'
+          ? get_utf8_byte_length(content)
+          : content?.byteLength || 0
+        ,
       };
     },
     async list(path) {
@@ -118,6 +213,8 @@ function create_adapter(params = {}) {
   const block_collection = {
     items: {},
     item_class_name: 'SmartBlock',
+    data_dir: 'smart_blocks',
+    data_fs: fs,
     item_type: TestBlock,
     settings: {},
     embeddings: create_embeddings(),
@@ -127,6 +224,7 @@ function create_adapter(params = {}) {
     set(block) {
       this.items[block.key] = block;
     },
+    async process_save_queue() {},
   };
   const env = {
     data_fs: fs,
@@ -144,6 +242,7 @@ function create_adapter(params = {}) {
     get(key) {
       return this.items[key];
     },
+    async process_save_queue() {},
   };
 
   const adapter = new AjsonShardedSourcesDataAdapter(collection);
@@ -177,7 +276,9 @@ function create_source(collection, params = {}) {
     },
     file: params.file || null,
     source_adapter: params.source_adapter,
-    should_embed: false,
+    should_embed: params.should_embed === true,
+    read_hash: params.read_hash || '',
+    deleted: params.deleted === true,
     _queue_embed: false,
     _queue_save: params.queue_save === true,
     get blocks_initialized() {
@@ -1021,4 +1122,587 @@ test('Compaction does not clear changes queued during its rewrite', async (t) =>
 
   t.true(source._queue_save);
   t.true(block._queue_save);
+});
+
+
+test('Source Data Optimize persists vectors before embedding refs', async (t) => {
+  const { adapter, block_collection, collection, fs } = create_adapter();
+  const order = [];
+  collection.embeddings = create_optimization_embeddings(fs, 'smart_sources', []);
+  block_collection.embeddings = create_optimization_embeddings(fs, 'smart_blocks', []);
+  collection.embeddings.save_dirty_files = async () => { order.push('source vectors'); };
+  block_collection.embeddings.save_dirty_files = async () => { order.push('block vectors'); };
+  block_collection.process_save_queue = async () => { order.push('block refs'); };
+  collection.process_save_queue = async () => { order.push('source refs'); };
+
+  await adapter.write_optimized_source_data_files();
+
+  t.deepEqual(order, [
+    'source vectors',
+    'block vectors',
+    'block refs',
+    'source refs',
+  ]);
+});
+
+test('Source Data Optimize does not persist refs or temporary files when vector persistence fails', async (t) => {
+  const {
+    adapter,
+    block_collection,
+    collection,
+    fs,
+    operations,
+  } = create_adapter();
+  const order = [];
+  collection.embeddings = create_optimization_embeddings(fs, 'smart_sources', []);
+  block_collection.embeddings = create_optimization_embeddings(fs, 'smart_blocks', []);
+  collection.embeddings.save_dirty_files = async () => {
+    order.push('source vectors');
+    throw new Error('vector save failed');
+  };
+  block_collection.embeddings.save_dirty_files = async () => { order.push('block vectors'); };
+  block_collection.process_save_queue = async () => { order.push('block refs'); };
+  collection.process_save_queue = async () => { order.push('source refs'); };
+
+  await t.throwsAsync(
+    () => adapter.write_optimized_source_data_files(),
+    { message: 'vector save failed' },
+  );
+
+  t.deepEqual(order, ['source vectors']);
+  t.false(operations.some((operation) => operation.includes('.optimize.tmp')));
+});
+
+test('Source Data Optimize rejects any existing backup in either data directory', async (t) => {
+  for (const backup_path of [
+    'smart_sources/smart_sources_9.ajson.backup',
+    'smart_blocks/mf_old.backup',
+  ]) {
+    const {
+      adapter,
+      block_collection,
+      collection,
+      files,
+      fs,
+      operations,
+    } = create_adapter();
+    collection.embeddings = create_optimization_embeddings(fs, 'smart_sources', []);
+    block_collection.embeddings = create_optimization_embeddings(fs, 'smart_blocks', []);
+    files.set(backup_path, new ArrayBuffer(0));
+
+    await t.throwsAsync(
+      () => adapter.write_optimized_source_data_files(),
+      { message: `Source data optimization backup already exists: ${backup_path}` },
+    );
+
+    t.false(operations.some((operation) => operation.includes('.optimize.tmp')));
+  }
+});
+
+test('Finish optimization rechecks for backups before unloading or renaming', async (t) => {
+  const {
+    adapter,
+    block_collection,
+    collection,
+    files,
+    fs,
+    operations,
+  } = create_adapter();
+  collection.embeddings = create_optimization_embeddings(fs, 'smart_sources', []);
+  block_collection.embeddings = create_optimization_embeddings(fs, 'smart_blocks', []);
+
+  const plan = await adapter.write_optimized_source_data_files();
+  const backup_path = 'smart_sources/smart_sources_9.ajson.backup';
+  files.set(backup_path, 'stale backup');
+  const rename_count = operations.filter((operation) => operation.startsWith('rename:')).length;
+  let reload_count = 0;
+  const previous_window = globalThis.window;
+  globalThis.window = {
+    location: {
+      reload() { reload_count += 1; },
+    },
+  };
+
+  try {
+    await t.throwsAsync(
+      () => adapter.finish_source_data_optimization(plan),
+      { message: `Source data optimization backup already exists: ${backup_path}` },
+    );
+  } finally {
+    if (previous_window === undefined) delete globalThis.window;
+    else globalThis.window = previous_window;
+  }
+
+  t.false(collection.embeddings.unloaded);
+  t.false(block_collection.embeddings.unloaded);
+  t.is(
+    operations.filter((operation) => operation.startsWith('rename:')).length,
+    rename_count,
+  );
+  t.is(reload_count, 0);
+});
+
+test('Finish optimization validates temporary file sizes before unloading or renaming', async (t) => {
+  const {
+    adapter,
+    block_collection,
+    collection,
+    files,
+    fs,
+    operations,
+  } = create_adapter();
+  collection.embeddings = create_optimization_embeddings(fs, 'smart_sources', [1, 2]);
+  block_collection.embeddings = create_optimization_embeddings(fs, 'smart_blocks', []);
+  const source = create_source(collection, {
+    should_embed: true,
+    read_hash: 'source-hash',
+    data: {
+      blocks_data: {},
+      embedding: create_embedding_data(0, 'source-hash'),
+    },
+  });
+  source.source_adapter = { should_persist: true };
+
+  const source_vector_path = collection.embeddings.get_file_path();
+  const block_vector_path = block_collection.embeddings.get_file_path();
+  files.set(source_vector_path, new Float32Array([1, 2]).buffer);
+  files.set(block_vector_path, new ArrayBuffer(0));
+  files.set(adapter.get_ajson_file_path(0), 'old base');
+
+  const plan = await adapter.write_optimized_source_data_files();
+  const temporary_path = plan.vector_files[0].temporary_path;
+  files.set(temporary_path, new ArrayBuffer(0));
+  const rename_count = operations.filter((operation) => operation.startsWith('rename:')).length;
+  let reload_count = 0;
+  const previous_window = globalThis.window;
+  globalThis.window = {
+    location: {
+      reload() { reload_count += 1; },
+    },
+  };
+
+  try {
+    await t.throwsAsync(
+      () => adapter.finish_source_data_optimization(plan),
+      {
+        message: `Failed to validate source data optimization temporary file ${temporary_path}.`,
+      },
+    );
+  } finally {
+    if (previous_window === undefined) delete globalThis.window;
+    else globalThis.window = previous_window;
+  }
+
+  t.false(collection.embeddings.unloaded);
+  t.false(block_collection.embeddings.unloaded);
+  t.is(
+    operations.filter((operation) => operation.startsWith('rename:')).length,
+    rename_count,
+  );
+  t.true(files.has(source_vector_path));
+  t.false(files.has(`${source_vector_path}.backup`));
+  t.is(reload_count, 0);
+});
+
+test('Source Data Optimize writes dense vectors and remapped temporary source data without mutating live data', async (t) => {
+  const {
+    adapter,
+    block_collection,
+    collection,
+    files,
+    fs,
+  } = create_adapter();
+  collection.embeddings = create_optimization_embeddings(
+    fs,
+    'smart_sources',
+    [10, 11, 20, 21, 30, 31],
+  );
+  block_collection.embeddings = create_optimization_embeddings(
+    fs,
+    'smart_blocks',
+    [100, 101, 200, 201, 300, 301],
+  );
+
+  const source_a = create_source(collection, {
+    key: 'Notes/A.md',
+    should_embed: true,
+    read_hash: 'source-a',
+    data: {
+      blocks_data: {
+        '#Selected': {
+          key: 'Notes/A.md#Selected',
+          lines: [1, 2],
+          size: 300,
+          should_embed: true,
+          embedding: create_embedding_data(2, 'block-selected', {
+            history: [
+              { file: 'mf_test', file_i: 0, read_hash: 'old', at: 1 },
+            ],
+          }),
+        },
+        '#Inactive': {
+          key: 'Notes/A.md#Inactive',
+          lines: [3, 4],
+          size: 300,
+          should_embed: false,
+          embedding: create_embedding_data(1, 'block-inactive', {
+            other_refs: {
+              mf_old: {
+                file: 'mf_old',
+                file_i: 7,
+                read_hash: 'old-block',
+                at: 1,
+              },
+            },
+          }),
+        },
+        '#Stale': {
+          key: 'Notes/A.md#Stale',
+          lines: [5, 6],
+          size: 300,
+          should_embed: true,
+          embedding: create_embedding_data(0, 'stale-hash'),
+        },
+      },
+      embedding: create_embedding_data(2, 'source-a', {
+        history: [
+          { file: 'mf_test', file_i: 1, read_hash: 'old-source', at: 1 },
+          { file: 'mf_old', file_i: 4, read_hash: 'older-source', at: 1 },
+        ],
+      }),
+    },
+  });
+  const source_b = create_source(collection, {
+    key: 'Notes/B.md',
+    should_embed: true,
+    read_hash: 'source-b',
+    data: {
+      blocks_data: {},
+      embedding: create_embedding_data(0, 'source-b'),
+    },
+  });
+  source_a.source_adapter = { should_persist: true };
+  source_b.source_adapter = { should_persist: true };
+
+  block_collection.items['Notes/A.md#Selected'] = {
+    key: 'Notes/A.md#Selected',
+    data: source_a.data.blocks_data['#Selected'],
+    read_hash: 'block-selected',
+    deleted: false,
+  };
+  block_collection.items['Notes/A.md#Inactive'] = {
+    key: 'Notes/A.md#Inactive',
+    data: source_a.data.blocks_data['#Inactive'],
+    read_hash: 'block-inactive',
+    deleted: false,
+  };
+  block_collection.items['Notes/A.md#Stale'] = {
+    key: 'Notes/A.md#Stale',
+    data: source_a.data.blocks_data['#Stale'],
+    read_hash: 'current-hash',
+    deleted: false,
+  };
+
+  const source_vector_path = collection.embeddings.get_file_path();
+  const block_vector_path = block_collection.embeddings.get_file_path();
+  files.set(source_vector_path, new Float32Array([10, 11, 20, 21, 30, 31]).buffer);
+  files.set(block_vector_path, new Float32Array([100, 101, 200, 201, 300, 301]).buffer);
+  files.set(adapter.get_ajson_file_path(0), 'old base');
+  files.set(adapter.get_ajson_file_path(1), 'old shard');
+
+  const before_source_a = JSON.stringify(source_a.data);
+  const before_source_b = JSON.stringify(source_b.data);
+  const plan = await adapter.write_optimized_source_data_files();
+  const optimized = parse_optimized_sources(plan, files);
+
+  t.deepEqual(
+    get_float_values(files, `${source_vector_path}.optimize.tmp`),
+    [10, 11, 30, 31],
+  );
+  t.deepEqual(
+    get_float_values(files, `${block_vector_path}.optimize.tmp`),
+    [300, 301],
+  );
+  t.is(optimized['Notes/A.md'].embedding.default.mf_test.file_i, 1);
+  t.is(optimized['Notes/B.md'].embedding.default.mf_test.file_i, 0);
+  t.is(
+    optimized['Notes/A.md'].blocks_data['#Selected'].embedding.default.mf_test.file_i,
+    0,
+  );
+  t.false(Boolean(
+    optimized['Notes/A.md'].blocks_data['#Inactive'].embedding.default?.mf_test
+  ));
+  t.is(
+    optimized['Notes/A.md'].blocks_data['#Inactive'].embedding.default.mf_old.file_i,
+    7,
+  );
+  t.false(Boolean(
+    optimized['Notes/A.md'].blocks_data['#Stale'].embedding.default?.mf_test
+  ));
+  t.deepEqual(optimized['Notes/A.md'].embedding.history, [
+    { file: 'mf_old', file_i: 4, read_hash: 'older-source', at: 1 },
+  ]);
+  t.deepEqual(
+    optimized['Notes/A.md'].blocks_data['#Selected'].embedding.history,
+    [],
+  );
+  t.is(plan.stats.unexpected_refs_removed, 1);
+  t.is(plan.stats.removed_refs, 2);
+  t.is(plan.stats.removed_history_refs, 2);
+  t.is(plan.stats.retained_source_rows, 2);
+  t.is(plan.stats.retained_block_rows, 1);
+  t.is(JSON.stringify(source_a.data), before_source_a);
+  t.is(JSON.stringify(source_b.data), before_source_b);
+  t.is(files.get(adapter.get_ajson_file_path(0)), 'old base');
+  t.is(files.get(adapter.get_ajson_file_path(1)), 'old shard');
+});
+
+test('Finish optimization backs up every canonical file, promotes temporary files, and reloads', async (t) => {
+  const {
+    adapter,
+    block_collection,
+    collection,
+    files,
+    fs,
+  } = create_adapter();
+  collection.embeddings = create_optimization_embeddings(fs, 'smart_sources', [1, 2]);
+  block_collection.embeddings = create_optimization_embeddings(fs, 'smart_blocks', [3, 4]);
+
+  const source = create_source(collection, {
+    key: 'Notes/Test.md',
+    should_embed: true,
+    read_hash: 'source-hash',
+    data: {
+      blocks_data: {
+        '#Block': {
+          key: 'Notes/Test.md#Block',
+          lines: [1, 1],
+          size: 300,
+          should_embed: true,
+          embedding: create_embedding_data(0, 'block-hash'),
+        },
+      },
+      embedding: create_embedding_data(0, 'source-hash'),
+    },
+  });
+  block_collection.items['Notes/Test.md#Block'] = {
+    key: 'Notes/Test.md#Block',
+    data: source.data.blocks_data['#Block'],
+    read_hash: 'block-hash',
+    deleted: false,
+  };
+
+  const source_vector_path = collection.embeddings.get_file_path();
+  const block_vector_path = block_collection.embeddings.get_file_path();
+  const old_source_vectors = new Float32Array([1, 2]).buffer;
+  const old_block_vectors = new Float32Array([3, 4]).buffer;
+  files.set(source_vector_path, old_source_vectors);
+  files.set(block_vector_path, old_block_vectors);
+  files.set(adapter.get_ajson_file_path(0), 'old base');
+  files.set(adapter.get_ajson_file_path(1), 'obsolete shard');
+
+  const plan = await adapter.write_optimized_source_data_files();
+  const optimized_source_vectors = files.get(`${source_vector_path}.optimize.tmp`).slice(0);
+  const optimized_block_vectors = files.get(`${block_vector_path}.optimize.tmp`).slice(0);
+  const optimized_source_data = files.get(plan.new_source_files[0].temporary_path);
+  let reload_count = 0;
+  const previous_window = globalThis.window;
+  globalThis.window = {
+    location: {
+      reload() { reload_count += 1; },
+    },
+  };
+
+  try {
+    await adapter.finish_source_data_optimization(plan);
+  } finally {
+    if (previous_window === undefined) delete globalThis.window;
+    else globalThis.window = previous_window;
+  }
+
+  t.deepEqual(
+    get_float_values(files, source_vector_path),
+    Array.from(new Float32Array(optimized_source_vectors)),
+  );
+  t.deepEqual(
+    get_float_values(files, block_vector_path),
+    Array.from(new Float32Array(optimized_block_vectors)),
+  );
+  t.deepEqual(
+    get_float_values(files, `${source_vector_path}.backup`),
+    Array.from(new Float32Array(old_source_vectors)),
+  );
+  t.deepEqual(
+    get_float_values(files, `${block_vector_path}.backup`),
+    Array.from(new Float32Array(old_block_vectors)),
+  );
+  t.is(files.get(adapter.get_ajson_file_path(0)), optimized_source_data);
+  t.is(files.get(`${adapter.get_ajson_file_path(0)}.backup`), 'old base');
+  t.is(files.get(`${adapter.get_ajson_file_path(1)}.backup`), 'obsolete shard');
+  t.false(files.has(adapter.get_ajson_file_path(1)));
+  t.false(files.has(`${source_vector_path}.optimize.tmp`));
+  t.false(files.has(`${block_vector_path}.optimize.tmp`));
+  t.true(collection.embeddings.unloaded);
+  t.true(block_collection.embeddings.unloaded);
+  t.is(reload_count, 1);
+});
+
+test('Source Data Optimize refuses to overwrite an existing backup before writing temporary files', async (t) => {
+  const {
+    adapter,
+    block_collection,
+    collection,
+    files,
+    fs,
+    operations,
+  } = create_adapter();
+  collection.embeddings = create_optimization_embeddings(fs, 'smart_sources', []);
+  block_collection.embeddings = create_optimization_embeddings(fs, 'smart_blocks', []);
+  const backup_path = `${collection.embeddings.get_file_path()}.backup`;
+  files.set(backup_path, new ArrayBuffer(0));
+
+  await t.throwsAsync(
+    () => adapter.write_optimized_source_data_files(),
+    { message: `Source data optimization backup already exists: ${backup_path}` },
+  );
+
+  t.false(operations.some((operation) => operation.includes('.optimize.tmp')));
+});
+
+test('Finish optimization does not reload when a rename fails and leaves files for manual restoration', async (t) => {
+  const {
+    adapter,
+    block_collection,
+    collection,
+    files,
+    fs,
+  } = create_adapter();
+  collection.embeddings = create_optimization_embeddings(fs, 'smart_sources', [1, 2]);
+  block_collection.embeddings = create_optimization_embeddings(fs, 'smart_blocks', []);
+  const source = create_source(collection, {
+    should_embed: true,
+    read_hash: 'source-hash',
+    data: {
+      blocks_data: {},
+      embedding: create_embedding_data(0, 'source-hash'),
+    },
+  });
+  source.source_adapter = { should_persist: true };
+
+  const source_vector_path = collection.embeddings.get_file_path();
+  const block_vector_path = block_collection.embeddings.get_file_path();
+  files.set(source_vector_path, new Float32Array([1, 2]).buffer);
+  files.set(block_vector_path, new ArrayBuffer(0));
+  files.set(adapter.get_ajson_file_path(0), 'old base');
+
+  const plan = await adapter.write_optimized_source_data_files();
+  const failed_temp_path = plan.new_source_files[0].temporary_path;
+  const original_rename = fs.adapter.rename.bind(fs.adapter);
+  fs.adapter.rename = async (old_path, new_path) => {
+    if (old_path === failed_temp_path) throw new Error('rename failed');
+    return await original_rename(old_path, new_path);
+  };
+  let reload_count = 0;
+  const previous_window = globalThis.window;
+  globalThis.window = {
+    location: {
+      reload() { reload_count += 1; },
+    },
+  };
+
+  try {
+    await t.throwsAsync(
+      () => adapter.finish_source_data_optimization(plan),
+      { message: 'rename failed' },
+    );
+  } finally {
+    if (previous_window === undefined) delete globalThis.window;
+    else globalThis.window = previous_window;
+  }
+
+  t.is(reload_count, 0);
+  t.true(files.has(`${source_vector_path}.backup`));
+  t.true(files.has(`${block_vector_path}.backup`));
+  t.true(files.has(`${adapter.get_ajson_file_path(0)}.backup`));
+  t.true(files.has(failed_temp_path));
+  t.false(files.has(adapter.get_ajson_file_path(0)));
+});
+
+test('Source Data Optimize writes size-bounded temporary AJSON shards', async (t) => {
+  const {
+    adapter,
+    block_collection,
+    collection,
+    files,
+    fs,
+  } = create_adapter({ max_bytes_per_shard: 220 });
+  collection.embeddings = create_optimization_embeddings(fs, 'smart_sources', []);
+  block_collection.embeddings = create_optimization_embeddings(fs, 'smart_blocks', []);
+
+  for (const name of ['A', 'B', 'C']) {
+    create_source(collection, {
+      key: `Notes/${name}.md`,
+      data: {
+        blocks_data: {},
+        payload: 'x'.repeat(120),
+      },
+    });
+  }
+
+  const plan = await adapter.write_optimized_source_data_files();
+  const optimized = parse_optimized_sources(plan, files);
+
+  t.is(plan.new_source_files.length, 3);
+  t.deepEqual(Object.keys(optimized).sort(), [
+    'Notes/A.md',
+    'Notes/B.md',
+    'Notes/C.md',
+  ]);
+  plan.new_source_files.forEach((file) => {
+    t.true(file.expected_bytes <= adapter.max_bytes_per_shard);
+  });
+});
+
+test('Source Data Optimize rejects unresolved block selection and legacy refs', async (t) => {
+  const first = create_adapter();
+  first.collection.embeddings = create_optimization_embeddings(first.fs, 'smart_sources', []);
+  first.block_collection.embeddings = create_optimization_embeddings(first.fs, 'smart_blocks', []);
+  create_source(first.collection, {
+    key: 'Notes/Reimport.md',
+    data: {
+      blocks_data: {},
+      block_embedding_selection: {
+        requires_reimport: true,
+      },
+    },
+  });
+
+  await t.throwsAsync(
+    () => first.adapter.write_optimized_source_data_files(),
+    { message: 'Cannot optimize source data while Notes/Reimport.md requires re-import.' },
+  );
+
+  const second = create_adapter();
+  second.collection.embeddings = create_optimization_embeddings(second.fs, 'smart_sources', []);
+  second.block_collection.embeddings = create_optimization_embeddings(second.fs, 'smart_blocks', []);
+  create_source(second.collection, {
+    key: 'Notes/Legacy.md',
+    data: {
+      blocks_data: {},
+      embedding: {
+        default: {
+          file: 'mf_test',
+          file_i: 0,
+          read_hash: 'legacy',
+          at: 1,
+        },
+        history: [],
+      },
+    },
+  });
+
+  await t.throwsAsync(
+    () => second.adapter.write_optimized_source_data_files(),
+    { message: 'Cannot optimize source data with legacy embedding refs: Notes/Legacy.md' },
+  );
 });
