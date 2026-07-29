@@ -11,7 +11,11 @@ import { run_action_entry } from 'smart-environment/utils/action_entry.js';
 import { convert_to_human_readable_size } from 'smart-utils/convert_to_human_readable_size.js';
 import styles from './env_stats.css';
 import { format_collection_name } from '../utils/format_collection_name.js';
-import { collect_environment_stats } from '../actions/env/show_stats.js';
+import {
+  collect_collection_inspection_records,
+  collect_environment_stats,
+} from '../actions/env/show_stats.js';
+import { open_source } from '../utils/open_source.js';
 import {
   get_embeddings_file_info,
   has_current_embedding,
@@ -23,7 +27,24 @@ const COLLECTION_KEYS = [
 ];
 const CACHE_FRESH_MS = 10000;
 const stats_cache = new WeakMap();
+const INSPECTOR_PAGE_SIZE = 30;
+const INSPECTOR_SEARCH_DEBOUNCE_MS = 120;
+const INSPECTION_PRESENTATION = {
+  skipped: {
+    title: 'Skipped items',
+    noun: 'skipped items',
+    singular_noun: 'skipped item',
+    description: 'Not eligible under the current embedding policy, so these items do not reduce coverage. Unexpected vectors are included because they are also skipped.',
+  },
+  unexpected: {
+    title: 'Unexpected vectors',
+    noun: 'unexpected vectors',
+    singular_noun: 'unexpected vector',
+    description: 'Not eligible under the current policy, but a current vector is still stored. Each row explains why the item is now skipped.',
+  },
+};
 const number_formatter = new Intl.NumberFormat();
+let inspector_instance_i = 0;
 
 /**
  * Build the immediately visible stats shell.
@@ -66,10 +87,11 @@ export function build_html() {
       <div class="smart-env-stats__section-heading">
         <div>
           <h3>Collections</h3>
-          <p>Coverage uses the current model, vector file, and content hash.</p>
+          <p>Coverage uses the current model, vector file, and content hash. Select Skipped or Unexpected to inspect items.</p>
         </div>
       </div>
       <div class="smart-env-stats__collections"></div>
+      ${build_inspector_html()}
     </section>
 
     <footer class="smart-env-stats__footer" aria-live="polite"></footer>
@@ -105,13 +127,147 @@ export function post_process(env, container, opts = {}) {
   const refresh_btn = container.querySelector('.smart-env-stats__refresh');
   const collections_el = container.querySelector('.smart-env-stats__collections');
   const footer_el = container.querySelector('.smart-env-stats__footer');
+  const inspector_elements = get_inspector_elements(container);
+  const inspector_cache = new Map();
+  const inspector_state = {
+    active_trigger: null,
+    collection_key: '',
+    filtered_records: [],
+    load_id: 0,
+    load_result: null,
+    query: '',
+    reason_key: 'all',
+    search_timeout: null,
+    status: '',
+    visible_count: INSPECTOR_PAGE_SIZE,
+  };
+  const inspector_id = `smart-env-stats-inspector-${++inspector_instance_i}`;
   let disposed = false;
   let scan_id = 0;
   let start_timeout = null;
 
+  if (inspector_elements.container) {
+    inspector_elements.container.id = inspector_id;
+    inspector_elements.container.setAttribute('aria-labelledby', `${inspector_id}-title`);
+  }
+  if (inspector_elements.title) inspector_elements.title.id = `${inspector_id}-title`;
   COLLECTION_KEYS.forEach((collection_key) => {
-    ensure_collection_card(collections_el, collection_key);
+    const card = ensure_collection_card(collections_el, collection_key);
+    card?.querySelectorAll('[data-inspect-status]').forEach((button) => {
+      button.setAttribute('aria-controls', inspector_id);
+    });
   });
+
+  const close_inspector = ({ restore_focus = false } = {}) => {
+    const active_trigger = inspector_state.active_trigger;
+    inspector_state.load_id += 1;
+    if (inspector_state.search_timeout) {
+      clearTimeout(inspector_state.search_timeout);
+      inspector_state.search_timeout = null;
+    }
+    active_trigger?.removeAttribute('data-selected');
+    active_trigger?.setAttribute('aria-expanded', 'false');
+    inspector_state.active_trigger = null;
+    inspector_state.collection_key = '';
+    inspector_state.filtered_records = [];
+    inspector_state.load_result = null;
+    inspector_state.query = '';
+    inspector_state.reason_key = 'all';
+    inspector_state.status = '';
+    inspector_state.visible_count = INSPECTOR_PAGE_SIZE;
+    if (inspector_elements.container) {
+      inspector_elements.container.hidden = true;
+      inspector_elements.container.setAttribute('aria-busy', 'false');
+    }
+    if (inspector_elements.search_input) inspector_elements.search_input.value = '';
+    if (restore_focus) active_trigger?.focus();
+  };
+
+  const show_inspection_result = (result) => {
+    inspector_state.load_result = result;
+    inspector_state.filtered_records = [];
+    inspector_state.query = '';
+    inspector_state.reason_key = 'all';
+    inspector_state.visible_count = INSPECTOR_PAGE_SIZE;
+    if (inspector_elements.search_input) inspector_elements.search_input.value = '';
+    render_inspector_reason_options(inspector_elements.reason_select, result.reasons);
+    apply_inspector_filters(inspector_elements, inspector_state);
+    set_inspector_loading(inspector_elements, false);
+  };
+
+  const load_inspection = async (trigger, { force = false } = {}) => {
+    if (!trigger || trigger.disabled) return;
+
+    const card = trigger.closest('[data-collection-key]');
+    const collection_key = card?.dataset.collectionKey || '';
+    const status = trigger.dataset.inspectStatus || '';
+    if (!collection_key || !INSPECTION_PRESENTATION[status]) return;
+
+    const is_current = (
+      inspector_state.active_trigger === trigger
+      && !inspector_elements.container?.hidden
+    );
+    if (is_current) {
+      close_inspector();
+      return;
+    }
+
+    close_inspector();
+    inspector_state.active_trigger = trigger;
+    inspector_state.collection_key = collection_key;
+    inspector_state.status = status;
+    trigger.dataset.selected = 'true';
+    trigger.setAttribute('aria-expanded', 'true');
+    configure_inspector(inspector_elements, { collection_key, status });
+    if (inspector_elements.container) inspector_elements.container.hidden = false;
+    set_inspector_loading(inspector_elements, true);
+    inspector_elements.container?.scrollIntoView?.({ block: 'nearest' });
+
+    const cache_key = `${collection_key}:${status}`;
+    const cached = !force ? inspector_cache.get(cache_key) : null;
+    if (cached) {
+      show_inspection_result(cached);
+      return;
+    }
+
+    const current_load_id = ++inspector_state.load_id;
+    try {
+      const result = await collect_collection_inspection_records(
+        env?.[collection_key],
+        {
+          collection_key,
+          status,
+          is_cancelled: () => (
+            disposed
+            || current_load_id !== inspector_state.load_id
+          ),
+          on_progress: ({ scanned_items, total_items, matched_items }) => {
+            if (disposed || current_load_id !== inspector_state.load_id) return;
+            set_text(
+              inspector_elements.status,
+              `Scanning ${format_number(scanned_items)} of ${format_number(total_items)} items / ${format_number(matched_items)} found...`,
+            );
+          },
+        },
+      );
+
+      if (
+        disposed
+        || current_load_id !== inspector_state.load_id
+        || result.cancelled
+      ) {
+        return;
+      }
+
+      inspector_cache.set(cache_key, result);
+      show_inspection_result(result);
+    } catch (error) {
+      if (disposed || current_load_id !== inspector_state.load_id) return;
+      console.error('[env_stats] Failed to inspect collection stat', error);
+      set_inspector_loading(inspector_elements, false);
+      render_inspector_error(inspector_elements, error);
+    }
+  };
 
   const load_stats = async ({ force = false } = {}) => {
     const current_scan_id = ++scan_id;
@@ -136,6 +292,9 @@ export function post_process(env, container, opts = {}) {
       set_button_loading(refresh_btn, false);
       return;
     }
+
+    inspector_cache.clear();
+    close_inspector();
 
     container.setAttribute('aria-busy', 'true');
     set_button_loading(refresh_btn, true);
@@ -206,9 +365,76 @@ export function post_process(env, container, opts = {}) {
       clearTimeout(start_timeout);
       start_timeout = null;
     }
+    inspector_cache.clear();
+    close_inspector();
     load_stats({ force: true }).catch(handle_load_error);
   };
+
+  const handle_collection_click = (event) => {
+    const trigger = event.target?.closest?.('button[data-inspect-status]');
+    if (!trigger || !collections_el?.contains(trigger)) return;
+    load_inspection(trigger).catch((error) => {
+      if (disposed) return;
+      console.error('[env_stats] Failed to open collection inspector', error);
+      set_inspector_loading(inspector_elements, false);
+      render_inspector_error(inspector_elements, error);
+    });
+  };
+
+  const handle_inspector_search = (event) => {
+    inspector_state.query = String(event.currentTarget?.value || '').trim().toLowerCase();
+    if (inspector_state.search_timeout) clearTimeout(inspector_state.search_timeout);
+    inspector_state.search_timeout = setTimeout(() => {
+      inspector_state.search_timeout = null;
+      inspector_state.visible_count = INSPECTOR_PAGE_SIZE;
+      apply_inspector_filters(inspector_elements, inspector_state);
+    }, INSPECTOR_SEARCH_DEBOUNCE_MS);
+  };
+
+  const handle_reason_change = (event) => {
+    inspector_state.reason_key = event.currentTarget?.value || 'all';
+    inspector_state.visible_count = INSPECTOR_PAGE_SIZE;
+    apply_inspector_filters(inspector_elements, inspector_state);
+  };
+
+  const handle_load_more = () => {
+    inspector_state.visible_count += INSPECTOR_PAGE_SIZE;
+    render_inspector_records(inspector_elements, inspector_state);
+  };
+
+  const handle_close_inspector = () => {
+    close_inspector({ restore_focus: true });
+  };
+
+  const handle_inspector_list_click = async (event) => {
+    const button = event.target?.closest?.('[data-open-record-index]');
+    if (!button || !inspector_elements.list?.contains(button)) return;
+    const record_i = Number(button.dataset.openRecordIndex);
+    const record = inspector_state.filtered_records[record_i];
+    if (!record?.item) return;
+
+    const idle_label = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Opening...';
+    try {
+      await open_source(record.item, event);
+    } catch (error) {
+      console.error('[env_stats] Failed to open inspected item', error);
+    } finally {
+      if (button.isConnected) {
+        button.disabled = false;
+        button.textContent = idle_label;
+      }
+    }
+  };
+
   refresh_btn?.addEventListener('click', handle_refresh);
+  collections_el?.addEventListener('click', handle_collection_click);
+  inspector_elements.search_input?.addEventListener('input', handle_inspector_search);
+  inspector_elements.reason_select?.addEventListener('change', handle_reason_change);
+  inspector_elements.load_more_btn?.addEventListener('click', handle_load_more);
+  inspector_elements.close_btn?.addEventListener('click', handle_close_inspector);
+  inspector_elements.list?.addEventListener('click', handle_inspector_list_click);
 
   start_timeout = setTimeout(() => {
     start_timeout = null;
@@ -218,8 +444,16 @@ export function post_process(env, container, opts = {}) {
   this.attach_disposer?.(container, () => {
     disposed = true;
     scan_id += 1;
+    inspector_state.load_id += 1;
     if (start_timeout) clearTimeout(start_timeout);
+    if (inspector_state.search_timeout) clearTimeout(inspector_state.search_timeout);
     refresh_btn?.removeEventListener('click', handle_refresh);
+    collections_el?.removeEventListener('click', handle_collection_click);
+    inspector_elements.search_input?.removeEventListener('input', handle_inspector_search);
+    inspector_elements.reason_select?.removeEventListener('change', handle_reason_change);
+    inspector_elements.load_more_btn?.removeEventListener('click', handle_load_more);
+    inspector_elements.close_btn?.removeEventListener('click', handle_close_inspector);
+    inspector_elements.list?.removeEventListener('click', handle_inspector_list_click);
   });
 
   return container;
@@ -282,6 +516,7 @@ export function calculate_embed_coverage(collection) {
 /**
  * @param {string} key
  * @param {string} label
+ * @param {boolean} [inspectable=false]
  * @returns {string}
  */
 function build_metric_html(key, label) {
@@ -289,6 +524,350 @@ function build_metric_html(key, label) {
     <div class="smart-env-stats__metric-label">${label}</div>
     <div class="smart-env-stats__metric-value">-</div>
     <div class="smart-env-stats__metric-detail"></div>
+  </div>`;
+}
+
+/**
+ * @returns {string}
+ */
+function build_inspector_html() {
+  return `<section class="smart-env-stats__inspector" data-collection-inspector hidden aria-busy="false">
+    <header class="smart-env-stats__inspector-header">
+      <div class="smart-env-stats__inspector-heading">
+        <div class="smart-env-stats__inspector-eyebrow" data-inspector-eyebrow>Collection diagnostics</div>
+        <h4 data-inspector-title>Collection inspector</h4>
+        <p data-inspector-description></p>
+      </div>
+      <button type="button" data-action="close-inspector">Close</button>
+    </header>
+
+    <div class="smart-env-stats__inspector-toolbar">
+      <label class="smart-env-stats__inspector-field smart-env-stats__inspector-search">
+        <span>Search items</span>
+        <input type="search" data-inspector-search placeholder="Path, heading, or reason" autocomplete="off" disabled>
+      </label>
+      <label class="smart-env-stats__inspector-field">
+        <span>Reason</span>
+        <select data-inspector-reason disabled>
+          <option value="all">All reasons</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="smart-env-stats__inspector-status" data-inspector-status aria-live="polite"></div>
+    <div class="smart-env-stats__inspector-list" data-inspector-list role="list"></div>
+    <button class="smart-env-stats__inspector-load-more" type="button" data-action="load-more-inspector" hidden>Show more</button>
+  </section>`;
+}
+
+/**
+ * @param {HTMLElement} container
+ * @returns {object}
+ */
+function get_inspector_elements(container) {
+  const inspector = container.querySelector('[data-collection-inspector]');
+  return {
+    container: inspector,
+    close_btn: inspector?.querySelector('[data-action="close-inspector"]'),
+    description: inspector?.querySelector('[data-inspector-description]'),
+    eyebrow: inspector?.querySelector('[data-inspector-eyebrow]'),
+    list: inspector?.querySelector('[data-inspector-list]'),
+    load_more_btn: inspector?.querySelector('[data-action="load-more-inspector"]'),
+    reason_select: inspector?.querySelector('[data-inspector-reason]'),
+    search_input: inspector?.querySelector('[data-inspector-search]'),
+    status: inspector?.querySelector('[data-inspector-status]'),
+    title: inspector?.querySelector('[data-inspector-title]'),
+  };
+}
+
+/**
+ * @param {object} elements
+ * @param {object} params
+ * @returns {void}
+ */
+function configure_inspector(elements, params = {}) {
+  const { collection_key = '', status = 'skipped' } = params;
+  const presentation = INSPECTION_PRESENTATION[status] || INSPECTION_PRESENTATION.skipped;
+  const collection_name = format_collection_name(collection_key);
+
+  if (elements.container) {
+    elements.container.dataset.status = status;
+    delete elements.container.dataset.error;
+  }
+  set_text(elements.eyebrow, `${collection_name} diagnostics`);
+  set_text(elements.title, `${presentation.title} in ${collection_name}`);
+  set_text(elements.description, presentation.description);
+  set_text(elements.status, 'Preparing item-level diagnostics...');
+  if (elements.search_input) elements.search_input.value = '';
+  render_inspector_reason_options(elements.reason_select, []);
+  if (elements.list) elements.list.innerHTML = build_inspector_loading_html('Scanning item metadata...');
+  if (elements.load_more_btn) elements.load_more_btn.hidden = true;
+}
+
+/**
+ * @param {object} elements
+ * @param {boolean} loading
+ * @returns {void}
+ */
+function set_inspector_loading(elements, loading) {
+  elements.container?.setAttribute('aria-busy', String(loading));
+  if (elements.search_input) elements.search_input.disabled = loading;
+  if (elements.reason_select) elements.reason_select.disabled = loading;
+  if (loading && elements.load_more_btn) elements.load_more_btn.hidden = true;
+}
+
+/**
+ * @param {HTMLSelectElement|null} select
+ * @param {object[]} reasons
+ * @returns {void}
+ */
+function render_inspector_reason_options(select, reasons = []) {
+  if (!select) return;
+  const document_ref = select.ownerDocument;
+  const total_count = reasons.reduce((total, reason) => total + Number(reason?.count || 0), 0);
+  const all_option = document_ref.createElement('option');
+  all_option.value = 'all';
+  all_option.textContent = total_count
+    ? `All reasons (${format_number(total_count)})`
+    : 'All reasons'
+  ;
+  const options = [all_option];
+
+  reasons.forEach((reason) => {
+    const option = document_ref.createElement('option');
+    option.value = reason.key;
+    option.textContent = `${reason.label} (${format_number(reason.count)})`;
+    options.push(option);
+  });
+  select.replaceChildren(...options);
+  select.value = 'all';
+}
+
+/**
+ * @param {object} elements
+ * @param {object} state
+ * @returns {void}
+ */
+function apply_inspector_filters(elements, state) {
+  const records = state.load_result?.records || [];
+  const query = state.query || '';
+  const reason_key = state.reason_key || 'all';
+
+  state.filtered_records = records.filter((record) => (
+    (reason_key === 'all' || record.reason_key === reason_key)
+    && (!query || record.search_text?.includes(query))
+  ));
+  render_inspector_records(elements, state);
+}
+
+/**
+ * @param {object} elements
+ * @param {object} state
+ * @returns {void}
+ */
+function render_inspector_records(elements, state) {
+  if (!elements.list) return;
+
+  const records = state.filtered_records || [];
+  const visible_records = records.slice(0, state.visible_count);
+  const total_count = Number(state.load_result?.records?.length || 0);
+  const visible_count = visible_records.length;
+  const is_filtered = Boolean(state.query || state.reason_key !== 'all');
+  const presentation = INSPECTION_PRESENTATION[state.status] || INSPECTION_PRESENTATION.skipped;
+  const total_noun = total_count === 1 ? presentation.singular_noun : presentation.noun;
+  const unexpected_count = Number(state.load_result?.status_counts?.unexpected || 0);
+  let status_text;
+
+  if (is_filtered) {
+    status_text = records.length > visible_count
+      ? `Showing ${format_number(visible_count)} of ${format_number(records.length)} matches (${format_number(total_count)} total)`
+      : `${format_number(records.length)} matches (${format_number(total_count)} total)`
+    ;
+  } else if (total_count > visible_count) {
+    status_text = `Showing ${format_number(visible_count)} of ${format_number(total_count)} ${total_noun}`;
+  } else {
+    status_text = `${format_number(total_count)} ${total_noun}`;
+  }
+  if (!is_filtered && state.status === 'skipped' && unexpected_count) {
+    status_text += `, including ${format_number(unexpected_count)} unexpected ${unexpected_count === 1 ? 'vector' : 'vectors'}`;
+  }
+  set_text(elements.status, status_text);
+
+  if (!visible_records.length) {
+    let empty_message = `No ${presentation.noun} found.`;
+    if (total_count && state.query && state.reason_key !== 'all') {
+      empty_message = 'No items match this search and reason.';
+    } else if (total_count && state.query) {
+      empty_message = 'No items match this search.';
+    } else if (total_count && state.reason_key !== 'all') {
+      empty_message = 'No items match this reason.';
+    }
+    elements.list.replaceChildren(create_inspector_message(
+      elements.list.ownerDocument,
+      empty_message,
+      'empty',
+    ));
+  } else {
+    const document_ref = elements.list.ownerDocument;
+    const fragment = document_ref.createDocumentFragment();
+    visible_records.forEach((record, record_i) => {
+      fragment.appendChild(create_inspector_record(document_ref, record, record_i));
+    });
+    elements.list.replaceChildren(fragment);
+  }
+
+  if (!elements.load_more_btn) return;
+  elements.load_more_btn.hidden = visible_count >= records.length;
+  if (!elements.load_more_btn.hidden) {
+    const remaining = records.length - visible_count;
+    elements.load_more_btn.textContent = `Show ${format_number(Math.min(INSPECTOR_PAGE_SIZE, remaining))} more`;
+  }
+}
+
+/**
+ * @param {Document} document_ref
+ * @param {object} record
+ * @param {number} record_i
+ * @returns {HTMLElement}
+ */
+function create_inspector_record(document_ref, record, record_i) {
+  const article = document_ref.createElement('article');
+  article.className = 'smart-env-stats__inspector-record';
+  article.dataset.tone = record.status_key || 'skipped';
+  article.setAttribute('role', 'listitem');
+
+  const identity = document_ref.createElement('div');
+  identity.className = 'smart-env-stats__inspector-record-identity';
+  const title = document_ref.createElement('h5');
+  title.textContent = format_inspection_record_label(record);
+  title.title = record.key || '';
+
+  const metadata = document_ref.createElement('div');
+  metadata.className = 'smart-env-stats__inspector-record-metadata';
+  metadata.appendChild(create_inspector_badge(document_ref, record.status_key));
+  append_metadata_value(metadata, record.item_type === 'block' ? 'Block' : 'Source');
+  if (Number.isFinite(record.size)) {
+    append_metadata_value(
+      metadata,
+      `${format_number(record.size)} ${Number(record.size) === 1 ? 'char' : 'chars'}`,
+    );
+  }
+  if (record.line_start && record.line_end) {
+    append_metadata_value(metadata, `Lines ${record.line_start}-${record.line_end}`);
+  }
+  if (record.file_type) append_metadata_value(metadata, format_file_type(record.file_type));
+
+  const reason = document_ref.createElement('p');
+  reason.className = 'smart-env-stats__inspector-record-reason';
+  const reason_label = document_ref.createElement('strong');
+  reason_label.textContent = record.reason_label;
+  reason.appendChild(reason_label);
+  if (record.reason_detail) reason.append(`. ${record.reason_detail}`);
+
+  identity.append(title, metadata, reason);
+
+  const action = document_ref.createElement('button');
+  action.type = 'button';
+  action.dataset.openRecordIndex = String(record_i);
+  action.textContent = 'Open note';
+  article.append(identity, action);
+  return article;
+}
+
+/**
+ * @param {Document} document_ref
+ * @param {string} status_key
+ * @returns {HTMLElement}
+ */
+function create_inspector_badge(document_ref, status_key) {
+  const badge = document_ref.createElement('span');
+  badge.className = 'smart-env-stats__inspector-badge';
+  badge.dataset.tone = status_key || 'skipped';
+  badge.textContent = status_key === 'unexpected' ? 'Unexpected vector' : 'Skipped';
+  badge.title = status_key === 'unexpected'
+    ? 'Not eligible, but a current vector is still stored.'
+    : 'Not eligible and no current vector is stored.'
+  ;
+  return badge;
+}
+
+/**
+ * @param {HTMLElement} container
+ * @param {string} value
+ * @returns {void}
+ */
+function append_metadata_value(container, value) {
+  const element = container.ownerDocument.createElement('span');
+  element.textContent = value;
+  container.appendChild(element);
+}
+
+/**
+ * @param {object} record
+ * @returns {string}
+ */
+function format_inspection_record_label(record) {
+  const key = String(record?.key || 'Unknown item');
+  const [source_key, ...block_parts] = key.split('#');
+  const block_label = block_parts.filter(Boolean).join(' > ');
+  return block_label ? `${source_key} > ${block_label}` : source_key;
+}
+
+/**
+ * @param {string} file_type
+ * @returns {string}
+ */
+function format_file_type(file_type) {
+  const normalized_file_type = String(file_type || '');
+  if (!normalized_file_type) return '';
+  return normalized_file_type.startsWith('.')
+    ? normalized_file_type
+    : `.${normalized_file_type}`
+  ;
+}
+
+/**
+ * @param {object} elements
+ * @param {Error} error
+ * @returns {void}
+ */
+function render_inspector_error(elements, error) {
+  const message = error?.message || 'Unknown error';
+  if (elements.container) elements.container.dataset.error = 'true';
+  set_text(elements.status, 'Collection inspection failed.');
+  if (elements.search_input) elements.search_input.disabled = true;
+  if (elements.reason_select) elements.reason_select.disabled = true;
+  if (elements.list) {
+    elements.list.replaceChildren(create_inspector_message(
+      elements.list.ownerDocument,
+      `${message}. See the developer console for details.`,
+      'error',
+    ));
+  }
+  if (elements.load_more_btn) elements.load_more_btn.hidden = true;
+}
+
+/**
+ * @param {Document} document_ref
+ * @param {string} message
+ * @param {'empty'|'error'} tone
+ * @returns {HTMLElement}
+ */
+function create_inspector_message(document_ref, message, tone = 'empty') {
+  const element = document_ref.createElement('div');
+  element.className = `smart-env-stats__inspector-${tone}`;
+  element.textContent = message;
+  return element;
+}
+
+/**
+ * @param {string} message
+ * @returns {string}
+ */
+function build_inspector_loading_html(message) {
+  return `<div class="smart-env-stats__inspector-loading">
+    <span class="smart-env-stats__inspector-spinner" aria-hidden="true"></span>
+    <span>${message}</span>
   </div>`;
 }
 
@@ -401,8 +980,8 @@ function ensure_collection_card(collections_el, collection_key) {
       ${build_collection_value_html('eligible', 'Eligible')}
       ${build_collection_value_html('current', 'Current')}
       ${build_collection_value_html('missing', 'Missing')}
-      ${build_collection_value_html('skipped', 'Skipped')}
-      ${build_collection_value_html('unexpected', 'Unexpected')}
+      ${build_collection_value_html('skipped', 'Skipped', true)}
+      ${build_collection_value_html('unexpected', 'Unexpected', true)}
     </div>`;
   collections_el.appendChild(card);
   return card;
@@ -413,11 +992,23 @@ function ensure_collection_card(collections_el, collection_key) {
  * @param {string} label
  * @returns {string}
  */
-function build_collection_value_html(key, label) {
-  return `<div class="smart-env-stats__collection-value" data-value="${key}">
-    <span>${label}</span>
+function build_collection_value_html(key, label, inspectable = false) {
+  const tag_name = inspectable ? 'button' : 'div';
+  const attributes = inspectable
+    ? ` type="button" data-inspect-status="${key}" aria-expanded="false" disabled`
+    : ''
+  ;
+  const inspect_label = inspectable
+    ? '<span class="smart-env-stats__inspect-label" aria-hidden="true">Inspect</span>'
+    : ''
+  ;
+  return `<${tag_name} class="smart-env-stats__collection-value" data-value="${key}"${attributes}>
+    <span class="smart-env-stats__collection-value-heading">
+      <span class="smart-env-stats__collection-value-label">${label}</span>
+      ${inspect_label}
+    </span>
     <strong>-</strong>
-  </div>`;
+  </${tag_name}>`;
 }
 
 /**
@@ -427,6 +1018,13 @@ function build_collection_value_html(key, label) {
  */
 function render_collection_progress(card, stats) {
   if (!card) return;
+  card.removeAttribute('data-loaded');
+  card.querySelectorAll('[data-inspect-status]').forEach((button) => {
+    button.disabled = true;
+    button.removeAttribute('data-has-items');
+    button.removeAttribute('data-selected');
+    button.setAttribute('aria-expanded', 'false');
+  });
   const scanned = Number(stats.scanned_items || 0);
   const total = Number(stats.total_items || 0);
   const progress_percent = total ? Math.round((scanned / total) * 100) : 0;
@@ -449,6 +1047,7 @@ function render_collection_stats(card, stats) {
   if (!card) return;
 
   const is_loaded = stats.state === 'loaded';
+  card.toggleAttribute('data-loaded', is_loaded);
   const coverage_text = is_loaded
     ? format_percent(stats.coverage_percent)
     : 'Not loaded'
@@ -488,10 +1087,34 @@ function render_collection_stats(card, stats) {
  * @returns {void}
  */
 function set_collection_value(card, key, value) {
-  set_text(
-    card.querySelector(`[data-value="${key}"] strong`),
-    format_number(value),
+  const value_el = card.querySelector(`[data-value="${key}"]`);
+  const numeric_value = Number(value || 0);
+  const normalized_value = Number.isFinite(numeric_value)
+    ? Math.max(0, numeric_value)
+    : 0
+  ;
+  set_text(value_el?.querySelector('strong'), format_number(normalized_value));
+  if (!value_el?.matches?.('button[data-inspect-status]')) return;
+
+  const can_inspect = card.hasAttribute('data-loaded') && normalized_value > 0;
+  const collection_name = card.querySelector('h4')?.textContent || 'this collection';
+  const presentation = INSPECTION_PRESENTATION[key] || INSPECTION_PRESENTATION.skipped;
+  value_el.disabled = !can_inspect;
+  value_el.toggleAttribute('data-has-items', can_inspect);
+  value_el.setAttribute(
+    'aria-label',
+    can_inspect
+      ? `Inspect ${format_number(normalized_value)} ${presentation.noun} in ${collection_name}`
+      : `No ${presentation.noun} in ${collection_name}`,
   );
+  value_el.title = can_inspect
+    ? presentation.description
+    : ''
+  ;
+  if (!can_inspect) {
+    value_el.removeAttribute('data-selected');
+    value_el.setAttribute('aria-expanded', 'false');
+  }
 }
 
 /**
