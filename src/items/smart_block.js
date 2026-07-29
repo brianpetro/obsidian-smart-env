@@ -180,7 +180,7 @@ export class SmartBlock extends BaseSmartBlock {
     this._data_sub_key = sub_key;
     this._data_source_data = source_data;
 
-    source._block_coverage_cache = null;
+    source.data.block_embedding_selection = null;
   }
 
   get source_key() {
@@ -231,63 +231,22 @@ export class SmartBlock extends BaseSmartBlock {
   }
 
   get_should_embed(params = {}) {
-    try {
-      const source = params.source || this.source;
-      const min_chars = params.min_chars ?? this.settings?.min_chars;
-      const source_hash = source?.data?.last_read?.hash;
-      const cached_should_embed = this._should_embed_cache;
-
-      if (
-        source_hash != null
-        && cached_should_embed?.hash === source_hash
-        && cached_should_embed?.min_chars === min_chars
-      ) {
-        return cached_should_embed.value;
-      }
-
-      let should_embed = true;
-      if (min_chars && this.size < min_chars) {
-        should_embed = false;
-      } else {
-        const cache = params.coverage_cache || get_source_block_coverage_cache(source);
-        const prefix = this.sub_key + '#';
-        const start_key = find_descendant_key(cache.by_start.get(this.line_start + 1), prefix);
-        const end_key = find_descendant_key(cache.by_end.get(this.line_end), prefix);
-
-        if (start_key && end_key) {
-          const child_params = {
-            ...params,
-            source,
-            min_chars,
-            coverage_cache: cache,
-          };
-          const start_block = this.collection.get(this.source_key + start_key);
-          const end_block = this.collection.get(this.source_key + end_key);
-          const start_should_embed = typeof start_block?.get_should_embed === 'function'
-            ? start_block.get_should_embed(child_params)
-            : start_block?.should_embed
-          ;
-          const end_should_embed = typeof end_block?.get_should_embed === 'function'
-            ? end_block.get_should_embed(child_params)
-            : end_block?.should_embed
-          ;
-          if (start_should_embed && end_should_embed) should_embed = false;
-        }
-      }
-
-      if (source_hash != null) {
-        this._should_embed_cache = {
-          hash: source_hash,
-          min_chars,
-          value: should_embed,
-        };
-      }
-
-      return should_embed;
-    } catch (error) {
-      console.error(error, error.stack);
-      console.error(`Error getting should_embed for ${this.key}: ` + JSON.stringify((error || {}), null, 2));
+    const source = params.source || this.source;
+    const block_data = this.data;
+    if (
+      source?.data
+      && (
+        this._should_embed_cache === null
+        || block_data.should_embed == null
+      )
+    ) {
+      source.data.block_embedding_selection = null;
     }
+    if (this._should_embed_cache === null) this._should_embed_cache = undefined;
+    source?.ensure_block_embedding_selection?.({
+      min_chars: params.min_chars,
+    });
+    return block_data.should_embed === true;
   }
 }
 
@@ -300,41 +259,6 @@ function create_empty_block_data() {
       at: 0,
     },
   };
-}
-
-function get_source_block_coverage_cache(source) {
-  if (!source) return { by_start: new Map(), by_end: new Map() };
-
-  const hash = source.data?.last_read?.hash || '';
-  if (source._block_coverage_cache?.hash === hash) {
-    return source._block_coverage_cache;
-  }
-
-  const by_start = new Map();
-  const by_end = new Map();
-  const blocks_data = source.data?.blocks_data || {};
-
-  for (const sub_key in blocks_data) {
-    const range = blocks_data[sub_key]?.lines;
-    if (!Array.isArray(range)) continue;
-    push_map_entry(by_start, range[0], sub_key);
-    push_map_entry(by_end, range[1], sub_key);
-  }
-
-  source._block_coverage_cache = { hash, by_start, by_end };
-  return source._block_coverage_cache;
-}
-
-function push_map_entry(map, key, value) {
-  if (!map.has(key)) map.set(key, []);
-  map.get(key).push(value);
-}
-
-function find_descendant_key(keys = [], prefix = '') {
-  for (let i = 0; i < keys.length; i += 1) {
-    if (keys[i]?.startsWith(prefix)) return keys[i];
-  }
-  return '';
 }
 
 function set_block_refs(block, block_key = '') {
@@ -373,6 +297,6 @@ function source_has_block(source, sub_key) {
 function remove_source_block_data(source, sub_key) {
   if (!source?.data || !sub_key) return;
   if (source.data.blocks_data) delete source.data.blocks_data[sub_key];
-  source._block_coverage_cache = null;
+  source.data.block_embedding_selection = null;
 }
 

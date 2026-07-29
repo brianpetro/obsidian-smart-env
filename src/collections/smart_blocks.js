@@ -23,8 +23,13 @@ export class SmartBlocks extends BaseSmartBlocks {
     const file_info = this.embeddings?.get_active_file_info?.();
 
     for (const block of Object.values(this.items || {})) {
+      if (!block.should_embed) {
+        block._queue_embed = false;
+        continue;
+      }
+
       const has_vector = this.embeddings?.has_current_vector_ref?.(block, undefined, file_info) === true;
-      if (block._queue_embed || (!has_vector && block.should_embed)) {
+      if (block._queue_embed || !has_vector) {
         embed_queue.push(block);
       }
     }

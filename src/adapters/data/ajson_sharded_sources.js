@@ -1214,7 +1214,11 @@ function prepare_loaded_block(block, params = {}) {
     ? block.get_should_embed({ min_chars: params.min_chars })
     : block.should_embed
   ;
-  if (block._queue_embed || (!has_current_vector && should_embed)) {
+  if (!should_embed) {
+    block._queue_embed = false;
+    return;
+  }
+  if (block._queue_embed || !has_current_vector) {
     params.embed_queue?.push(block);
   }
 }

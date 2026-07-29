@@ -34,8 +34,13 @@ export class SmartSources extends BaseSmartSources {
       const blocks = source.blocks || [];
       for (let i = 0; i < blocks.length; i += 1) {
         const block = blocks[i];
+        if (!block.should_embed) {
+          block._queue_embed = false;
+          continue;
+        }
+
         const block_has_vector = this.block_collection?.embeddings?.has_current_vector_ref?.(block, undefined, block_file_info) === true;
-        if (block._queue_embed || (!block_has_vector && block.should_embed)) {
+        if (block._queue_embed || !block_has_vector) {
           embed_queue.push(block);
         }
       }

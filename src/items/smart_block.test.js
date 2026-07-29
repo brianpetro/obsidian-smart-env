@@ -146,3 +146,34 @@ test('block membership is attached only through blocks_data writes', t => {
   t.false(source.has_block('#Heading'));
   t.false(Object.prototype.hasOwnProperty.call(block.collection.items, 'Notes/Test.md#Heading'));
 });
+
+test('get_should_embed uses the source-level persisted selection', t => {
+  const calls = [];
+  const source = {
+    data: {
+      block_embedding_selection: { version: 1 },
+    },
+    ensure_block_embedding_selection(params) {
+      calls.push(params);
+    },
+  };
+  const block = {
+    source,
+    data: {
+      should_embed: true,
+    },
+    _should_embed_cache: null,
+  };
+
+  t.true(SmartBlock.prototype.get_should_embed.call(block, { min_chars: 200 }));
+  t.is(source.data.block_embedding_selection, null);
+  t.is(block._should_embed_cache, undefined);
+  t.deepEqual(calls, [{ min_chars: 200 }]);
+
+  block.data.should_embed = false;
+  t.false(SmartBlock.prototype.get_should_embed.call(block));
+  t.deepEqual(calls, [
+    { min_chars: 200 },
+    { min_chars: undefined },
+  ]);
+});

@@ -596,6 +596,34 @@ test('legacy read errors abort before vector migration and base commit', async (
   t.true(files.has(legacy_path));
 });
 
+test('load-time queue excludes a stale flag for a deselected block', async (t) => {
+  const {
+    adapter,
+    block_collection,
+    collection,
+    files,
+  } = create_adapter();
+  const source_key = 'Notes/Test.md';
+  create_source(collection, { key: source_key });
+
+  const block = new block_collection.item_type(collection.env);
+  block._block_key = `${source_key}#Parent`;
+  block._data_ref = { should_embed: false };
+  block._queue_embed = true;
+  block_collection.set(block);
+
+  files.set(
+    adapter.get_ajson_file_path(0),
+    `"smart_sources:${source_key}": {"blocks_data":{"#Parent":{"lines":[1,2],"size":300,"should_embed":false}}},`,
+  );
+
+  await adapter.process_load_queue();
+
+  t.false(block._queue_embed);
+  t.deepEqual(collection._embed_queue, []);
+  t.deepEqual(block_collection._embed_queue, []);
+});
+
 test('flat embedding refs trigger model fingerprint migration on load', async (t) => {
   const {
     adapter,
