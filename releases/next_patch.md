@@ -195,3 +195,6 @@ Improved: environment stats inspector with detailed diagnostics and improved UI
 - Updated collection cards to allow inspection of items, with appropriate aria attributes for accessibility.
 - Enhanced loading states and error handling in the inspector.
 - Refactored related functions for better code organization and readability.
+
+
+Improved: refine block embedding logic to exclude deselected blocks and added tests for embedding selection
