@@ -207,3 +207,6 @@ Added: force re-import functionality to source inspector
 
 
 move vec index logic to correct scope
+
+
+Enhance context_to_md_tree to support filtering and add corresponding tests
