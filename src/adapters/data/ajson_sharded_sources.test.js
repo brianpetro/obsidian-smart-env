@@ -326,6 +326,22 @@ test('adapter exposes the current platform byte threshold', (t) => {
   t.is(adapter.max_bytes_per_shard, DEFAULT_MAX_BYTES_PER_SHARD);
 });
 
+test('compaction suggestion waits for material stale-record growth', (t) => {
+  const { adapter, collection } = create_adapter();
+
+  for (let i = 0; i < 100; i += 1) {
+    create_source(collection, { key: `Notes/Small-${i}.md` });
+  }
+  t.false(adapter.should_suggest_compaction([{ record_count: 1100 }]));
+  t.true(adapter.should_suggest_compaction([{ record_count: 1101 }]));
+
+  for (let i = 100; i < 1000; i += 1) {
+    create_source(collection, { key: `Notes/Large-${i}.md` });
+  }
+  t.false(adapter.should_suggest_compaction([{ record_count: 3000 }]));
+  t.true(adapter.should_suggest_compaction([{ record_count: 3001 }]));
+});
+
 test('long source paths persist in fixed shards without legacy filename probes', async (t) => {
   const { adapter, collection, files } = create_adapter();
   const source_key = `Notes/${'x'.repeat(220)}.md`;

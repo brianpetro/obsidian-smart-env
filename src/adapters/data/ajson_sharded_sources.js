@@ -285,7 +285,7 @@ export class AjsonShardedSourcesDataAdapter extends AjsonSingleFileCollectionDat
       .length
     ;
     const stale_record_count = Math.max(0, total_record_count - active_source_count);
-    const stale_record_threshold = Math.max(100, Math.floor(active_source_count / 2));
+    const stale_record_threshold = Math.max(1000, active_source_count * 2);
 
     return stale_record_count > stale_record_threshold;
   }
