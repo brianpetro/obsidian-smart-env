@@ -222,15 +222,10 @@ export class AjsonShardedSourcesDataAdapter extends AjsonSingleFileCollectionDat
 
     let loaded = 0;
     let migrated_legacy_data = false;
-    let should_offer_compaction = false;
 
     const data_files = await this.list_ajson_data_files();
     if (data_files.length) {
       loaded = await this.parse_ajson_files(data_files, prepare_context);
-      if (this._needs_minimal_rewrite) should_offer_compaction = true;
-      if (data_files.some((file) => {
-        return file.size_bytes > this.max_bytes_per_shard && file.record_count > 1;
-      })) should_offer_compaction = true;
     } else if (await this.fs.exists(this.legacy_data_dir)) {
       loaded = await this.load_legacy_multi_files(prepare_context);
       migrated_legacy_data = true;
@@ -246,17 +241,14 @@ export class AjsonShardedSourcesDataAdapter extends AjsonSingleFileCollectionDat
       ? await this.collection.embeddings?.migrate_legacy_item_vectors?.() || 0
       : 0
     ;
-    if (migrated_source_count) should_offer_compaction = true;
 
     const migrated_block_count = block_collection?._has_legacy_embedding_data
       ? await block_collection?.embeddings?.migrate_legacy_item_vectors?.() || 0
       : 0
     ;
-    if (migrated_block_count) should_offer_compaction = true;
 
     if (migrated_legacy_data) {
       await this.commit_legacy_migration();
-      should_offer_compaction = false;
     }
 
     if (migrated_source_count || migrated_block_count || should_rebuild_for_dims) {
@@ -266,7 +258,7 @@ export class AjsonShardedSourcesDataAdapter extends AjsonSingleFileCollectionDat
       apply_prepared_embed_queue(this.collection, block_collection, prepare_context);
     }
 
-    if (should_offer_compaction || this.should_suggest_compaction(data_files)) {
+    if (this.should_suggest_compaction(data_files)) {
       this.show_compact_notice_after_load();
     }
 
@@ -277,17 +269,38 @@ export class AjsonShardedSourcesDataAdapter extends AjsonSingleFileCollectionDat
   should_suggest_compaction(data_files = []) {
     if (!data_files.length) return false;
 
-    const total_record_count = data_files.reduce((total, file) => {
-      return total + Number(file?.record_count || 0);
-    }, 0);
-    const active_source_count = Object.values(this.collection.items || {})
-      .filter((source) => source && !source.deleted && source.source_adapter?.should_persist !== false)
-      .length
-    ;
-    const stale_record_count = Math.max(0, total_record_count - active_source_count);
-    const stale_record_threshold = Math.max(1000, active_source_count * 2);
+    const current_bytes = measure_ajson_files(data_files).bytes;
+    let projected_compacted_bytes = 0;
+    let shard_size_bytes = 0;
+    let shard_record_count = 0;
 
-    return stale_record_count > stale_record_threshold;
+    for (const source_key in this.collection.items || {}) {
+      const source = this.collection.items[source_key];
+      if (!source || source.deleted) continue;
+      if (source.source_adapter?.should_persist === false) continue;
+
+      const line_size_bytes = get_utf8_byte_length(this.get_source_ajson(source));
+      const separator_size_bytes = shard_record_count ? 1 : 0;
+      if (
+        shard_record_count
+        && shard_size_bytes + separator_size_bytes + line_size_bytes > this.max_bytes_per_shard
+      ) {
+        projected_compacted_bytes += shard_size_bytes;
+        shard_size_bytes = 0;
+        shard_record_count = 0;
+      }
+
+      shard_size_bytes += (shard_record_count ? 1 : 0) + line_size_bytes;
+      shard_record_count += 1;
+    }
+
+    projected_compacted_bytes += shard_size_bytes;
+    const reclaimable_bytes = current_bytes - projected_compacted_bytes;
+    const min_reclaimable_bytes = this.max_bytes_per_shard / 2;
+
+    return reclaimable_bytes >= min_reclaimable_bytes
+      && reclaimable_bytes >= projected_compacted_bytes
+    ;
   }
 
   show_compact_notice_after_load() {

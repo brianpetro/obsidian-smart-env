@@ -326,20 +326,78 @@ test('adapter exposes the current platform byte threshold', (t) => {
   t.is(adapter.max_bytes_per_shard, DEFAULT_MAX_BYTES_PER_SHARD);
 });
 
-test('compaction suggestion waits for material stale-record growth', (t) => {
-  const { adapter, collection } = create_adapter();
+test('compaction suggestion requires half a shard and 2x projected compacted bytes', (t) => {
+  const { adapter, collection } = create_adapter({ max_bytes_per_shard: TEST_MAX_BYTES_PER_SHARD });
+  const min_reclaimable_bytes = adapter.max_bytes_per_shard / 2;
 
-  for (let i = 0; i < 100; i += 1) {
-    create_source(collection, { key: `Notes/Small-${i}.md` });
-  }
-  t.false(adapter.should_suggest_compaction([{ record_count: 1100 }]));
-  t.true(adapter.should_suggest_compaction([{ record_count: 1101 }]));
+  create_source(collection, { key: 'Notes/First.md' });
+  create_source(collection, { key: 'Notes/Second.md' });
+  adapter.get_source_ajson = () => 'x'.repeat(6);
 
-  for (let i = 100; i < 1000; i += 1) {
-    create_source(collection, { key: `Notes/Large-${i}.md` });
-  }
-  t.false(adapter.should_suggest_compaction([{ record_count: 3000 }]));
-  t.true(adapter.should_suggest_compaction([{ record_count: 3001 }]));
+  const projected_compacted_bytes = 13;
+  t.false(adapter.should_suggest_compaction([{
+    size_bytes: projected_compacted_bytes * 2,
+  }]));
+  t.false(adapter.should_suggest_compaction([{
+    size_bytes: projected_compacted_bytes + min_reclaimable_bytes - 1,
+  }]));
+  t.true(adapter.should_suggest_compaction([{
+    size_bytes: projected_compacted_bytes + min_reclaimable_bytes,
+  }]));
+
+  const large_projected_compacted_bytes = min_reclaimable_bytes * 2;
+  adapter.get_source_ajson = () => 'x'.repeat(min_reclaimable_bytes);
+  t.false(adapter.should_suggest_compaction([{
+    size_bytes: large_projected_compacted_bytes * 2 - 1,
+  }]));
+  t.true(adapter.should_suggest_compaction([{
+    size_bytes: large_projected_compacted_bytes * 2,
+  }]));
+});
+
+test('load ignores maintenance-only compaction reasons without material byte savings', async (t) => {
+  const {
+    adapter,
+    block_collection,
+    collection,
+    files,
+  } = create_adapter({ max_bytes_per_shard: 128 });
+  const source_key = 'Notes/Test.md';
+  const block_key = `${source_key}#Heading`;
+  const source = create_source(collection, { key: source_key });
+  create_source(collection, { key: 'Notes/Second.md' });
+
+  files.set(adapter.get_ajson_file_path(0), [
+    `"smart_sources:${source_key}": {"blocks":{},"blocks_data":{"#Heading":{"lines":[1,2],"embedding":{"default":{"file":"mf_test","file_i":0,"read_hash":"block-hash","at":1},"history":[]}}},"embedding":{"default":{"file":"mf_test","file_i":0,"read_hash":"source-hash","at":1},"history":[]}},`,
+    '"smart_sources:Notes/Second.md": {"blocks_data":{}},',
+  ].join('\n'));
+
+  let source_migration_count = 0;
+  collection.embeddings.migrate_legacy_item_vectors = async () => {
+    source_migration_count += 1;
+    source.data.embedding.default = { mf_test: source.data.embedding.default };
+    return 1;
+  };
+  let block_migration_count = 0;
+  block_collection.embeddings.migrate_legacy_item_vectors = async () => {
+    block_migration_count += 1;
+    const block = block_collection.get(block_key);
+    block.data.embedding.default = { mf_test: block.data.embedding.default };
+    return 1;
+  };
+  let notice_shown = false;
+  adapter.show_compact_notice_after_load = () => {
+    notice_shown = true;
+  };
+
+  await adapter.process_load_queue();
+
+  t.true(adapter._needs_minimal_rewrite);
+  t.is(source_migration_count, 1);
+  t.is(block_migration_count, 1);
+  t.true(adapter._ajson_file_infos[0].size_bytes > adapter.max_bytes_per_shard);
+  t.is(adapter._ajson_file_infos[0].record_count, 2);
+  t.false(notice_shown);
 });
 
 test('long source paths persist in fixed shards without legacy filename probes', async (t) => {
