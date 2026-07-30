@@ -402,6 +402,7 @@ test('embed_batch migrates a compatible legacy file ref without calling the prov
 
   t.is(embed_call_count, 0);
   t.true(results[0].skipped);
+  t.true(results[0].vector_changed);
   t.deepEqual(Array.from(results[0].vec), default_vector);
   t.is(migrated_ref.file, active_file);
   t.is(migrated_ref.file_i, 0);

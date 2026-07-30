@@ -359,6 +359,7 @@ export class Embeddings {
       }
 
       let ref = this.get_item_embedding_ref(item, type, model_fingerprint);
+      let vector_changed = false;
       if (
         ref?.file
         && ref.file !== active_file
@@ -378,6 +379,7 @@ export class Embeddings {
               read_hash: ref.read_hash,
               at: ref.at,
             });
+            vector_changed = Boolean(ref);
           }
         }
       }
@@ -389,7 +391,11 @@ export class Embeddings {
       ) {
         item._queue_embed = false;
         item._embed_input = null;
-        results[i] = { skipped: true, vec: this.get_vector(ref.file, ref.file_i) };
+        results[i] = {
+          skipped: true,
+          vector_changed,
+          vec: this.get_vector(ref.file, ref.file_i),
+        };
         continue;
       }
 
