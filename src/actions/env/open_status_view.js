@@ -21,3 +21,11 @@ export const commands = {
     },
   },
 };
+
+export const menus = {
+  'env:status_bar_menu': {
+    title: 'Open status view',
+    icon: 'gauge',
+    order: 5,
+  },
+};

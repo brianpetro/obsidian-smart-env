@@ -62,7 +62,7 @@ import { env_inspect_active_note as env_inspect_active_note_action, menus as env
 import { env_open_milestones as env_open_milestones_action, menus as env_open_milestones_action_menus } from './src/actions/env/open_milestones.js';
 import { env_open_notifications as env_open_notifications_action, menus as env_open_notifications_action_menus } from './src/actions/env/open_notifications.js';
 import { env_open_pro_link as env_open_pro_link_action, menus as env_open_pro_link_action_menus } from './src/actions/env/open_pro_link.js';
-import { env_open_status_view as env_open_status_view_action, commands as env_open_status_view_action_commands } from './src/actions/env/open_status_view.js';
+import { env_open_status_view as env_open_status_view_action, commands as env_open_status_view_action_commands, menus as env_open_status_view_action_menus } from './src/actions/env/open_status_view.js';
 import { env_show_stats as env_show_stats_action, menus as env_show_stats_action_menus } from './src/actions/env/show_stats.js';
 import { lookup_list_get_results as lookup_list_get_results_action, display_name as lookup_list_get_results_action_display_name } from './src/actions/lookup-list/get_results.js';
 import { pre_process as lookup_list_pre_process_action, pre_process as lookup_list_pre_process_action_pre_process } from './src/actions/lookup-list/pre_process.js';
@@ -143,7 +143,7 @@ export const smart_env_config = {
     env_open_milestones: { action: env_open_milestones_action, menus: env_open_milestones_action_menus, version: "1.0.1" },
     env_open_notifications: { action: env_open_notifications_action, menus: env_open_notifications_action_menus, version: "1.0.1" },
     env_open_pro_link: { action: env_open_pro_link_action, menus: env_open_pro_link_action_menus, version: "1.0.1" },
-    env_open_status_view: { action: env_open_status_view_action, commands: env_open_status_view_action_commands, version: "1.0.1" },
+    env_open_status_view: { action: env_open_status_view_action, commands: env_open_status_view_action_commands, menus: env_open_status_view_action_menus, version: "1.0.1" },
     env_show_stats: { action: env_show_stats_action, menus: env_show_stats_action_menus, version: "1.0.1" },
     lookup_list_get_results: { action: lookup_list_get_results_action, display_name: lookup_list_get_results_action_display_name, version: "1.0.1" },
     lookup_list_pre_process: { action: lookup_list_pre_process_action, pre_process: lookup_list_pre_process_action_pre_process, version: "1.0.1" },

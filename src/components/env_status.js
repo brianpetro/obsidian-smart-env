@@ -1,3 +1,4 @@
+import { run_action_entry } from 'smart-environment';
 import styles from './env_status.css';
 import {
   get_env_activity_state,
@@ -195,7 +196,14 @@ function render_details(details_el, details = []) {
 function render_actions(actions_el, env, action_keys = [], params = {}) {
   actions_el.replaceChildren();
 
-  action_keys.forEach((action_key) => {
+  const status_action_keys = [
+    ...action_keys,
+    ...(env?.state === 'loaded'
+      ? ['env_show_stats', 'env_browse_smart_plugins']
+      : []),
+  ];
+
+  status_action_keys.forEach((action_key) => {
     const btn = actions_el.ownerDocument.createElement('button');
     btn.type = 'button';
     btn.className = 'smart-env-status-view__btn';
@@ -222,6 +230,10 @@ function get_action_label(action_key) {
       return 'Run re-import';
     case 'open_notifications':
       return 'Open events feed';
+    case 'env_show_stats':
+      return 'Environment stats';
+    case 'env_browse_smart_plugins':
+      return 'Browse Smart Plugins';
     default:
       return action_key;
   }
@@ -278,6 +290,12 @@ async function run_action_key(env, action_key, params = {}) {
       return;
     case 'open_notifications':
       env?.open_notifications_feed_modal?.();
+      return;
+    case 'env_show_stats':
+    case 'env_browse_smart_plugins':
+      await run_action_entry(env, action_key, {}, {
+        event_source: 'env_status_component',
+      });
       return;
     default:
       return;
