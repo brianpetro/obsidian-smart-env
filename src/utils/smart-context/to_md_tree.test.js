@@ -81,6 +81,38 @@ test('context_to_md_tree builds a nested wikilink tree from context_items', (t) 
   );
 });
 
+test('context_to_md_tree applies a caller filter to the rendered items', (t) => {
+  const smart_context = build_smart_context(
+    [
+      'root.md',
+      'links/out.md',
+      'links/in.md',
+      'links/deep.md',
+      'links/excluded.md',
+    ],
+    {
+      item_data: {
+        'root.md': { d: 0 },
+        'links/out.md': { d: 1 },
+        'links/in.md': { d: 1, inlink: true },
+        'links/deep.md': { d: 2 },
+        'links/excluded.md': { d: 0, exclude: true },
+      },
+    },
+  );
+
+  t.is(
+    context_to_md_tree(smart_context, (item) => {
+      return item.data.d <= 1 && item.data.inlink !== true;
+    }),
+    [
+      '- [[root]]',
+      '- links',
+      '\t- [[out]]',
+    ].join('\n'),
+  );
+});
+
 test('context_to_md_tree resolves external links with adapter.getFilePath when available', (t) => {
   const vault_root_path = process.platform === 'win32'
     ? 'C:\\Users\\brian\\Documents\\vault'

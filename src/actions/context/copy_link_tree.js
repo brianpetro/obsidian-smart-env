@@ -6,11 +6,12 @@ import { context_to_md_tree } from '../../utils/smart-context/to_md_tree.js';
  *
  * @this {import('smart-contexts').SmartContext}
  * @param {object} [params={}]
+ * @param {(item: import('smart-contexts').ContextItem) => boolean} [params.filter]
  * @returns {Promise<boolean>}
  */
 export async function context_copy_link_tree(params = {}) {
   const event_source = params.event_source || 'smart_context.copy_link_tree';
-  const md_tree = context_to_md_tree(this).trim();
+  const md_tree = context_to_md_tree(this, params.filter).trim();
   if (!md_tree) {
     this.emit_event('context:copy_empty', {
       level: 'warning',

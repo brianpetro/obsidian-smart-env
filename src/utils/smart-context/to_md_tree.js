@@ -402,15 +402,21 @@ function render_tree_lines(node, depth = 0, lines = []) {
  * live ContextItems collection. Falls back to raw `data.context_items` when needed.
  *
  * @param {import('smart-contexts').SmartContext|any} smart_context
+ * @param {(item: { key: string, data?: Record<string, any> }) => boolean} [filter]
  * @returns {Array<{ key: string, data?: Record<string, any> }>}
  */
-function list_context_items(smart_context) {
+function list_context_items(smart_context, filter) {
+  const user_filter = typeof filter === 'function'
+    ? filter
+    : null
+  ;
   const collection = smart_context?.context_items;
 
   if (collection && typeof collection.filter === 'function') {
     return collection.filter((item) => {
       if (!item?.key) return false;
       if (item?.data?.exclude) return false;
+      if (user_filter && !user_filter(item)) return false;
       return true;
     });
   }
@@ -419,12 +425,13 @@ function list_context_items(smart_context) {
   if (!raw_items || typeof raw_items !== 'object') return [];
 
   return Object.entries(raw_items)
-    .filter(([key, item_data]) => {
-      if (!key) return false;
-      if (item_data?.exclude) return false;
+    .map(([key, item_data]) => ({ key, data: item_data || {} }))
+    .filter((item) => {
+      if (!item.key) return false;
+      if (item.data?.exclude) return false;
+      if (user_filter && !user_filter(item)) return false;
       return true;
     })
-    .map(([key, item_data]) => ({ key, data: item_data || {} }))
   ;
 }
 
@@ -445,10 +452,11 @@ function get_active_file_path(smart_context) {
  * URLs resolved from Obsidian's vault adapter when available.
  *
  * @param {import('smart-contexts').SmartContext|any} smart_context
+ * @param {(item: { key: string, data?: Record<string, any> }) => boolean} [filter]
  * @returns {string}
  */
-export function context_to_md_tree(smart_context) {
-  const items = list_context_items(smart_context);
+export function context_to_md_tree(smart_context, filter) {
+  const items = list_context_items(smart_context, filter);
   if (!items.length) return '';
 
   const root_node = create_tree_node();
