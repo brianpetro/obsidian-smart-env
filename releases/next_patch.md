@@ -204,3 +204,6 @@ Added: source data optimization functionality with backup validation and error h
 
 
 Added: force re-import functionality to source inspector
+
+
+move vec index logic to correct scope
