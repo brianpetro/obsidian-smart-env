@@ -58,6 +58,7 @@
 }
 
 .smart-env-stats__status,
+.smart-env-stats__optimization-status,
 .smart-env-stats__section-heading p,
 .smart-env-stats__collection-state,
 .smart-env-stats__collection-footer,
@@ -74,7 +75,8 @@
   font-variant-numeric: tabular-nums;
 }
 
-.smart-env-stats__refresh {
+.smart-env-stats__refresh,
+.smart-env-stats__optimize {
   flex: 0 0 auto;
   min-width: 96px;
 }
@@ -157,11 +159,45 @@
   margin: var(--size-2-2) 0 0;
 }
 
-.smart-env-stats__memory-section {
+.smart-env-stats__memory-section,
+.smart-env-stats__optimization {
   padding: var(--size-4-3);
   border: 1px solid var(--background-modifier-border);
   border-radius: var(--smart-env-stats-card-radius);
   background: color-mix(in srgb, var(--background-secondary) 58%, transparent);
+}
+
+.smart-env-stats__optimization-status {
+  min-height: 1.35em;
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.smart-env-stats__optimization-confirm[hidden] {
+  display: none;
+}
+
+.smart-env-stats__optimization-confirm {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--size-4-3);
+  padding: var(--size-4-2) var(--size-4-3);
+  border: 1px solid color-mix(in srgb, var(--color-orange) 55%, var(--background-modifier-border));
+  border-radius: var(--radius-m);
+  background: color-mix(in srgb, var(--color-orange) 8%, var(--background-primary));
+  font-size: var(--font-ui-small);
+  line-height: 1.4;
+}
+
+.smart-env-stats__optimization-confirm p {
+  margin: 0;
+}
+
+.smart-env-stats__optimization-confirm-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: var(--size-4-2);
 }
 
 .smart-env-stats__memory-utilization {
@@ -631,8 +667,18 @@
     flex-direction: column;
   }
 
-  .smart-env-stats__refresh {
+  .smart-env-stats__refresh,
+  .smart-env-stats__optimize {
     align-self: flex-start;
+  }
+
+  .smart-env-stats__optimization-confirm {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .smart-env-stats__optimization-confirm-actions {
+    flex-wrap: wrap;
   }
 
   .smart-env-stats__inspector-field {

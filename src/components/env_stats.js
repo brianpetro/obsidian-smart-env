@@ -94,6 +94,24 @@ export function build_html() {
       ${build_inspector_html()}
     </section>
 
+    <section class="smart-env-stats__section smart-env-stats__optimization">
+      <div class="smart-env-stats__section-heading">
+        <div>
+          <h3>Clean up unexpected embeddings</h3>
+          <p>Optimize source data and vector files to remove unexpected embeddings. This runs separately from Compact.</p>
+        </div>
+        <button class="smart-env-stats__optimize" type="button" disabled>Optimize</button>
+      </div>
+      <p class="smart-env-stats__optimization-status" aria-live="polite">Waiting for exact stats...</p>
+      <div class="smart-env-stats__optimization-confirm" role="alert" hidden>
+        <p>Existing backup files were found. Continuing means prior backup files will be replaced with the current environment data.</p>
+        <div class="smart-env-stats__optimization-confirm-actions">
+          <button class="mod-warning" type="button" data-action="confirm-source-data-optimization">Replace backups and optimize</button>
+          <button type="button" data-action="cancel-source-data-optimization">Cancel</button>
+        </div>
+      </div>
+    </section>
+
     <footer class="smart-env-stats__footer" aria-live="polite"></footer>
   </section>`;
 }
@@ -128,6 +146,12 @@ export function post_process(env, container, opts = {}) {
   const collections_el = container.querySelector('.smart-env-stats__collections');
   const footer_el = container.querySelector('.smart-env-stats__footer');
   const inspector_elements = get_inspector_elements(container);
+  const optimize_btn = container.querySelector('.smart-env-stats__optimize');
+  const optimization_status_el = container.querySelector('.smart-env-stats__optimization-status');
+  const optimization_confirm_el = container.querySelector('.smart-env-stats__optimization-confirm');
+  const confirm_optimize_btn = optimization_confirm_el.querySelector('[data-action="confirm-source-data-optimization"]');
+  const cancel_optimize_btn = optimization_confirm_el.querySelector('[data-action="cancel-source-data-optimization"]');
+  const optimization_adapter = env.smart_sources.data_adapter;
   const inspector_cache = new Map();
   const inspector_state = {
     active_trigger: null,
@@ -145,6 +169,9 @@ export function post_process(env, container, opts = {}) {
   let disposed = false;
   let scan_id = 0;
   let start_timeout = null;
+  let unexpected_embedding_count = 0;
+  let optimization_busy = false;
+  let optimization_plan = null;
 
   if (inspector_elements.container) {
     inspector_elements.container.id = inspector_id;
@@ -193,6 +220,103 @@ export function post_process(env, container, opts = {}) {
     render_inspector_reason_options(inspector_elements.reason_select, result.reasons);
     apply_inspector_filters(inspector_elements, inspector_state);
     set_inspector_loading(inspector_elements, false);
+  };
+
+  const show_optimization_count = () => {
+    const noun = unexpected_embedding_count === 1 ? 'embedding' : 'embeddings';
+    optimize_btn.disabled = unexpected_embedding_count === 0;
+    optimize_btn.textContent = 'Optimize';
+    set_text(
+      optimization_status_el,
+      unexpected_embedding_count
+        ? `${format_number(unexpected_embedding_count)} unexpected ${noun} can be removed.`
+        : 'No unexpected embeddings to clean up.',
+    );
+  };
+
+  const set_optimization_stats = (totals = {}) => {
+    unexpected_embedding_count = totals.extraneous_embed || 0;
+    if (
+      optimization_busy
+      || optimization_plan
+      || !optimization_confirm_el.hidden
+    ) {
+      return;
+    }
+    show_optimization_count();
+  };
+
+  const prepare_source_data_optimization = async (replace_existing_backups = false) => {
+    optimization_busy = true;
+    optimization_confirm_el.hidden = true;
+    optimize_btn.disabled = true;
+    optimize_btn.textContent = 'Optimizing...';
+    set_text(optimization_status_el, 'Preparing optimized source and vector files...');
+
+    try {
+      optimization_plan = await optimization_adapter.optimize_source_data({
+        replace_existing_backups,
+      });
+      if (disposed) return;
+
+      const backup_message = replace_existing_backups
+        ? 'Prior backup files will be replaced with the current environment data.'
+        : 'Current source and vector files will be retained as .backup files.'
+      ;
+      optimize_btn.disabled = false;
+      optimize_btn.textContent = 'Finish optimization';
+      set_text(
+        optimization_status_el,
+        `Optimized files are ready. ${backup_message} Do not change sources or the embedding model before finishing.`,
+      );
+    } catch (error) {
+      if (disposed) return;
+      optimization_plan = null;
+      optimize_btn.textContent = 'Optimize';
+
+      if (
+        !replace_existing_backups
+        && error.message.startsWith('Source data optimization backup already exists:')
+      ) {
+        optimization_confirm_el.hidden = false;
+        set_text(optimization_status_el, 'Backup replacement requires confirmation.');
+        confirm_optimize_btn.focus();
+        return;
+      }
+
+      console.error('[env_stats] Failed to optimize source data', error);
+      optimize_btn.disabled = unexpected_embedding_count === 0;
+      set_text(
+        optimization_status_el,
+        'Optimization could not be prepared. See the developer console for details.',
+      );
+    } finally {
+      optimization_busy = false;
+    }
+  };
+
+  const finish_source_data_optimization = async () => {
+    optimization_busy = true;
+    optimize_btn.disabled = true;
+    optimize_btn.textContent = 'Finishing...';
+    set_text(optimization_status_el, 'Applying optimized source and vector files...');
+
+    try {
+      await optimization_adapter.finish_source_data_optimization(optimization_plan);
+    } catch (error) {
+      if (disposed) return;
+      console.error('[env_stats] Failed to finish source data optimization', {
+        error,
+        plan: optimization_plan,
+      });
+      optimize_btn.textContent = 'Finishing failed';
+      set_text(
+        optimization_status_el,
+        'Finishing failed. Close Obsidian and restore the complete .backup file set before restarting. See the developer console for details.',
+      );
+    } finally {
+      optimization_busy = false;
+    }
   };
 
   const load_inspection = async (trigger, { force = false } = {}) => {
@@ -279,6 +403,7 @@ export function post_process(env, container, opts = {}) {
 
     if (cached) {
       render_stats(container, cached);
+      set_optimization_stats(cached.totals);
       set_text(
         status_el,
         cache_age_ms < CACHE_FRESH_MS
@@ -295,6 +420,13 @@ export function post_process(env, container, opts = {}) {
 
     inspector_cache.clear();
     close_inspector();
+
+    if (!optimization_busy && !optimization_plan) {
+      optimization_confirm_el.hidden = true;
+      optimize_btn.disabled = true;
+      optimize_btn.textContent = 'Optimize';
+      set_text(optimization_status_el, 'Refreshing exact stats...');
+    }
 
     container.setAttribute('aria-busy', 'true');
     set_button_loading(refresh_btn, true);
@@ -344,6 +476,7 @@ export function post_process(env, container, opts = {}) {
     };
     stats_cache.set(env, result);
     render_stats(container, result);
+    set_optimization_stats(result.totals);
     set_text(
       status_el,
       `Scanned ${format_number(result.totals.scanned_items)} items in ${format_duration(result.total_time_ms)}.`,
@@ -355,6 +488,10 @@ export function post_process(env, container, opts = {}) {
   const handle_load_error = (error) => {
     if (disposed) return;
     console.error('[env_stats] Failed to calculate stats', error);
+    if (!optimization_busy && !optimization_plan) {
+      optimize_btn.disabled = true;
+      set_text(optimization_status_el, 'Exact stats could not be refreshed.');
+    }
     set_text(status_el, 'Failed to calculate stats. See the developer console for details.');
     container.setAttribute('aria-busy', 'false');
     set_button_loading(refresh_btn, false);
@@ -428,6 +565,28 @@ export function post_process(env, container, opts = {}) {
     }
   };
 
+  const handle_optimize_source_data = () => {
+    if (optimization_busy) return;
+    if (optimization_plan) {
+      finish_source_data_optimization();
+      return;
+    }
+    if (unexpected_embedding_count === 0) return;
+    prepare_source_data_optimization();
+  };
+
+  const handle_confirm_source_data_optimization = () => {
+    if (optimization_busy) return;
+    prepare_source_data_optimization(true);
+  };
+
+  const handle_cancel_source_data_optimization = () => {
+    if (optimization_busy) return;
+    optimization_confirm_el.hidden = true;
+    show_optimization_count();
+    optimize_btn.focus();
+  };
+
   refresh_btn?.addEventListener('click', handle_refresh);
   collections_el?.addEventListener('click', handle_collection_click);
   inspector_elements.search_input?.addEventListener('input', handle_inspector_search);
@@ -435,6 +594,9 @@ export function post_process(env, container, opts = {}) {
   inspector_elements.load_more_btn?.addEventListener('click', handle_load_more);
   inspector_elements.close_btn?.addEventListener('click', handle_close_inspector);
   inspector_elements.list?.addEventListener('click', handle_inspector_list_click);
+  optimize_btn.addEventListener('click', handle_optimize_source_data);
+  confirm_optimize_btn.addEventListener('click', handle_confirm_source_data_optimization);
+  cancel_optimize_btn.addEventListener('click', handle_cancel_source_data_optimization);
 
   start_timeout = setTimeout(() => {
     start_timeout = null;
@@ -454,6 +616,9 @@ export function post_process(env, container, opts = {}) {
     inspector_elements.load_more_btn?.removeEventListener('click', handle_load_more);
     inspector_elements.close_btn?.removeEventListener('click', handle_close_inspector);
     inspector_elements.list?.removeEventListener('click', handle_inspector_list_click);
+    optimize_btn.removeEventListener('click', handle_optimize_source_data);
+    confirm_optimize_btn.removeEventListener('click', handle_confirm_source_data_optimization);
+    cancel_optimize_btn.removeEventListener('click', handle_cancel_source_data_optimization);
   });
 
   return container;

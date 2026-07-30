@@ -346,16 +346,15 @@ export class AjsonShardedSourcesDataAdapter extends AjsonSingleFileCollectionDat
     notice = new Notice(frag, 0);
   }
 
-  async optimize_source_data() {
-    const plan = await this.write_optimized_source_data_files();
-    this.show_finish_source_data_optimization_notice(plan);
-    return plan.stats;
+  async optimize_source_data(params = {}) {
+    return await this.write_optimized_source_data_files(params);
   }
 
-  async write_optimized_source_data_files() {
+  async write_optimized_source_data_files(params = {}) {
     const block_collection = this.env.smart_blocks;
     const source_embeddings = this.collection.embeddings;
     const block_embeddings = block_collection?.embeddings;
+    const replace_existing_backups = params.replace_existing_backups === true;
 
     if (this.collection?._defer_embed_saves || block_collection?._defer_embed_saves) {
       throw new Error('Cannot optimize source data while embedding saves are deferred.');
@@ -364,10 +363,12 @@ export class AjsonShardedSourcesDataAdapter extends AjsonSingleFileCollectionDat
       throw new Error('Cannot optimize source data without source and block embeddings.');
     }
 
-    await assert_no_source_data_optimization_backups([
-      source_embeddings,
-      block_embeddings,
-    ]);
+    if (!replace_existing_backups) {
+      await assert_no_source_data_optimization_backups([
+        source_embeddings,
+        block_embeddings,
+      ]);
+    }
 
     const persistent_sources = Object.values(this.collection.items || {})
       .filter((source) => {
@@ -411,16 +412,12 @@ export class AjsonShardedSourcesDataAdapter extends AjsonSingleFileCollectionDat
       get_optimization_vector_file(block_embeddings, block_file_info),
     ];
 
-    for (const vector_file of vector_files) {
-      if (await vector_file.fs.exists(vector_file.backup_path)) {
-        throw new Error(`Source data optimization backup already exists: ${vector_file.backup_path}`);
-      }
-    }
-    for (const old_file of old_source_files) {
-      const backup_path = `${old_file.path}.backup`;
-      if (await this.fs.exists(backup_path)) {
-        throw new Error(`Source data optimization backup already exists: ${backup_path}`);
-      }
+    // Recheck after queued saves before writing optimization files.
+    if (!replace_existing_backups) {
+      await assert_no_source_data_optimization_backups([
+        source_embeddings,
+        block_embeddings,
+      ]);
     }
 
     const optimized_source_data = new Map();
@@ -599,6 +596,7 @@ export class AjsonShardedSourcesDataAdapter extends AjsonSingleFileCollectionDat
         backup_path: `${file.path}.backup`,
       })),
       new_source_files,
+      replace_existing_backups,
       stats: {
         unexpected_refs_removed,
         removed_refs,
@@ -612,48 +610,10 @@ export class AjsonShardedSourcesDataAdapter extends AjsonSingleFileCollectionDat
     };
   }
 
-  show_finish_source_data_optimization_notice(plan) {
-    if (typeof document === 'undefined') return;
-
-    const frag = document.createDocumentFragment();
-    frag.createEl('p', {
-      text: 'Optimized source data is ready. '
-        + `${plan.stats.unexpected_refs_removed} unexpected embedding references will be removed. `
-        + 'Current source and vector files will be retained as .backup files. '
-        + 'Do not change sources or the embedding model before finishing.',
-    });
-    const finish_btn = frag.createEl('button', { text: 'Finish optimization' });
-
-    finish_btn.addEventListener('click', async () => {
-      finish_btn.disabled = true;
-      finish_btn.textContent = 'Finishing...';
-
-      try {
-        await this.finish_source_data_optimization(plan);
-      } catch (error) {
-        finish_btn.textContent = 'Finishing failed';
-        console.warn('[smart_env] Failed to finish source data optimization', {
-          error,
-          plan,
-        });
-        new Notice(
-          'Failed to finish source data optimization. Close Obsidian and restore the complete .backup file set before restarting.',
-          0,
-        );
-      }
-    });
-
-    new Notice(frag, 0);
-  }
-
   async finish_source_data_optimization(plan) {
     const source_embeddings = this.collection.embeddings;
     const block_embeddings = this.env.smart_blocks?.embeddings;
-
-    await assert_no_source_data_optimization_backups([
-      source_embeddings,
-      block_embeddings,
-    ]);
+    const replace_existing_backups = plan.replace_existing_backups === true;
 
     for (const file of [...plan.vector_files, ...plan.new_source_files]) {
       if (!(await file.fs.exists(file.temporary_path))) {
@@ -670,6 +630,20 @@ export class AjsonShardedSourcesDataAdapter extends AjsonSingleFileCollectionDat
       }
     }
 
+    const prior_backup_files = replace_existing_backups
+      ? await list_source_data_optimization_backup_files([
+        source_embeddings,
+        block_embeddings,
+      ])
+      : []
+    ;
+    if (!replace_existing_backups) {
+      await assert_no_source_data_optimization_backups([
+        source_embeddings,
+        block_embeddings,
+      ]);
+    }
+
     await Promise.all([
       source_embeddings?.unload?.(),
       block_embeddings?.unload?.(),
@@ -677,7 +651,10 @@ export class AjsonShardedSourcesDataAdapter extends AjsonSingleFileCollectionDat
 
     for (const file of plan.vector_files) {
       if (await file.fs.exists(file.backup_path)) {
-        throw new Error(`Source data optimization backup already exists: ${file.backup_path}`);
+        if (!replace_existing_backups) {
+          throw new Error(`Source data optimization backup already exists: ${file.backup_path}`);
+        }
+        await remove_file(file.fs, file.backup_path);
       }
       if (await file.fs.exists(file.canonical_path)) {
         await rename_file(file.fs, file.canonical_path, file.backup_path);
@@ -687,7 +664,10 @@ export class AjsonShardedSourcesDataAdapter extends AjsonSingleFileCollectionDat
 
     for (const file of plan.old_source_files) {
       if (await file.fs.exists(file.backup_path)) {
-        throw new Error(`Source data optimization backup already exists: ${file.backup_path}`);
+        if (!replace_existing_backups) {
+          throw new Error(`Source data optimization backup already exists: ${file.backup_path}`);
+        }
+        await remove_file(file.fs, file.backup_path);
       }
       if (await file.fs.exists(file.canonical_path)) {
         await rename_file(file.fs, file.canonical_path, file.backup_path);
@@ -696,6 +676,19 @@ export class AjsonShardedSourcesDataAdapter extends AjsonSingleFileCollectionDat
 
     for (const file of plan.new_source_files) {
       await rename_file(file.fs, file.temporary_path, file.canonical_path);
+    }
+
+    if (replace_existing_backups) {
+      const current_backup_paths = [
+        ...plan.vector_files.map((file) => file.backup_path),
+        ...plan.old_source_files.map((file) => file.backup_path),
+      ];
+      for (const backup_file of prior_backup_files) {
+        if (current_backup_paths.includes(backup_file.path)) continue;
+        if (await backup_file.fs.exists(backup_file.path)) {
+          await remove_file(backup_file.fs, backup_file.path);
+        }
+      }
     }
 
     globalThis.window.location.reload();
@@ -1786,6 +1779,15 @@ async function replace_file_with_temp(fs, temp_path, final_path) {
 }
 
 async function assert_no_source_data_optimization_backups(embeddings_list = []) {
+  const backup_files = await list_source_data_optimization_backup_files(embeddings_list);
+  if (backup_files.length) {
+    throw new Error(`Source data optimization backup already exists: ${backup_files[0].path}`);
+  }
+}
+
+async function list_source_data_optimization_backup_files(embeddings_list = []) {
+  const backup_files = [];
+
   for (const embeddings of embeddings_list) {
     const fs = embeddings.data_fs;
     const data_dir = embeddings.data_dir;
@@ -1800,9 +1802,11 @@ async function assert_no_source_data_optimization_backups(embeddings_list = []) 
         ? file_path
         : `${data_dir}/${file_path}`
       ;
-      throw new Error(`Source data optimization backup already exists: ${backup_path}`);
+      backup_files.push({ fs, path: backup_path });
     }
   }
+
+  return backup_files;
 }
 
 async function rename_file(fs, old_path, new_path) {

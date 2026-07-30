@@ -1151,7 +1151,7 @@ test('Source Data Optimize persists vectors before embedding refs', async (t) =>
   block_collection.process_save_queue = async () => { order.push('block refs'); };
   collection.process_save_queue = async () => { order.push('source refs'); };
 
-  await adapter.write_optimized_source_data_files();
+  const plan = await adapter.optimize_source_data();
 
   t.deepEqual(order, [
     'source vectors',
@@ -1159,6 +1159,7 @@ test('Source Data Optimize persists vectors before embedding refs', async (t) =>
     'block refs',
     'source refs',
   ]);
+  t.truthy(plan.stats);
 });
 
 test('Source Data Optimize does not persist refs or temporary files when vector persistence fails', async (t) => {
@@ -1561,6 +1562,95 @@ test('Finish optimization backs up every canonical file, promotes temporary file
   t.true(collection.embeddings.unloaded);
   t.true(block_collection.embeddings.unloaded);
   t.is(reload_count, 1);
+});
+
+test('Finish optimization replaces prior backups with current environment data when confirmed', async (t) => {
+  const {
+    adapter,
+    block_collection,
+    collection,
+    files,
+    fs,
+  } = create_adapter();
+  collection.embeddings = create_optimization_embeddings(fs, 'smart_sources', [1, 2]);
+  block_collection.embeddings = create_optimization_embeddings(fs, 'smart_blocks', [3, 4]);
+
+  const source_vector_path = collection.embeddings.get_file_path();
+  const block_vector_path = block_collection.embeddings.get_file_path();
+  const source_vectors = new Float32Array([1, 2]).buffer;
+  const block_vectors = new Float32Array([3, 4]).buffer;
+  const source_data_path = adapter.get_ajson_file_path(0);
+  files.set(source_vector_path, source_vectors);
+  files.set(block_vector_path, block_vectors);
+  files.set(source_data_path, 'current source data');
+  files.set(`${source_vector_path}.backup`, new Float32Array([9, 9]).buffer);
+  files.set(`${block_vector_path}.backup`, new Float32Array([8, 8]).buffer);
+  files.set(`${source_data_path}.backup`, 'prior source data');
+  files.set('smart_sources/smart_sources_9.ajson.backup', 'stale prior shard');
+
+  const plan = await adapter.optimize_source_data({
+    replace_existing_backups: true,
+  });
+  t.deepEqual(get_float_values(files, `${source_vector_path}.backup`), [9, 9]);
+  t.deepEqual(get_float_values(files, `${block_vector_path}.backup`), [8, 8]);
+  t.is(files.get(`${source_data_path}.backup`), 'prior source data');
+  t.is(files.get('smart_sources/smart_sources_9.ajson.backup'), 'stale prior shard');
+
+  let reload_count = 0;
+  const previous_window = globalThis.window;
+  globalThis.window = {
+    location: {
+      reload() { reload_count += 1; },
+    },
+  };
+
+  try {
+    await adapter.finish_source_data_optimization(plan);
+  } finally {
+    if (previous_window === undefined) delete globalThis.window;
+    else globalThis.window = previous_window;
+  }
+
+  t.deepEqual(get_float_values(files, `${source_vector_path}.backup`), [1, 2]);
+  t.deepEqual(get_float_values(files, `${block_vector_path}.backup`), [3, 4]);
+  t.is(files.get(`${source_data_path}.backup`), 'current source data');
+  t.false(files.has('smart_sources/smart_sources_9.ajson.backup'));
+  t.deepEqual(get_float_values(files, source_vector_path), []);
+  t.deepEqual(get_float_values(files, block_vector_path), []);
+  t.is(files.get(source_data_path), '');
+  t.is(reload_count, 1);
+});
+
+test('Confirmed backup replacement preserves prior backups when temporary validation fails', async (t) => {
+  const {
+    adapter,
+    block_collection,
+    collection,
+    files,
+    fs,
+  } = create_adapter();
+  collection.embeddings = create_optimization_embeddings(fs, 'smart_sources', [1, 2]);
+  block_collection.embeddings = create_optimization_embeddings(fs, 'smart_blocks', []);
+  const backup_path = `${collection.embeddings.get_file_path()}.backup`;
+  const prior_backup = new Float32Array([9, 9]).buffer;
+  files.set(backup_path, prior_backup);
+
+  const plan = await adapter.optimize_source_data({
+    replace_existing_backups: true,
+  });
+  const temporary_path = plan.vector_files[0].temporary_path;
+  files.set(temporary_path, new ArrayBuffer(4));
+
+  await t.throwsAsync(
+    () => adapter.finish_source_data_optimization(plan),
+    {
+      message: `Failed to validate source data optimization temporary file ${temporary_path}.`,
+    },
+  );
+
+  t.is(files.get(backup_path), prior_backup);
+  t.false(collection.embeddings.unloaded);
+  t.false(block_collection.embeddings.unloaded);
 });
 
 test('Source Data Optimize refuses to overwrite an existing backup before writing temporary files', async (t) => {
