@@ -195,9 +195,6 @@ export class SmartSource extends BaseSmartSource {
 
     if (selection_changed) {
       this.block_collection?.mark_embed_queue_dirty?.();
-      const runtime = this.env?.smart_vec_index_runtime;
-      runtime?.mark_collection_vec_index_dirty?.('smart_blocks');
-      runtime?.schedule_collection_vec_index_rebuild?.('smart_blocks');
     }
     if (
       selection_changed

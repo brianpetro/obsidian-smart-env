@@ -360,12 +360,7 @@ test('block embedding selection changes from fitting parent to less-lossy siblin
   ]);
   t.false(blocks['Notes/Test.md#Parent']._queue_embed);
   t.is(source.data.block_embedding_selection.max_input_chars, 370);
-  t.deepEqual(runtime_calls, [
-    ['mark', 'smart_blocks'],
-    ['schedule', 'smart_blocks'],
-    ['mark', 'smart_blocks'],
-    ['schedule', 'smart_blocks'],
-  ]);
+  t.deepEqual(runtime_calls, []);
   assert_selected_ranges_do_not_overlap(t, source);
 });
 
