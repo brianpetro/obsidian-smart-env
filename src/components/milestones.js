@@ -114,7 +114,7 @@ export async function render(env, params = {}) {
  * @returns {Promise<HTMLElement>}
  */
 export async function post_process(env, container, params = {}) {
-  attach_item_link_listeners(container);
+  attach_item_link_listeners(env, container);
   render_item_state_icons(container);
   return container;
 }
@@ -130,6 +130,10 @@ function build_item_html(item, state) {
   const link = typeof item.link === 'string' ? item.link : '';
   const status_label = checked ? 'Completed' : 'Incomplete';
   const aria_label = `Open docs: ${item.milestone || item.event_key || 'milestone'} (${status_label})`;
+  const pro_badge_html = item.is_pro
+    ? '<button class="smart-plugin-pro-badge" type="button" aria-label="Browse Smart Plugins">PRO</button>'
+    : ''
+  ;
 
   return `
     <li
@@ -143,18 +147,23 @@ function build_item_html(item, state) {
     >
       <div class="sc-events-checklist__label${item.is_pro ? ' pro-milestone' : ''}">
         <span class="sc-events-checklist__icon" aria-hidden="true"></span>
-        <span class="sc-events-checklist__milestone">${escape_html(item.milestone)}</span>
+        <span class="sc-events-checklist__milestone">${escape_html(item.milestone)}${pro_badge_html}</span>
       </div>
     </li>
   `;
 }
 
-function attach_item_link_listeners(container) {
+function attach_item_link_listeners(env, container) {
   if (!container) return;
   if (container.getAttribute('data-links-enabled') === 'true') return;
   container.setAttribute('data-links-enabled', 'true');
 
   container.addEventListener('click', (evt) => {
+    if (evt.target.closest('.smart-plugin-pro-badge')) {
+      env.events.emit('smart_plugins:browse');
+      return;
+    }
+
     const item_el = get_item_el_from_event(container, evt);
     if (!item_el) return;
 
@@ -166,6 +175,8 @@ function attach_item_link_listeners(container) {
   });
 
   container.addEventListener('keydown', (evt) => {
+    if (evt.target.closest('.smart-plugin-pro-badge')) return;
+
     const key = evt && /** @type {KeyboardEvent} */ (evt).key;
     if (key !== 'Enter' && key !== ' ') return;
 

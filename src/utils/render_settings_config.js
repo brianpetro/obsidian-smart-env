@@ -302,6 +302,17 @@ export function render_settings_group(group_name, scope, settings_config, contai
         // disable the entire setting if it's a pro setting and env is not pro (using obsidian api)
         setting.setDisabled(true);
       }
+      if (settng_is_pro) {
+        const pro_badge = document.createElement('button');
+        pro_badge.type = 'button';
+        pro_badge.className = 'smart-plugin-pro-badge';
+        pro_badge.textContent = 'PRO';
+        pro_badge.setAttribute('aria-label', 'Browse Smart Plugins');
+        pro_badge.addEventListener('click', () => {
+          window.smart_env.events.emit('smart_plugins:browse');
+        });
+        setting.settingEl.querySelector('.setting-item-name').appendChild(pro_badge);
+      }
     });
   }
   return setting_group;

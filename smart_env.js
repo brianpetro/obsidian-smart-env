@@ -610,6 +610,7 @@ export class SmartEnv extends BaseSmartEnv {
   }
 
   browse_smart_plugins() {
+    if (document.querySelector('.smart-env-pro-plugins-modal')) return;
     const BrowseSmartPluginsClass = this.config?.modals?.browse_plugins_modal?.class;
     if (typeof BrowseSmartPluginsClass !== 'function') return;
     const modal = new BrowseSmartPluginsClass(this.obsidian_app, this);
