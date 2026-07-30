@@ -213,3 +213,6 @@ Enhance context_to_md_tree to support filtering and add corresponding tests
 
 
 Added: Implement source data optimization UI in environment stats modal
+
+
+Add env status menu action to status bar and add buttons to status view
