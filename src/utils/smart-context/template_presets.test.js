@@ -101,3 +101,32 @@ test('context merge_template swaps in preset templates at runtime', async (t) =>
   t.true(merged.includes('CONTENT'));
   t.true(merged.trimEnd().endsWith('CONTENT'));
 });
+
+
+test('item merge_template uses Smart Context item settings when available', async (t) => {
+  const merged = await merge_item_template.call({
+    key: 'Area/Note.md',
+    data: { d: 0 },
+    env: {},
+    mtime: null,
+    item_ref: { file_type: 'md' },
+    settings: {
+      template_preset: 'custom',
+      template_before: 'GLOBAL-BEFORE',
+      template_after: 'GLOBAL-AFTER',
+    },
+    context_items: {
+      effective_settings: {
+        template_preset: 'custom',
+        template_before: 'INSTANCE-BEFORE {{KEY}}',
+        template_after: 'INSTANCE-AFTER',
+      },
+    },
+  }, 'CONTENT');
+
+  t.true(merged.includes('INSTANCE-BEFORE Area/Note.md'));
+  t.true(merged.includes('CONTENT'));
+  t.true(merged.includes('INSTANCE-AFTER'));
+  t.false(merged.includes('GLOBAL-BEFORE'));
+  t.false(merged.includes('GLOBAL-AFTER'));
+});

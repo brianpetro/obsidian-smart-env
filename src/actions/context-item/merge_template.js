@@ -52,7 +52,8 @@ export async function merge_template(item_text, params={}) {
     return template;
   };
 
-  const templates = get_item_templates(this.settings, default_settings);
+  const item_settings = this.context_items?.effective_settings || this.settings;
+  const templates = get_item_templates(item_settings, default_settings);
   if(params.json_stringify || templates.json_stringify) {
     item_text = JSON.stringify(item_text);
   }
