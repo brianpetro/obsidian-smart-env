@@ -1004,7 +1004,7 @@ test('process_embed_queue reruns when requested during an active run', async (t)
   t.truthy(get_item_ref(second_item, embeddings.model_fingerprint));
 });
 
-test('process_embed_queue restores all defer flags before final vector saves', async (t) => {
+test('process_embed_queue restores all defer flags after a failed committed vector save', async (t) => {
   const { collection, embeddings, file } = create_embeddings({
     vectors: default_vector,
   });
@@ -1027,15 +1027,14 @@ test('process_embed_queue restores all defer flags before final vector saves', a
   collection.block_collection = block_collection;
 
   embeddings.save_dirty_files = async () => {
-    t.false(collection._defer_embed_saves);
-    t.false(block_collection._defer_embed_saves);
+    t.true(collection._defer_embed_saves);
+    t.true(block_collection._defer_embed_saves);
     t.true(embeddings.defer_vector_saves);
-    t.false(block_embeddings.defer_vector_saves);
+    t.true(block_embeddings.defer_vector_saves);
     throw new Error('vector save failed');
   };
 
   const adapter = embeddings.entities_vector_adapter;
-  adapter._is_processing_embed_queue = true;
 
   await t.throwsAsync(
     () => adapter.process_embed_queue(),

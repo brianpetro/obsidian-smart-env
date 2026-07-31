@@ -42,7 +42,10 @@ class EmbeddingsVectorAdapter extends DefaultEntitiesVectorAdapter {
     if (!embed_queue.length) return;
 
     const owns_embed_run = !this._is_processing_embed_queue;
-    if (owns_embed_run) this._stored_since_checkpoint = 0;
+    if (owns_embed_run) {
+      this._stored_since_checkpoint = 0;
+      this._uncommitted_embed_items = [];
+    }
     const collections = get_embed_queue_collections(this.collection);
     const previous_defer_states = collections.map((collection) => ({
       collection,
@@ -65,7 +68,7 @@ class EmbeddingsVectorAdapter extends DefaultEntitiesVectorAdapter {
       });
 
       for (const [embeddings, embedding_items] of items_by_embeddings) {
-        await embeddings.load_vectors();
+        const vectors = await embeddings.prepare_vector_file();
         const file_info = embeddings.get_active_file_info();
         let expected_new_rows = 0;
         for (const item of embedding_items) {
@@ -77,7 +80,7 @@ class EmbeddingsVectorAdapter extends DefaultEntitiesVectorAdapter {
             expected_new_rows += 1;
           }
         }
-        if (expected_new_rows) {
+        if (expected_new_rows && vectors) {
           await embeddings.reserve_vector_capacity(expected_new_rows, file_info.file);
         }
       }
@@ -93,28 +96,13 @@ class EmbeddingsVectorAdapter extends DefaultEntitiesVectorAdapter {
         }
       });
 
-      try {
-        for (const state of previous_defer_states) {
-          const embeddings = state.collection?.embeddings;
-          if (!embeddings) continue;
-          embeddings.clear_save_timeout();
-          await embeddings.save_dirty_files();
-        }
-
-        for (const collection of collections.slice().reverse()) {
-          if (!collection?.process_save_queue) continue;
-          await collection.process_save_queue();
-        }
-      } finally {
-        if (owns_embed_run) this._stored_since_checkpoint = 0;
-      }
+      if (owns_embed_run) this._uncommitted_embed_items = null;
     }
   }
 
   async embed_batch(items = []) {
     if (this._stored_since_checkpoint >= EMBEDDING_SAVE_CHECKPOINT_SIZE) {
       await this.flush_embed_checkpoint();
-      this._stored_since_checkpoint = 0;
     }
 
     const groups = new Map();
@@ -143,9 +131,11 @@ class EmbeddingsVectorAdapter extends DefaultEntitiesVectorAdapter {
       group_results.forEach((result, group_i) => {
         const entry = group_entries[group_i];
         results[entry.item_i] = result;
+        if (result?.skipped && result?.vector_changed !== true) return;
+        this._uncommitted_embed_items?.push(entry.item);
       });
       stored_count += group_results.reduce((count, result) => {
-        return count + (result?.skipped ? 0 : 1);
+        return count + (result?.skipped && result?.vector_changed !== true ? 0 : 1);
       }, 0);
     }
 
@@ -153,32 +143,53 @@ class EmbeddingsVectorAdapter extends DefaultEntitiesVectorAdapter {
     return results;
   }
 
+  async commit_embed_run() {
+    await this.flush_embed_checkpoint();
+  }
+
   async flush_embed_checkpoint() {
     const collections = get_embed_queue_collections(this.collection);
 
-    for (const collection of collections) {
-      if (!collection?.embeddings) continue;
-      collection.embeddings.clear_save_timeout();
-      await collection.embeddings.save_dirty_files();
-    }
-
-    const defer_states = collections.map((collection) => ({
-      collection,
-      defer_embed_saves: collection?._defer_embed_saves,
-    }));
-    collections.forEach((collection) => {
-      collection._defer_embed_saves = false;
-    });
-
     try {
-      for (const collection of collections.slice().reverse()) {
-        if (!collection?.process_save_queue) continue;
-        await collection.process_save_queue();
+      for (const collection of collections) {
+        if (!collection?.embeddings) continue;
+        collection.embeddings.clear_save_timeout();
+        await collection.embeddings.save_dirty_files();
       }
-    } finally {
-      defer_states.forEach((state) => {
-        state.collection._defer_embed_saves = state.defer_embed_saves;
+
+      const defer_states = collections.map((collection) => ({
+        collection,
+        defer_embed_saves: collection?._defer_embed_saves,
+      }));
+      collections.forEach((collection) => {
+        collection._defer_embed_saves = false;
       });
+
+      try {
+        for (const collection of collections.slice().reverse()) {
+          if (!collection?.process_save_queue) continue;
+          await collection.process_save_queue();
+        }
+      } finally {
+        defer_states.forEach((state) => {
+          state.collection._defer_embed_saves = state.defer_embed_saves;
+        });
+      }
+
+      for (const item of this._uncommitted_embed_items || []) {
+        delete item._embedding_commit_pending;
+      }
+      if (this._uncommitted_embed_items) this._uncommitted_embed_items.length = 0;
+      this._stored_since_checkpoint = 0;
+    } catch (error) {
+      for (const item of this._uncommitted_embed_items || []) {
+        item._queue_embed = true;
+        item._embedding_commit_pending = true;
+        item._embed_input = null;
+        item.collection?.mark_embed_queue_dirty?.();
+        item.source_collection?.mark_embed_queue_dirty?.();
+      }
+      throw error;
     }
   }
 }
@@ -190,6 +201,7 @@ export class Embeddings {
     this.env = scope?.collection_key ? scope.env : scope;
     this.collection = scope?.collection_key ? scope : opts.collection || null;
     this._vectors_by_file = {};
+    this._append_vectors_by_file = {};
     this._dims_by_file = {};
     this._vector_lengths_by_file = {};
     this._persisted_lengths_by_file = {};
@@ -324,6 +336,7 @@ export class Embeddings {
   clear_runtime_cache() {
     this.clear_save_timeout();
     this._vectors_by_file = {};
+    this._append_vectors_by_file = {};
     this._dims_by_file = {};
     this._vector_lengths_by_file = {};
     this._persisted_lengths_by_file = {};
@@ -342,7 +355,7 @@ export class Embeddings {
     const model_fingerprint = this.model_fingerprint;
     const active_file = this.active_file;
     const model_dims = this.dims;
-    await this.load_vectors(active_file, model_dims);
+    await this.prepare_vector_file(active_file, model_dims);
     const expected_dims = this._dims_by_file[active_file] || model_dims;
 
     const prepared_items = [];
@@ -387,14 +400,15 @@ export class Embeddings {
       if (
         ref?.file === active_file
         && ref.read_hash === item.read_hash
-        && this.has_vector(ref.file, ref.file_i)
+        && this.has_current_vector_ref(item, type)
       ) {
+        vector_changed ||= item._embedding_commit_pending === true;
         item._queue_embed = false;
         item._embed_input = null;
         results[i] = {
           skipped: true,
           vector_changed,
-          vec: this.get_vector(ref.file, ref.file_i),
+          vec: this.get_item_vector(item, type),
         };
         continue;
       }
@@ -561,33 +575,49 @@ export class Embeddings {
     return changed_count;
   }
 
+  async prepare_vector_file(file = this.active_file, expected_dims = 0) {
+    if (this._vectors_by_file[file]) return this._vectors_by_file[file];
+    if (this._persisted_lengths_by_file[file] !== undefined) return null;
+    return await this.load_vectors(file, expected_dims);
+  }
+
   async load_vectors(file = this.active_file, expected_dims = 0) {
     if (!file) return new Float32Array(0);
     if (this._vectors_by_file[file]) return this._vectors_by_file[file];
 
     const path = this.get_file_path(file);
-    if (!(await this.data_fs.exists(path))) {
-      this._vectors_by_file[file] = new Float32Array(0);
-      this._vector_lengths_by_file[file] = 0;
-      this._persisted_lengths_by_file[file] = 0;
-      return this._vectors_by_file[file];
+    const appended = this._append_vectors_by_file[file];
+    let vectors = new Float32Array(0);
+
+    if (await this.data_fs.exists(path)) {
+      const raw = await this.data_fs.read_binary(path);
+      const buffer = to_array_buffer(raw);
+      if (!buffer) {
+        const detail = raw?.error ? `: ${raw.error}` : '';
+        throw new Error(`Failed to read vector file ${path}${detail}`);
+      }
+      if (buffer.byteLength % 4 !== 0) {
+        throw new Error(`Invalid vector file ${path}: byte length ${buffer.byteLength} is not divisible by 4.`);
+      }
+      vectors = new Float32Array(buffer);
     }
 
-    const raw = await this.data_fs.read_binary(path);
-    const buffer = to_array_buffer(raw);
-    if (!buffer) {
-      const detail = raw?.error ? `: ${raw.error}` : '';
-      throw new Error(`Failed to read vector file ${path}${detail}`);
-    }
-    if (buffer.byteLength % 4 !== 0) {
-      throw new Error(`Invalid vector file ${path}: byte length ${buffer.byteLength} is not divisible by 4.`);
+    const persisted_value_count = vectors.length;
+    const dims = this.resolve_file_dims(file, persisted_value_count, expected_dims);
+    if (appended) {
+      const merged_vectors = new Float32Array(this.get_vector_value_count(file));
+      merged_vectors.set(vectors);
+      for (const [file_i, vec] of appended) {
+        merged_vectors.set(vec, file_i * dims);
+      }
+      vectors = merged_vectors;
     }
 
-    const vectors = new Float32Array(buffer);
     this._vectors_by_file[file] = vectors;
     this._vector_lengths_by_file[file] = vectors.length;
-    this._persisted_lengths_by_file[file] = vectors.length;
-    this._dims_by_file[file] = this.resolve_file_dims(file, vectors.length, expected_dims);
+    this._persisted_lengths_by_file[file] = persisted_value_count;
+    this._dims_by_file[file] = dims;
+    delete this._append_vectors_by_file[file];
     return vectors;
   }
 
@@ -658,6 +688,12 @@ export class Embeddings {
     }
 
     const file_i = value_count / dims;
+    if (!this._vectors_by_file[file]) {
+      this._dims_by_file[file] = dims;
+      this._vector_lengths_by_file[file] = value_count + dims;
+      return file_i;
+    }
+
     this.ensure_vector_capacity(file, dims, value_count + dims);
     this._vector_lengths_by_file[file] = value_count + dims;
     return file_i;
@@ -676,6 +712,13 @@ export class Embeddings {
     const end = start + dims;
     if (end > this.get_vector_value_count(file)) return false;
 
+    if (!this._vectors_by_file[file]) {
+      this._append_vectors_by_file[file] ||= new Map();
+      this._append_vectors_by_file[file].set(file_i, source_vec);
+      this._dirty_files.add(file);
+      return true;
+    }
+
     const vectors = this.ensure_vector_capacity(file, dims, end);
     vectors.set(source_vec, start);
     if (start < (this._persisted_lengths_by_file[file] || 0)) {
@@ -688,12 +731,22 @@ export class Embeddings {
   get_vector(file, file_i) {
     const vectors = this._vectors_by_file[file];
     const dims = this._dims_by_file[file] || this.dims;
-    if (!vectors || !Number.isInteger(file_i) || file_i < 0 || !dims) return undefined;
+    if (!Number.isInteger(file_i) || file_i < 0 || !dims) return undefined;
 
     const start = file_i * dims;
     const end = start + dims;
     if (end > this.get_vector_value_count(file)) return undefined;
-    return vectors.subarray(start, end);
+    if (vectors) return vectors.subarray(start, end);
+
+    return this._append_vectors_by_file[file]?.get(file_i);
+  }
+
+  release_appended_vector(item) {
+    const ref = this.get_item_embedding_ref(item);
+    const appended = this._append_vectors_by_file[ref?.file];
+    if (appended?.delete(ref?.file_i) && !appended.size) {
+      delete this._append_vectors_by_file[ref.file];
+    }
   }
 
   has_vector(file, file_i) {
@@ -792,13 +845,39 @@ export class Embeddings {
 
   async save_vectors(file = this.active_file) {
     const vectors = this._vectors_by_file[file];
-    if (!vectors) return;
+    const appended = this._append_vectors_by_file[file];
+    if (!vectors && !appended) return;
 
     await this.ensure_data_dir();
 
     const path = this.get_file_path(file);
     const value_count = this.get_vector_value_count(file);
     const persisted_value_count = this._persisted_lengths_by_file[file] || 0;
+
+    if (!vectors) {
+      const dims = this._dims_by_file[file] || this.dims;
+      const first_file_i = persisted_value_count / dims;
+      const row_count = (value_count - persisted_value_count) / dims;
+      const appended_vectors = new Float32Array(row_count * dims);
+      for (let row_i = 0; row_i < row_count; row_i += 1) {
+        const vec = appended.get(first_file_i + row_i);
+        if (!vec) throw new Error(`Missing appended vector row for ${path}.`);
+        appended_vectors.set(vec, row_i * dims);
+      }
+
+      if (persisted_value_count) {
+        if (!(await this.can_append_vectors(file, persisted_value_count, value_count))) {
+          throw new Error(`Cannot append vectors to ${path} without loading the persisted file.`);
+        }
+        await this.data_fs.append_binary(path, appended_vectors.buffer);
+      } else {
+        await this.write_vectors_file(path, appended_vectors.buffer);
+      }
+
+      this._persisted_lengths_by_file[file] = value_count;
+      return;
+    }
+
     const can_append = await this.can_append_vectors(file, persisted_value_count, value_count);
     const should_rewrite = this._rewrite_files.has(file);
 
@@ -839,7 +918,11 @@ export class Embeddings {
   async can_append_vectors(file, persisted_value_count, value_count) {
     if (!persisted_value_count || value_count <= persisted_value_count) return false;
     if (typeof this.data_fs?.append_binary !== 'function') return false;
-    return await this.data_fs.exists(this.get_file_path(file));
+
+    const path = this.get_file_path(file);
+    if (!(await this.data_fs.exists(path))) return false;
+    const stat = await this.data_fs.stat(path);
+    return stat?.size === persisted_value_count * Float32Array.BYTES_PER_ELEMENT;
   }
 
   async ensure_data_dir() {
