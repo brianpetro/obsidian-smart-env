@@ -6,6 +6,7 @@ import {
 } from '../../utils/smart-context/source_folder_utils.js';
 
 const MOD_CHAR = Platform.isMacOS ? '⌘' : 'Ctrl';
+const DEFAULT_SOURCE_FILE_TYPES = new Set(['md', 'base', 'canvas']);
 
 /**
  * @param {import('smart-contexts').SmartContext} ctx
@@ -33,6 +34,7 @@ function build_source_suggestions(ctx, sources) {
 /**
  * @param {object} [params]
  * @param {string} [params.folder_path]
+ * @param {(source: { file_type: string }) => boolean} [params.source_filter]
  * @returns {Array<{ key: string, display: string, select_action: Function, mod_select_action: Function, arrow_right_action: Function }>}
  */
 export function context_suggest_sources(params = {}) {
@@ -44,12 +46,17 @@ export function context_suggest_sources(params = {}) {
     ]);
   }
 
-  const sources = get_sources_list(this, { folder_path: params?.folder_path || '' });
+  const source_filter = params?.source_filter
+    || ((source) => DEFAULT_SOURCE_FILE_TYPES.has(source.file_type))
+  ;
+  const sources = get_sources_list(this, {
+    folder_path: params?.folder_path || '',
+  }).filter(source_filter);
   return build_source_suggestions(this, sources);
 }
 
 export const display_name = 'Add sources';
-export const display_description = 'Search indexed notes and supported vault files.';
+export const display_description = 'Search Markdown notes, Bases, and Canvas files.';
 
 export const menus = {
   'smart_context:suggest': {
