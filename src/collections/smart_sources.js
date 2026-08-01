@@ -56,6 +56,101 @@ export class SmartSources extends BaseSmartSources {
     this._embed_queue = [];
   }
 
+  /**
+   * Rebuild the active embedding model's source and block vector files.
+   * References are persisted before the files are removed, then every
+   * persistent source is re-imported so block inputs use current ranges and
+   * already-read source content.
+   *
+   * @returns {Promise<object>} Re-index summary.
+   */
+  async reindex_embeddings() {
+    if (this._reindex_embeddings_promise) {
+      return await this._reindex_embeddings_promise;
+    }
+
+    const reindex_promise = (async () => {
+      await this.env?._embedding_model_change_promise;
+
+      const block_collection = this.block_collection;
+      const embed_adapter = this.entities_vector_adapter;
+      const import_progress = this.get_import_progress_state?.();
+
+      if (!this.embeddings) {
+        throw new Error('Cannot re-index embeddings before Smart Sources is loaded.');
+      }
+      if (
+        this._run_re_import_promise
+        || import_progress?.active
+        || embed_adapter?._process_embed_queue_promise
+        || embed_adapter?.is_embed_queue_paused?.()
+      ) {
+        throw new Error(
+          'Cannot re-index embeddings while source import or embedding is active or paused.'
+        );
+      }
+
+      const vec_index_runtime = this.env?.smart_vec_index_runtime;
+      vec_index_runtime?.unload?.();
+
+      if (this.sources_re_import_timeout) {
+        clearTimeout(this.sources_re_import_timeout);
+        this.sources_re_import_timeout = null;
+      }
+
+      try {
+        const source_refs = this.embeddings.clear_active_embedding_refs();
+        const block_refs = block_collection?.embeddings
+          ? block_collection.embeddings.clear_active_embedding_refs()
+          : { cleared_refs: 0 }
+        ;
+
+        await block_collection?.process_save_queue?.();
+        await this.process_save_queue?.();
+
+        const source_file = await this.embeddings.remove_active_vector_file();
+        const block_file = block_collection?.embeddings
+          ? await block_collection.embeddings.remove_active_vector_file()
+          : { removed: false }
+        ;
+
+        const sources = Object.values(this.items || {}).filter((source) => {
+          return source
+            && !source.deleted
+            && source.source_adapter
+            && source.source_adapter.should_persist !== false
+          ;
+        });
+
+        sources.forEach((source) => {
+          this.queue_source_re_import(source, {
+            event_source: 'reindex_embeddings',
+          });
+        });
+        await this.run_re_import();
+        await vec_index_runtime?.refresh_vec_index_state?.();
+
+        return {
+          sources_queued: sources.length,
+          source_refs_cleared: source_refs.cleared_refs,
+          block_refs_cleared: block_refs.cleared_refs,
+          source_file_removed: source_file.removed,
+          block_file_removed: block_file.removed,
+        };
+      } catch (error) {
+        vec_index_runtime?.register_vec_index_sync_events?.();
+        throw error;
+      }
+    })();
+
+    this._reindex_embeddings_promise = reindex_promise;
+    try {
+      return await reindex_promise;
+    } finally {
+      this._reindex_embeddings_promise = null;
+    }
+  }
+
   handle_source_renamed(event = {}) {
     if (!this.should_handle_event(event)) return;
 

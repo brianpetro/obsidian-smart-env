@@ -175,6 +175,88 @@ test('get_item_vector returns a matching current vector', (t) => {
   );
 });
 
+test('clear_active_embedding_refs removes only current-file refs and history', (t) => {
+  const { collection, embeddings, file } = create_embeddings({
+    vectors: default_vector,
+  });
+  const other_model_fingerprint = 'mf_other';
+  const other_ref = create_ref(other_model_fingerprint, {
+    file_i: 4,
+    read_hash: 'other-hash',
+  });
+  const item = create_item(collection, {
+    ref: create_ref(file),
+  });
+  item.data.embedding.default[other_model_fingerprint] = other_ref;
+  item.data.embedding.history = [
+    {
+      type: 'default',
+      model_fingerprint: embeddings.model_fingerprint,
+      ...create_ref(file),
+    },
+    {
+      type: 'default',
+      model_fingerprint: other_model_fingerprint,
+      ...other_ref,
+    },
+  ];
+  item.data.embedding.error = 'provider failed';
+  item._embed_input = 'cached input';
+  item._embedding_commit_pending = true;
+  item.clear_staged_embed_content = () => {
+    item.staged_content_cleared = true;
+  };
+  collection.items = { [item.key]: item };
+
+  const result = embeddings.clear_active_embedding_refs();
+
+  t.deepEqual(result, {
+    file,
+    model_fingerprint: embeddings.model_fingerprint,
+    cleared_refs: 1,
+  });
+  t.is(get_item_ref(item, embeddings.model_fingerprint), null);
+  t.deepEqual(get_item_ref(item, other_model_fingerprint), other_ref);
+  t.deepEqual(item.data.embedding.history, [{
+    type: 'default',
+    model_fingerprint: other_model_fingerprint,
+    ...other_ref,
+  }]);
+  t.false(Object.prototype.hasOwnProperty.call(item.data.embedding, 'error'));
+  t.is(item._embed_input, null);
+  t.false(Object.prototype.hasOwnProperty.call(item, '_embedding_commit_pending'));
+  t.true(item.staged_content_cleared);
+  t.true(item.save_queued);
+  t.true(collection.embed_queue_dirty);
+});
+
+test('remove_active_vector_file deletes the file and only its runtime state', async (t) => {
+  const data_fs = create_memory_data_fs();
+  const { collection, embeddings, file } = create_embeddings({
+    vectors: default_vector,
+  });
+  collection.data_fs = data_fs;
+  const path = embeddings.get_file_path(file);
+  data_fs.files.set(path, new Float32Array(default_vector).buffer);
+  embeddings._append_vectors_by_file[file] = new Map([
+    [1, new Float32Array(default_vector)],
+  ]);
+  embeddings._dirty_files.add(file);
+  embeddings._rewrite_files.add(file);
+
+  const result = await embeddings.remove_active_vector_file();
+
+  t.deepEqual(result, { file, path, removed: true });
+  t.false(data_fs.files.has(path));
+  t.false(Object.prototype.hasOwnProperty.call(embeddings._vectors_by_file, file));
+  t.false(Object.prototype.hasOwnProperty.call(embeddings._append_vectors_by_file, file));
+  t.false(Object.prototype.hasOwnProperty.call(embeddings._dims_by_file, file));
+  t.false(Object.prototype.hasOwnProperty.call(embeddings._vector_lengths_by_file, file));
+  t.false(Object.prototype.hasOwnProperty.call(embeddings._persisted_lengths_by_file, file));
+  t.false(embeddings._dirty_files.has(file));
+  t.false(embeddings._rewrite_files.has(file));
+});
+
 test('semantic profile keeps or migrates the model fingerprint as configured', async (t) => {
   let received_inputs;
   const corrected_vector = [3, 2, 1];

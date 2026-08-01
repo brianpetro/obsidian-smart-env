@@ -80,3 +80,135 @@ test('embed_queue excludes deselected blocks with stale queue flags', (t) => {
   t.false(parent._queue_embed);
   t.deepEqual(vector_checks, [child.key]);
 });
+
+test('reindex_embeddings persists cleared refs before deleting files and re-imports every persistent source', async (t) => {
+  const calls = [];
+  const source_a = {
+    key: 'Notes/A.md',
+    deleted: false,
+    source_adapter: {},
+  };
+  const source_b = {
+    key: 'Notes/B.md',
+    deleted: false,
+    source_adapter: {},
+  };
+  const media_source = {
+    key: 'Media/Image.png',
+    deleted: false,
+    source_adapter: { should_persist: false },
+  };
+  const collection = {
+    items: {
+      [source_a.key]: source_a,
+      [source_b.key]: source_b,
+      [media_source.key]: media_source,
+    },
+    env: {
+      _embedding_model_change_promise: Promise.resolve().then(() => {
+        calls.push('model_change:complete');
+      }),
+      smart_vec_index_runtime: {
+        unload() {
+          calls.push('vec_index:unload');
+        },
+        async refresh_vec_index_state() {
+          calls.push('vec_index:refresh');
+        },
+        register_vec_index_sync_events() {
+          calls.push('vec_index:register');
+        },
+      },
+    },
+    entities_vector_adapter: {
+      is_embed_queue_paused() { return false; },
+    },
+    embeddings: {
+      clear_active_embedding_refs() {
+        calls.push('source_refs:clear');
+        return { cleared_refs: 2 };
+      },
+      async remove_active_vector_file() {
+        calls.push('source_file:remove');
+        return { removed: true };
+      },
+    },
+    block_collection: {
+      embeddings: {
+        clear_active_embedding_refs() {
+          calls.push('block_refs:clear');
+          return { cleared_refs: 4 };
+        },
+        async remove_active_vector_file() {
+          calls.push('block_file:remove');
+          return { removed: true };
+        },
+      },
+      async process_save_queue() {
+        calls.push('block_refs:save');
+      },
+    },
+    get_import_progress_state() { return null; },
+    async process_save_queue() {
+      calls.push('source_refs:save');
+    },
+    queue_source_re_import(source, event_meta) {
+      calls.push(`source:queue:${source.key}:${event_meta.event_source}`);
+    },
+    async run_re_import() {
+      calls.push('sources:reimport');
+    },
+  };
+
+  const result = await SmartSources.prototype.reindex_embeddings.call(collection);
+
+  t.deepEqual(calls, [
+    'model_change:complete',
+    'vec_index:unload',
+    'source_refs:clear',
+    'block_refs:clear',
+    'block_refs:save',
+    'source_refs:save',
+    'source_file:remove',
+    'block_file:remove',
+    'source:queue:Notes/A.md:reindex_embeddings',
+    'source:queue:Notes/B.md:reindex_embeddings',
+    'sources:reimport',
+    'vec_index:refresh',
+  ]);
+  t.deepEqual(result, {
+    sources_queued: 2,
+    source_refs_cleared: 2,
+    block_refs_cleared: 4,
+    source_file_removed: true,
+    block_file_removed: true,
+  });
+  t.is(collection._reindex_embeddings_promise, null);
+});
+
+test('reindex_embeddings refuses to reset files during active embedding', async (t) => {
+  let refs_cleared = false;
+  const collection = {
+    env: {},
+    embeddings: {
+      clear_active_embedding_refs() {
+        refs_cleared = true;
+      },
+    },
+    entities_vector_adapter: {
+      _process_embed_queue_promise: Promise.resolve(),
+    },
+    get_import_progress_state() { return null; },
+  };
+
+  await t.throwsAsync(
+    () => SmartSources.prototype.reindex_embeddings.call(collection),
+    {
+      message: 'Cannot re-index embeddings while source import or embedding is active or paused.',
+    },
+  );
+
+  t.false(refs_cleared);
+  t.is(collection._reindex_embeddings_promise, null);
+});
+

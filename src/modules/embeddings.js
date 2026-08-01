@@ -298,6 +298,82 @@ export class Embeddings {
     return `${this.data_dir}/${file}`;
   }
 
+  /**
+   * Remove current-model refs before deleting and rebuilding the active vector file.
+   *
+   * @param {string} [type=DEFAULT_EMBEDDING_TYPE]
+   * @returns {{file: string, model_fingerprint: string, cleared_refs: number}}
+   */
+  clear_active_embedding_refs(type = DEFAULT_EMBEDDING_TYPE) {
+    const file = this.active_file;
+    const model_fingerprint = this.model_fingerprint;
+    let cleared_refs = 0;
+
+    Object.values(this.collection?.items || {}).forEach((item) => {
+      if (!item?.data) return;
+
+      const embedding = item.data.embedding;
+      const ref_cleared = delete_embedding_ref(
+        item,
+        type,
+        model_fingerprint,
+      );
+      const history = Array.isArray(embedding?.history)
+        ? embedding.history
+        : []
+      ;
+      const next_history = history.filter((ref) => {
+        return ref?.file !== file
+          && ref?.model_fingerprint !== model_fingerprint
+        ;
+      });
+      const history_cleared = next_history.length !== history.length;
+      const error_cleared = Boolean(embedding?.error);
+
+      if (!ref_cleared && !history_cleared && !error_cleared) return;
+
+      if (history_cleared) embedding.history = next_history;
+      if (error_cleared) delete embedding.error;
+      if (ref_cleared) cleared_refs += 1;
+
+      item._embed_input = null;
+      delete item._embedding_commit_pending;
+      item.clear_staged_embed_content?.();
+      item.queue_save?.();
+    });
+
+    this.collection?.mark_embed_queue_dirty?.();
+    return { file, model_fingerprint, cleared_refs };
+  }
+
+  /**
+   * Delete the active vector file and clear only its runtime state.
+   *
+   * @returns {Promise<{file: string, path: string, removed: boolean}>}
+   */
+  async remove_active_vector_file() {
+    const file = this.active_file;
+    const path = this.get_file_path(file);
+
+    this.clear_save_timeout();
+    if (this._save_dirty_files_promise) {
+      await this._save_dirty_files_promise;
+    }
+
+    delete this._vectors_by_file[file];
+    delete this._append_vectors_by_file[file];
+    delete this._dims_by_file[file];
+    delete this._vector_lengths_by_file[file];
+    delete this._persisted_lengths_by_file[file];
+    this._dirty_files.delete(file);
+    this._rewrite_files.delete(file);
+
+    const removed = await this.data_fs.exists(path);
+    if (removed) await remove_file(this.data_fs, path);
+
+    return { file, path, removed };
+  }
+
   get_item_embedding_ref(
     item,
     type = DEFAULT_EMBEDDING_TYPE,

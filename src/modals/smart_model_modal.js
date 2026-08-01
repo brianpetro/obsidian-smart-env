@@ -1,4 +1,4 @@
-import { Modal } from 'obsidian';
+import { Modal, Notice } from 'obsidian';
 import styles from './smart_model_modal.css';
 import { render_settings_config } from '../utils/render_settings_config.js';
 
@@ -51,6 +51,38 @@ export class SmartModelModal extends Modal {
     render_settings_config(settings, model, form_container, {
       default_group_name: 'Model settings',
     });
+
+    if (
+      this.collection?.collection_key === 'embedding_models'
+      && this.collection.default === model
+    ) {
+      const reindex_description = container.createEl('p', {
+        text: 'Deletes the current model source and block embedding files, then re-imports sources and rebuilds embeddings. API providers may charge for the new embeddings.',
+      });
+      reindex_description.addClass('setting-item-description');
+      const reindex_btn = container.createEl('button', { text: 'Re-index embeddings' });
+      const reindex_result_el = container.createDiv({ cls: 'model-reindex-result' });
+      reindex_btn.addEventListener('click', async () => {
+        reindex_btn.disabled = true;
+        reindex_btn.textContent = 'Re-indexing...';
+        reindex_result_el.textContent = 'Removing current embeddings and rebuilding from source files...';
+
+        try {
+          const result = await this.env.smart_sources.reindex_embeddings();
+          reindex_result_el.textContent = `Re-indexed embeddings from ${result.sources_queued} source${result.sources_queued === 1 ? '' : 's'}.`;
+          new Notice('Embedding re-index completed.');
+        } catch (error) {
+          const message = error?.message || String(error || 'Embedding re-index failed.');
+          console.warn('[smart_env] Failed to re-index embeddings', error);
+          reindex_result_el.textContent = message;
+          new Notice(message);
+        } finally {
+          reindex_btn.disabled = false;
+          reindex_btn.textContent = 'Re-index embeddings';
+        }
+      });
+    }
+
     const test_btn = container.createEl('button', { text: 'Test model' });
     const test_results_el = container.createDiv({ cls: 'model-test-container' });
     test_btn.addEventListener('click', async () => {
