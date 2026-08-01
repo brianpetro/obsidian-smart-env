@@ -219,3 +219,6 @@ Add env status menu action to status bar and add buttons to status view
 
 
 Improved: embedding save logic
+
+
+Improved: context_suggest_sources with source filter support
