@@ -60,11 +60,36 @@ export class SmartModelModal extends Modal {
         text: 'Deletes the current model source and block embedding files, then re-imports sources and rebuilds embeddings. API providers may charge for the new embeddings.',
       });
       reindex_description.addClass('setting-item-description');
-      const reindex_btn = container.createEl('button', { text: 'Re-index embeddings' });
+      const reindex_actions_el = container.createDiv({ cls: 'model-reindex-actions' });
+      const reindex_btn = reindex_actions_el.createEl('button', { text: 'Re-index embeddings' });
+      const reindex_confirm_el = reindex_actions_el.createDiv({ cls: 'sc-inline-confirm-row' });
+      reindex_confirm_el.style.display = 'none';
+      reindex_confirm_el.createEl('span', {
+        text: `Re-index embeddings for "${model.model_key}"? This deletes the active source and block embedding files before rebuilding them. API providers may charge for the new embeddings.`,
+      });
+      const cancel_reindex_btn = reindex_confirm_el.createEl('button', { text: 'Cancel' });
+      const confirm_reindex_btn = reindex_confirm_el.createEl('button', {
+        text: 'Delete and re-index',
+        cls: 'mod-warning',
+      });
       const reindex_result_el = container.createDiv({ cls: 'model-reindex-result' });
-      reindex_btn.addEventListener('click', async () => {
-        reindex_btn.disabled = true;
-        reindex_btn.textContent = 'Re-indexing...';
+
+      const close_reindex_confirmation = () => {
+        reindex_confirm_el.style.display = 'none';
+        reindex_btn.style.display = 'inline-block';
+      };
+
+      reindex_btn.addEventListener('click', () => {
+        reindex_btn.style.display = 'none';
+        reindex_confirm_el.style.display = '';
+      });
+
+      cancel_reindex_btn.addEventListener('click', close_reindex_confirmation);
+
+      confirm_reindex_btn.addEventListener('click', async () => {
+        confirm_reindex_btn.disabled = true;
+        cancel_reindex_btn.disabled = true;
+        confirm_reindex_btn.textContent = 'Re-indexing...';
         reindex_result_el.textContent = 'Removing current embeddings and rebuilding from source files...';
 
         try {
@@ -77,8 +102,10 @@ export class SmartModelModal extends Modal {
           reindex_result_el.textContent = message;
           new Notice(message);
         } finally {
-          reindex_btn.disabled = false;
-          reindex_btn.textContent = 'Re-index embeddings';
+          confirm_reindex_btn.disabled = false;
+          cancel_reindex_btn.disabled = false;
+          confirm_reindex_btn.textContent = 'Delete and re-index';
+          close_reindex_confirmation();
         }
       });
     }
