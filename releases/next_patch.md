@@ -222,3 +222,6 @@ Improved: embedding save logic
 
 
 Improved: context_suggest_sources with source filter support
+
+
+Improved: include API response JSON in embedding error events
