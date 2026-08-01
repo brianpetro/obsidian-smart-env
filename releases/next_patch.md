@@ -225,3 +225,6 @@ Improved: context_suggest_sources with source filter support
 
 
 Improved: include API response JSON in embedding error events
+
+
+Added: implement reindex_embeddings method for active embedding model
