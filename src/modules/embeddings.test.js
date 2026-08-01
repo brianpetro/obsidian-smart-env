@@ -842,6 +842,32 @@ test('process_embed_queue does not mark invalid or missing responses successfull
 });
 
 
+test('process_embed_queue includes API response JSON in the embedding error event', async (t) => {
+  const response_json = {
+    error: {
+      message: 'provider failed',
+      type: 'invalid_request_error',
+    },
+  };
+  const { collection, embeddings, events } = create_embeddings({
+    model_results: [{
+      error: { message: 'provider failed' },
+      response_json,
+    }],
+  });
+  collection.embed_queue = [
+    create_item(collection, { key: 'Notes/First.md' }),
+    create_item(collection, { key: 'Notes/Second.md' }),
+  ];
+
+  await embeddings.entities_vector_adapter.process_embed_queue();
+
+  const error_event = events.find(({ event_key }) => event_key === 'embedding:error');
+  t.truthy(error_event);
+  t.deepEqual(error_event.event.response_json, response_json);
+});
+
+
 test('embed adapter checkpoints vector files before item refs after 1000 stored embeddings', async (t) => {
   const { collection, embeddings } = create_embeddings();
   const adapter = embeddings.entities_vector_adapter;

@@ -428,6 +428,7 @@ export class Embeddings {
         expected_dims,
       );
     } catch (error) {
+      error.response_json = embeddings?.[0]?.response_json;
       prepared_items.forEach((entry) => {
         mark_embedding_error(entry.item, error?.message || String(error));
       });
