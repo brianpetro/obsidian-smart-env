@@ -47,11 +47,6 @@ export class SmartBlock extends BaseSmartBlock {
   }
 
   queue_save() {
-    if (this.collection?._defer_embed_saves) {
-      this._queue_save = true;
-      return;
-    }
-
     const source = this.source;
     const sub_key = this.sub_key;
     const block_key = this._block_key || this._pending_data?.key || (source && sub_key ? `${source.key}${sub_key}` : '');

@@ -157,23 +157,13 @@ class EmbeddingsVectorAdapter extends DefaultEntitiesVectorAdapter {
         await collection.embeddings.save_dirty_files();
       }
 
-      const defer_states = collections.map((collection) => ({
-        collection,
-        defer_embed_saves: collection?._defer_embed_saves,
-      }));
-      collections.forEach((collection) => {
-        collection._defer_embed_saves = false;
-      });
-
+      const source_collection = this.collection.source_collection || this.collection;
+      const defer_embed_saves = source_collection._defer_embed_saves;
+      source_collection._defer_embed_saves = false;
       try {
-        for (const collection of collections.slice().reverse()) {
-          if (!collection?.process_save_queue) continue;
-          await collection.process_save_queue();
-        }
+        await source_collection.process_save_queue();
       } finally {
-        defer_states.forEach((state) => {
-          state.collection._defer_embed_saves = state.defer_embed_saves;
-        });
+        source_collection._defer_embed_saves = defer_embed_saves;
       }
 
       for (const item of this._uncommitted_embed_items || []) {
