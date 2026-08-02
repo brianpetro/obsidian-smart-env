@@ -34,6 +34,7 @@ class TransformersWorkerModel {
   constructor(params = {}) {
     const configured_batch_size = Number(params.batch_size);
     this.model_key = params.model_key;
+    this.revision = params.revision;
     this.max_tokens = Number(params.max_tokens) || 512;
     this.use_gpu = params.use_gpu !== false;
     this.semantic_profile = {
@@ -106,12 +107,18 @@ class TransformersWorkerModel {
     const { pipeline } = await this.get_transformers_module();
     const config_key = `${device}_${this.dtype}`;
     const started_at = Date.now();
-
-    console.log(`[Transformers worker] load: ONNX v4/${config_key} starting`);
-    this.pipeline = await pipeline('feature-extraction', this.model_key, {
+    const pipeline_options = {
       device,
       dtype: this.dtype,
-    });
+    };
+    if (this.revision) pipeline_options.revision = this.revision;
+
+    console.log(`[Transformers worker] load: ONNX v4/${config_key} starting`);
+    this.pipeline = await pipeline(
+      'feature-extraction',
+      this.model_key,
+      pipeline_options,
+    );
     this.tokenizer = this.pipeline.tokenizer;
     if (!this.tokenizer) {
       throw new Error('Transformers v4 pipeline tokenizer unavailable');

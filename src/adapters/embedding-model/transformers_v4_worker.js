@@ -41,6 +41,24 @@ const transformers_models = {
     description: "Local, 512 tokens, 384 dim",
     adapter: "transformers",
   },
+  "Snowflake/snowflake-arctic-embed-s": {
+    id: "Snowflake/snowflake-arctic-embed-s",
+    revision: "e596f507467533e48a2e17c007f0e1dacc837b33",
+    batch_size: 2,
+    dims: 384,
+    max_tokens: 512,
+    dtype: "auto",
+    semantic_profile: {
+      embedding_space_id: "Snowflake/snowflake-arctic-embed-s/e596f507467533e48a2e17c007f0e1dacc837b33/cls-normalized-query-instruction-v1",
+      pooling: "cls",
+      normalize: true,
+      query_prefix: "Represent this sentence for searching relevant passages: ",
+      document_prefix: "",
+    },
+    name: "Snowflake Arctic Embed S",
+    description: "Local, 512 tokens, 384 dim",
+    adapter: "transformers",
+  },
   "Xenova/multilingual-e5-small": {
     id: "Xenova/multilingual-e5-small",
     batch_size: 1,
@@ -58,6 +76,42 @@ const transformers_models = {
     description: "Local, 512 tokens, 384 dim",
     adapter: "transformers",
   },
+  "onnx-community/granite-embedding-97m-multilingual-r2-ONNX": {
+    id: "onnx-community/granite-embedding-97m-multilingual-r2-ONNX",
+    revision: "536a9f241cb3f02a9c5995a1e708c784bd274859",
+    batch_size: 2,
+    dims: 384,
+    max_tokens: 512,
+    dtype: "auto",
+    semantic_profile: {
+      embedding_space_id: "onnx-community/granite-embedding-97m-multilingual-r2-ONNX/536a9f241cb3f02a9c5995a1e708c784bd274859/cls-normalized-v1",
+      pooling: "cls",
+      normalize: true,
+      query_prefix: "",
+      document_prefix: "",
+    },
+    name: "Granite Multilingual R2 (experimental)",
+    description: "Local, 512 tokens, 384 dim, multilingual/code",
+    adapter: "transformers",
+  },
+  "onnx-community/DenseOn-ONNX": {
+    id: "onnx-community/DenseOn-ONNX",
+    revision: "8606070c911ab26c582ce23db387abd3885541f2",
+    batch_size: 2,
+    dims: 768,
+    max_tokens: 512,
+    dtype: "auto",
+    semantic_profile: {
+      embedding_space_id: "onnx-community/DenseOn-ONNX/8606070c911ab26c582ce23db387abd3885541f2/cls-normalized-query-document-v1",
+      pooling: "cls",
+      normalize: true,
+      query_prefix: "query: ",
+      document_prefix: "document: ",
+    },
+    name: "DenseOn (experimental)",
+    description: "Local, 512 tokens, 768 dim, English",
+    adapter: "transformers",
+  },
 };
 
 export const settings_config = {};
@@ -72,6 +126,16 @@ export class TransformersWorkerEmbeddingModelAdapter extends SmartEmbedMessageAd
 
   constructor(model) {
     super(model);
+
+    // Keep model data aligned with the selected built-in profile.
+    const model_profile = transformers_models[model.model_key];
+    if (model_profile) {
+      delete model.data.dimensions;
+      model.data.dims = model_profile.dims;
+      model.data.max_tokens = model_profile.max_tokens;
+      model.data.batch_size = model_profile.batch_size;
+    }
+
     /** @type {Worker|null} */
     this.worker = null;
     /** @type {string|null} */
@@ -93,6 +157,10 @@ export class TransformersWorkerEmbeddingModelAdapter extends SmartEmbedMessageAd
 
   get semantic_profile() {
     return this.models[this.model.model_key]?.semantic_profile;
+  }
+
+  get revision() {
+    return this.models[this.model.model_key]?.revision;
   }
 
   get dtype() {
@@ -150,6 +218,7 @@ export class TransformersWorkerEmbeddingModelAdapter extends SmartEmbedMessageAd
   get load_key() {
     return JSON.stringify({
       model_key: this.model.model_key,
+      revision: this.revision,
       max_tokens: Number(this.model?.data?.max_tokens) || 512,
       batch_size: this.configured_batch_size,
       use_gpu: this.use_gpu !== false,
@@ -203,6 +272,7 @@ export class TransformersWorkerEmbeddingModelAdapter extends SmartEmbedMessageAd
 
       await this._send_message('load', {
         model_key: this.model.model_key,
+        revision: this.revision,
         max_tokens: this.model?.data?.max_tokens,
         batch_size: this.configured_batch_size,
         use_gpu: this.use_gpu,

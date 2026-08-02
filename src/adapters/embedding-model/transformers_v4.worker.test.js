@@ -55,8 +55,9 @@ function create_model(semantic_profile) {
   return model;
 }
 
-test('one configured dtype is used for WebGPU and WASM', async (t) => {
+test('one configured dtype and revision are used for WebGPU and WASM', async (t) => {
   const model = create_model();
+  model.revision = 'test-revision';
   const pipeline_options = [];
   const tokenizer = model.tokenizer;
   model.get_transformers_module = async () => ({
@@ -74,8 +75,8 @@ test('one configured dtype is used for WebGPU and WASM', async (t) => {
   await model.load_pipeline('wasm');
 
   t.deepEqual(JSON.parse(JSON.stringify(pipeline_options)), [
-    { device: 'webgpu', dtype: 'auto' },
-    { device: 'wasm', dtype: 'auto' },
+    { device: 'webgpu', dtype: 'auto', revision: 'test-revision' },
+    { device: 'wasm', dtype: 'auto', revision: 'test-revision' },
   ]);
 });
 
