@@ -228,3 +228,6 @@ Improved: include API response JSON in embedding error events
 
 
 Added: implement reindex_embeddings method for active embedding model
+
+
+Improved: added additional Transformers models and revision support
