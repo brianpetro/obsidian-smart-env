@@ -1,6 +1,7 @@
 import test from 'ava';
 import {
   SMART_DRAG_DATA_TYPE,
+  has_smart_drag_data,
   read_smart_drag_data,
   write_smart_drag_data,
 } from './smart_drag_drop.js';
@@ -9,6 +10,9 @@ function create_data_transfer(initial_data = {}) {
   const data = { ...initial_data };
   return {
     data,
+    get types() {
+      return Object.keys(data);
+    },
     getData(type) {
       return data[type] || '';
     },
@@ -17,6 +21,20 @@ function create_data_transfer(initial_data = {}) {
     },
   };
 }
+
+test('has_smart_drag_data distinguishes absent and present Smart MIME data', (t) => {
+  const absent = create_data_transfer();
+  const present_empty = create_data_transfer({
+    [SMART_DRAG_DATA_TYPE]: '',
+  });
+  const present_malformed = create_data_transfer({
+    [SMART_DRAG_DATA_TYPE]: '{not-json',
+  });
+
+  t.false(has_smart_drag_data(absent));
+  t.true(has_smart_drag_data(present_empty));
+  t.true(has_smart_drag_data(present_malformed));
+});
 
 test('write_smart_drag_data writes one Smart item ref', (t) => {
   const data_transfer = create_data_transfer();

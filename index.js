@@ -27,6 +27,7 @@ import { camel_case_to_snake_case } from 'smart-utils/camel_case_to_snake_case.j
 import { SmartPlugin } from './smart_plugin.js';
 import {
   SMART_DRAG_DATA_TYPE,
+  has_smart_drag_data,
   read_smart_drag_data,
   write_smart_drag_data,
 } from './src/utils/smart_drag_drop.js';
@@ -38,6 +39,7 @@ export {
   camel_case_to_snake_case,
   SmartPlugin,
   SMART_DRAG_DATA_TYPE,
+  has_smart_drag_data,
   read_smart_drag_data,
   write_smart_drag_data,
 };

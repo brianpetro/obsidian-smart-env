@@ -4,6 +4,37 @@ const SMART_DRAG_SCHEMA = 'smart-env-drag';
 const SMART_DRAG_VERSION = 1;
 
 /**
+ * Return whether a DataTransfer object contains the Smart MIME type.
+ *
+ * Presence is intentionally separate from payload validation so targets can
+ * fail closed when Smart data is present but malformed or unsupported.
+ *
+ * @param {DataTransfer|object} data_transfer
+ * @returns {boolean}
+ */
+export function has_smart_drag_data(data_transfer) {
+  if (!data_transfer) return false;
+
+  if (data_transfer.types != null) {
+    try {
+      return Array.from(data_transfer.types)
+        .includes(SMART_DRAG_DATA_TYPE)
+      ;
+    } catch {
+      return false;
+    }
+  }
+
+  if (typeof data_transfer.getData !== 'function') return false;
+
+  try {
+    return Boolean(data_transfer.getData(SMART_DRAG_DATA_TYPE));
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Normalize one Smart item identity.
  *
  * @param {unknown} collection_key
