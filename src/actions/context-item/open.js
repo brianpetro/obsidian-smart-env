@@ -1,5 +1,5 @@
 /**
- * Open the current context item.
+ * Open the current context item when not attributed to a source or block
  *
  * @this {import('smart-contexts').ContextItem}
  * @param {object} [params={}]
@@ -13,9 +13,12 @@ export async function context_item_open(params = {}) {
 
 export const menus = {
   'context_item:action_menu': {
-    title: 'Open item',
+    title: 'Open external',
     icon: 'external-link',
     order: 10,
+    when() {
+      return !this.scope?.item_ref;
+    },
     params(_menu_ctx, event) {
       return { event };
     },
