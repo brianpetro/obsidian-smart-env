@@ -231,3 +231,6 @@ Added: implement reindex_embeddings method for active embedding model
 
 
 Improved: added additional Transformers models and revision support
+
+
+Improved: enhance model settings UI and functionality with delete confirmation and better layout
