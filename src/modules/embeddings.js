@@ -248,7 +248,7 @@ export class Embeddings {
     const fingerprint_data = {
       provider_key: model_data.provider_key || '',
       model_key: model_data.model_key || this.embed_model_key || '',
-      dimensions: model_data.dimensions || model_data.dims || '',
+      dimensions: model_data.dims || model_data.dimensions || '',
       max_tokens: Number(model_data.max_tokens || 0),
     };
     if (embedding_space_id) {
@@ -263,8 +263,8 @@ export class Embeddings {
 
   get dims() {
     const dims = Number(
-      this.embed_model_data.dimensions
-      || this.embed_model_data.dims
+      this.embed_model_data.dims
+      || this.embed_model_data.dimensions
       || this._dims_by_file[this.active_file]
       || 0
     );

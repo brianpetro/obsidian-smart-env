@@ -26,7 +26,7 @@ export function show_new_model_menu(models_collection, event, params = {}) {
           if (typeof params.on_before_new === 'function') {
             await params.on_before_new();
           }
-          // new model set as default and emits model-changed
+          // new model emits model-changed so model settings refresh
           const model = models_collection.new_model({ provider_key: provider.value });
           const on_new_close = async () => {
             // model.emit_event('model:changed');

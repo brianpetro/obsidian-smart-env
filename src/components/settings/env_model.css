@@ -1,11 +1,48 @@
 .model-settings .model-info {
   border-radius: var(--radius-m);
-  padding: 1rem;
-  margin-bottom: 1rem;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
   background-color: var(--background-secondary);
+  .smart-env-settings-header {
+    gap: 1rem;
+    margin-bottom: 0;
+  }
+  .model-info-content {
+    flex: 1;
+    min-width: 0;
+  }
+  .model-info-content > b,
   pre {
-    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .model-info-content > b {
+    display: block;
+    white-space: nowrap;
+  }
+  pre {
+    margin: 0.25rem 0 0;
     font-size: 0.9rem;
+    white-space: pre;
+  }
+  .model-actions,
+  .model-action-buttons,
+  .model-delete-confirm {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .model-action-buttons,
+  .model-delete-confirm {
+    gap: 0.5rem;
+  }
+  .model-action-buttons[hidden],
+  .model-delete-confirm[hidden] {
+    display: none;
+  }
+  .model-delete-confirm-label {
+    color: var(--text-muted);
+    white-space: nowrap;
   }
   .test-result-icon {
     vertical-align: middle;
