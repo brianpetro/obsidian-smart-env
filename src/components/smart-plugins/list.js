@@ -1005,6 +1005,7 @@ export class PluginListItem {
       : ''
     ;
     const last_updated = normalize_positive_epoch_ms(plugin?.last_updated);
+    const one_month_ago = Date.now() - (30 * 24 * 60 * 60 * 1000);
 
     if (version && version !== 'unknown') {
       const version_difference = current_version
@@ -1019,7 +1020,7 @@ export class PluginListItem {
         meta.push(`v${version}`);
       }
     }
-    if (last_updated) {
+    if (last_updated && last_updated >= one_month_ago) {
       meta.push(`Updated ${convert_to_time_ago(last_updated)}`);
     }
 

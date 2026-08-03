@@ -200,7 +200,7 @@ function create_group_plugins(params = {}) {
       plugin_id,
       version: params.core_version || '1.0.0',
       icon_name: params.core_icon_name || 'smart-connections',
-      last_updated: params.core_last_updated || 1_700_000_000_000,
+      last_updated: params.core_last_updated || Date.now(),
       main_url: params.core_main_url || 'https://core.example/plugin/',
       details_url: params.core_details_url || 'https://core.example/details/',
       docs_url: params.core_docs_url || 'https://core.example/docs/',
@@ -213,7 +213,7 @@ function create_group_plugins(params = {}) {
       plugin_id,
       version: params.pro_version || '2.0.0',
       icon_name: params.pro_icon_name || 'smart-connections',
-      last_updated: params.pro_last_updated || 1_700_000_000_000,
+      last_updated: params.pro_last_updated || Date.now(),
       main_url: params.pro_main_url || 'https://pro.example/plugin/',
       details_url: params.pro_details_url || 'https://pro.example/details/',
       docs_url: params.pro_docs_url || 'https://pro.example/docs/',
@@ -514,6 +514,19 @@ test('PluginListItem shows current and available versions when they differ', (t)
     newer_current_item.get_track_meta_text('core'),
     'Current v2.0.0 - Store v1.3.3 - Updated ago'
   );
+});
+
+test('PluginListItem hides last updated metadata after one month', (t) => {
+  const one_day_ms = 24 * 60 * 60 * 1000;
+  const item = create_plugin_list_item({
+    plugins: {
+      core_last_updated: Date.now() - (31 * one_day_ms),
+      pro_last_updated: Date.now() - (29 * one_day_ms),
+    },
+  });
+
+  t.is(item.get_track_meta_text('core'), 'v1.0.0');
+  t.is(item.get_track_meta_text('pro'), 'v2.0.0 - Updated ago');
 });
 
 test('PluginListItem exposes icon, release metadata, and listing links', (t) => {
