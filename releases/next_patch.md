@@ -234,3 +234,6 @@ Improved: added additional Transformers models and revision support
 
 
 Improved: enhance model settings UI and functionality with delete confirmation and better layout
+
+
+Updated: Smart Environment v3
