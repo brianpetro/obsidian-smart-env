@@ -237,3 +237,6 @@ Improved: enhance model settings UI and functionality with delete confirmation a
 
 
 Updated: Smart Environment v3
+
+
+Improved: update version numbers and remove exclusion metadata from context items
