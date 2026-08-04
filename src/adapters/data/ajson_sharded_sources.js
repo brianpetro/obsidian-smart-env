@@ -754,15 +754,23 @@ export class AjsonShardedSourcesDataAdapter extends AjsonSingleFileCollectionDat
     return await this.queue_ajson_write(() => this._append_sources(sources));
   }
 
-  async assert_append_base_ready() {
+  async assert_ajson_base_ready(action = 'append') {
     if (await this.fs.exists(this.get_ajson_file_path(0))) return;
-    if (!(await this.fs.exists(this.legacy_data_dir))) return;
+    if (await this.fs.exists(this.legacy_data_dir)) {
+      throw new Error(`Cannot ${action} source AJSON before legacy migration is committed.`);
+    }
 
-    throw new Error('Cannot append source AJSON before legacy migration is committed.');
+    const uncommitted_files = await this.list_ajson_data_files({ require_base: false });
+    if (!uncommitted_files.length) return;
+
+    throw new Error(
+      `Cannot ${action} source AJSON while numbered shards exist without shard 0. `
+      + 'Run recover_uncommitted_shards() first.'
+    );
   }
 
   async _append_sources(sources = []) {
-    await this.assert_append_base_ready();
+    await this.assert_ajson_base_ready();
     await this.ensure_data_dir();
 
     let current_file_info = await this.get_current_append_file_info();
@@ -818,6 +826,27 @@ export class AjsonShardedSourcesDataAdapter extends AjsonSingleFileCollectionDat
     return await this.queue_ajson_write(() => this._compact_shards());
   }
 
+  async recover_uncommitted_shards() {
+    return await this.queue_ajson_write(async () => {
+      if (await this.fs.exists(this.get_ajson_file_path(0))) {
+        throw new Error('Cannot recover uncommitted source AJSON after shard 0 is committed.');
+      }
+      if (await this.fs.exists(this.legacy_data_dir)) {
+        throw new Error('Cannot recover uncommitted source AJSON while legacy migration is pending.');
+      }
+
+      const uncommitted_files = await this.list_ajson_data_files({ require_base: false });
+      if (!uncommitted_files.length) {
+        throw new Error('Cannot recover uncommitted source AJSON because no numbered shards were found.');
+      }
+
+      return await this._compact_shards({
+        commit_base_last: true,
+        include_uncommitted_files: true,
+      });
+    });
+  }
+
   async commit_legacy_migration() {
     const queued_sources = Object.values(this.collection.items || {})
       .filter((source) => source?._queue_save)
@@ -852,6 +881,9 @@ export class AjsonShardedSourcesDataAdapter extends AjsonSingleFileCollectionDat
   async _compact_shards(params = {}) {
     if (this.collection?._defer_embed_saves || this.env.smart_blocks?._defer_embed_saves) {
       throw new Error('Cannot compact AJSON data while embedding saves are deferred.');
+    }
+    if (params.include_uncommitted_files !== true) {
+      await this.assert_ajson_base_ready('compact');
     }
 
     const started_at = Date.now();

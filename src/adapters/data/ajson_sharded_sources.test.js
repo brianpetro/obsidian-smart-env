@@ -534,6 +534,100 @@ test('numbered shards are not committed without the base shard', async (t) => {
   );
 });
 
+test('ordinary append cannot commit orphan numbered shards', async (t) => {
+  const { adapter, files } = create_adapter();
+  const base_path = adapter.get_ajson_file_path(0);
+  const orphan_path = adapter.get_ajson_file_path(1);
+  const orphan_content = '"smart_sources:Notes/Test.md": {"version":"orphan"},';
+  files.set(orphan_path, orphan_content);
+
+  await t.throwsAsync(
+    () => adapter.append_sources([{
+      key: 'Notes/Test.md',
+      collection_key: 'smart_sources',
+      data: { version: 'current' },
+    }]),
+    {
+      message: 'Cannot append source AJSON while numbered shards exist without shard 0. '
+        + 'Run recover_uncommitted_shards() first.',
+    },
+  );
+
+  t.false(files.has(base_path));
+  t.is(files.get(orphan_path), orphan_content);
+});
+
+test('ordinary compaction cannot commit orphan numbered shards', async (t) => {
+  const { adapter, collection, files } = create_adapter();
+  create_source(collection, {
+    key: 'Notes/Test.md',
+    data: {
+      blocks_data: {},
+      version: 'current',
+    },
+  });
+  const base_path = adapter.get_ajson_file_path(0);
+  const orphan_path = adapter.get_ajson_file_path(1);
+  const orphan_content = '"smart_sources:Notes/Test.md": {"version":"orphan"},';
+  files.set(orphan_path, orphan_content);
+
+  await t.throwsAsync(
+    () => adapter.compact_shards(),
+    {
+      message: 'Cannot compact source AJSON while numbered shards exist without shard 0. '
+        + 'Run recover_uncommitted_shards() first.',
+    },
+  );
+
+  t.false(files.has(base_path));
+  t.false(files.has(`${base_path}.tmp`));
+  t.is(files.get(orphan_path), orphan_content);
+});
+
+test('explicit recovery replaces orphan shards before committing the base shard', async (t) => {
+  const {
+    adapter,
+    collection,
+    files,
+    operations,
+  } = create_adapter({ max_bytes_per_shard: 128 });
+  const first_source = create_sized_source(adapter, collection, 'Notes/First.md', 96);
+  const second_source = create_sized_source(adapter, collection, 'Notes/Second.md', 96);
+  collection.items = {
+    [first_source.key]: first_source,
+    [second_source.key]: second_source,
+  };
+
+  const base_path = adapter.get_ajson_file_path(0);
+  const shard_1_path = adapter.get_ajson_file_path(1);
+  const shard_2_path = adapter.get_ajson_file_path(2);
+  files.set(shard_1_path, '"smart_sources:Notes/Old.md": {"version":1},');
+  files.set(shard_2_path, '"smart_sources:Notes/Stale.md": {"version":2},');
+
+  const result = await adapter.recover_uncommitted_shards();
+
+  t.deepEqual(parse_source_line(files.get(base_path), first_source.key), first_source.data);
+  t.deepEqual(parse_source_line(files.get(shard_1_path), second_source.key), second_source.data);
+  t.false(files.has(shard_2_path));
+  t.is(result.before.shards, 2);
+  t.is(result.after.shards, 2);
+
+  const base_temp_write_i = operations.indexOf(`write:${base_path}.tmp`);
+  const shard_1_temp_write_i = operations.indexOf(`write:${shard_1_path}.tmp`);
+  const shard_1_backup_i = operations.indexOf(`rename:${shard_1_path}:${shard_1_path}.bak`);
+  const shard_1_commit_i = operations.indexOf(`rename:${shard_1_path}.tmp:${shard_1_path}`);
+  const shard_2_remove_i = operations.indexOf(`remove:${shard_2_path}`);
+  const base_commit_i = operations.indexOf(`rename:${base_path}.tmp:${base_path}`);
+
+  t.true(base_temp_write_i >= 0);
+  t.true(shard_1_temp_write_i >= 0);
+  t.true(base_temp_write_i < shard_1_backup_i);
+  t.true(shard_1_temp_write_i < shard_1_backup_i);
+  t.true(shard_1_backup_i < shard_1_commit_i);
+  t.true(shard_1_commit_i < shard_2_remove_i);
+  t.true(shard_2_remove_i < base_commit_i);
+});
+
 test('append rotation and compaction keep shards within the byte threshold', async (t) => {
   const {
     adapter,
@@ -709,6 +803,10 @@ test('ordinary append cannot create the commit marker while legacy migration is 
       deleted: true,
     }]),
     { message: 'Cannot append source AJSON before legacy migration is committed.' },
+  );
+  await t.throwsAsync(
+    () => adapter.recover_uncommitted_shards(),
+    { message: 'Cannot recover uncommitted source AJSON while legacy migration is pending.' },
   );
 
   t.false(files.has(adapter.get_ajson_file_path(0)));
