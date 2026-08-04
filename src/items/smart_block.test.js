@@ -147,6 +147,81 @@ test('block membership is attached only through blocks_data writes', t => {
   t.false(Object.prototype.hasOwnProperty.call(block.collection.items, 'Notes/Test.md#Heading'));
 });
 
+test('pending parsed block data replaces stale source-owned metadata', t => {
+  const stale_data = {
+    key: 'Notes/Test.md#Heading',
+    lines: [1, 2],
+    size: 62,
+    last_read: {
+      hash: 'stale-hash',
+      at: 1,
+    },
+    embedding: {
+      vec: {
+        stale_model: {
+          file: 'stale-file',
+          file_i: 3,
+          read_hash: 'stale-hash',
+        },
+      },
+    },
+  };
+  const current_data = {
+    key: 'Notes/Test.md#Heading',
+    lines: [1, 3],
+    size: 24,
+    last_read: {
+      hash: 'current-hash',
+      at: 2,
+    },
+  };
+  const source = {
+    key: 'Notes/Test.md',
+    data: {
+      blocks_data: {
+        '#Heading': stale_data,
+      },
+    },
+    has_block(sub_key) {
+      return Object.prototype.hasOwnProperty.call(this.data.blocks_data, sub_key);
+    },
+    queue_save() {
+      this._queue_save = true;
+    },
+  };
+  const smart_blocks = {
+    item_class_name: 'SmartBlock',
+    items: {},
+  };
+  const env = {
+    create_env_getter() {},
+    smart_blocks,
+    smart_sources: {
+      get(key) {
+        return key === source.key ? source : undefined;
+      },
+    },
+  };
+
+  const block = new SmartBlock(env, current_data);
+
+  t.is(block.data.size, 24);
+  t.is(block.data.last_read.hash, 'current-hash');
+  t.truthy(block._pending_data);
+
+  block.queue_save();
+
+  const stored_data = source.data.blocks_data['#Heading'];
+  t.is(stored_data, block.data);
+  t.deepEqual(stored_data.lines, [1, 3]);
+  t.is(stored_data.size, 24);
+  t.is(stored_data.last_read.hash, 'current-hash');
+  t.false(Object.prototype.hasOwnProperty.call(stored_data, 'embedding'));
+  t.is(block._pending_data, null);
+  t.is(source.data.block_embedding_selection, null);
+  t.true(source._queue_save);
+});
+
 test('get_should_embed uses the source-level persisted selection', t => {
   const calls = [];
   const source = {

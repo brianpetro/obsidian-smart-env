@@ -59,10 +59,10 @@ export class SmartBlock extends BaseSmartBlock {
     if (this.deleted) {
       remove_source_block_data(source, sub_key);
       if (block_key) delete this.collection.items[block_key];
-    } else if (source_has_block(source, sub_key)) {
-      // Block data is already attached to the source-owned blocks_data record.
     } else if (this._pending_data) {
       this.data = this._pending_data;
+    } else if (source_has_block(source, sub_key)) {
+      // Block data is already attached to the source-owned blocks_data record.
     } else {
       if (block_key) delete this.collection.items[block_key];
       this._queue_save = false;
@@ -100,6 +100,8 @@ export class SmartBlock extends BaseSmartBlock {
       }
       return this._pending_data;
     }
+
+    if (this._pending_data) return this._pending_data;
 
     const source = this.source;
     const sub_key = this.sub_key;
