@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { dist_text_plugin } from './dist_js_text.js';
@@ -230,6 +231,12 @@ async function build_plugin(options = {}) {
     plugins: [
       create_markdown_plugin(),
       dist_text_plugin(options.esbuild),
+      create_imported_styles_plugin({
+        dist_styles_path,
+        style_joiner: options.style_joiner,
+        base_style_sources: resolved_style_sources,
+        repo_root: cwd,
+      }),
       ...(options.plugins || []),
     ],
     banner: copyright_banner ? { js: copyright_banner } : undefined,
@@ -281,3 +288,118 @@ export {
   get_cli_entry_point,
   has_cli_flag,
 };
+/**
+ * Create a SHA-256 hash for stylesheet content.
+ * @param {Buffer|string} style_content
+ * @returns {string}
+ */
+function get_style_content_hash(style_content) {
+  return createHash('sha256').update(style_content).digest('hex');
+}
+
+/**
+ * Get a portable stylesheet source path rooted at its repository directory.
+ * @param {string} file_path
+ * @param {string} repo_root
+ * @returns {string}
+ */
+function get_style_source_path(file_path, repo_root) {
+  const resolved_file_path = path.resolve(file_path);
+  const resolved_repo_root = path.resolve(repo_root);
+  const repo_relative_path = path.relative(resolved_repo_root, resolved_file_path);
+  const is_repo_file = repo_relative_path
+    && !repo_relative_path.startsWith(`..${path.sep}`)
+    && repo_relative_path !== '..'
+    && !path.isAbsolute(repo_relative_path);
+
+  if (is_repo_file && !repo_relative_path.split(path.sep).includes('node_modules')) {
+    return `${path.basename(resolved_repo_root)}/${repo_relative_path.split(path.sep).join('/')}`;
+  }
+
+  const normalized_file_path = resolved_file_path.split(path.sep).join('/');
+  const node_modules_marker = '/node_modules/';
+  const node_modules_index = normalized_file_path.lastIndexOf(node_modules_marker);
+
+  if (node_modules_index !== -1) {
+    return normalized_file_path.slice(node_modules_index + node_modules_marker.length);
+  }
+
+  const src_marker = '/src/';
+  const src_index = normalized_file_path.lastIndexOf(src_marker);
+
+  if (src_index !== -1) {
+    const repo_path = normalized_file_path.slice(0, src_index);
+    return `${repo_path.slice(repo_path.lastIndexOf('/') + 1)}${normalized_file_path.slice(src_index)}`;
+  }
+
+  return path.basename(resolved_file_path);
+}
+
+/**
+ * Append imported stylesheets to the dist styles file.
+ * @param {{
+ *   dist_styles_path: string,
+ *   style_joiner?: string,
+ *   base_style_sources?: string[],
+ *   repo_root?: string,
+ * }} options
+ * @returns {import('esbuild').Plugin}
+ */
+function create_imported_styles_plugin(options) {
+  const {
+    dist_styles_path,
+    style_joiner = '\n',
+    base_style_sources = [],
+    repo_root = process.cwd(),
+  } = options;
+
+  return {
+    name: 'imported-styles',
+
+    setup(build) {
+      // Required so we can inspect the final import graph.
+      build.initialOptions.metafile = true;
+
+      build.onEnd((result) => {
+        if (result.errors.length || !result.metafile) {
+          return;
+        }
+
+        const build_working_dir = build.initialOptions.absWorkingDir || process.cwd();
+        const imported_style_paths = Object.keys(result.metafile.inputs)
+          .filter((file_path) => file_path.endsWith('.css'))
+          .map((file_path) => path.resolve(build_working_dir, file_path));
+        const style_content_hashes = new Set(
+          base_style_sources.map((file_path) => {
+            return get_style_content_hash(fs.readFileSync(file_path));
+          }),
+        );
+        const style_parts = [];
+
+        imported_style_paths.forEach((file_path) => {
+          const style_content = fs.readFileSync(file_path);
+          const style_content_hash = get_style_content_hash(style_content);
+
+          if (style_content_hashes.has(style_content_hash)) {
+            return;
+          }
+
+          style_content_hashes.add(style_content_hash);
+          style_parts.push(
+            `/* Imported from: ${get_style_source_path(file_path, repo_root)} */\n`
+              + style_content.toString('utf8'),
+          );
+        });
+
+        if (!style_parts.length) {
+          return;
+        }
+
+        fs.appendFileSync(
+          dist_styles_path,
+          `${style_joiner}${style_parts.join(style_joiner)}`,
+        );
+      });
+    },
+  };
+}
