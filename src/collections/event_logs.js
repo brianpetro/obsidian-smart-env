@@ -65,10 +65,10 @@ export class EventLogs extends BaseEventLogs {
   static get default_settings() {
     return {
       ...(super.default_settings || {}),
-      native_notice_info: false,
+      native_notice_info: true,
       native_notice_warning: true,
       native_notice_error: true,
-      native_notice_attention: false,
+      native_notice_attention: true,
       native_notice_milestone: true,
     };
   }
