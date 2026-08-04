@@ -673,7 +673,7 @@ function compile_latest_release(params) {
     current_patch_md,
   }).replace(
     /!\[\[([^|\]]+\.(?:avif|bmp|gif|jpe?g|png|svg|webp))(?:\|[^\]]*)?\]\]/gi,
-    '![](<https://smartconnections.app/assets/$1>)',
+    '![](https://smartconnections.app/assets/$1)',
   );
 
   if (!dry_run) {
