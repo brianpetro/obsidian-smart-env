@@ -1,4 +1,5 @@
 import test from 'ava';
+import { SmartContext as CoreSmartContext } from 'smart-contexts/smart_context.js';
 import { context_suggest_contexts } from './contexts.js';
 
 const build_ctx = () => {
@@ -78,6 +79,7 @@ test('context_suggest_contexts adds a named-context rule from the add-all row', 
   await item_suggestions[0].select_action({ modal });
   t.deepEqual(added_items, [{
     key: 'Alpha',
+    kind: 'named_context',
     named_context: true,
   }]);
   t.true(modal.instructions_log.length > 1);
@@ -103,6 +105,7 @@ test('context_suggest_contexts mod_select_action adds a named-context rule', asy
 
   t.deepEqual(added_items, [{
     key: 'Alpha',
+    kind: 'named_context',
     named_context: true,
   }]);
 });
@@ -119,6 +122,7 @@ test('legacy copy_context_items params do not change named-context behavior', as
 
   t.deepEqual(added_items, [{
     key: 'Alpha',
+    kind: 'named_context',
     named_context: true,
   }]);
 });
@@ -146,6 +150,7 @@ test('context_suggest_contexts uses the same rule for codeblock contexts', async
 
   t.deepEqual(added_items, [{
     key: 'Alpha',
+    kind: 'named_context',
     named_context: true,
   }]);
 });
@@ -162,4 +167,120 @@ test('context_suggest_contexts item select adds only the selected item', async (
   t.is(added_items.length, 1);
   t.is(added_items[0].key, 'note-a.md');
   t.false(Object.prototype.hasOwnProperty.call(added_items[0], 'from_named_context'));
+});
+
+test('context_suggest_contexts preserves selected item identity metadata', async (t) => {
+  const { ctx, added_items } = build_ctx();
+  ctx.env.smart_contexts.items.alpha.data.context_items = /** @type {*} */ ({
+    'archive.md': {
+      key: 'archive.md',
+      kind: 'folder',
+      source_path: 'archive.md',
+      folder: true,
+    },
+  });
+  const modal = build_modal();
+
+  const suggestions = await context_suggest_contexts.call(ctx, { modal });
+  const item_suggestions = await suggestions[0].select_action({ modal });
+  await item_suggestions[1].select_action({ modal });
+
+  t.deepEqual(added_items, [{
+    key: 'archive.md',
+    kind: 'folder',
+    source_path: 'archive.md',
+    folder: true,
+  }]);
+});
+
+test('context_suggest_contexts strips source-context provenance and hydration state', async (t) => {
+  const { ctx, added_items } = build_ctx();
+  ctx.env.smart_contexts.items.alpha.data.context_items = /** @type {*} */ ({
+    'notes/a.md#Heading': {
+      key: 'notes/a.md#Heading',
+      kind: 'block',
+      source_path: 'notes/a.md',
+      subpath: 'Heading',
+      section: 'Current',
+      content: 'adapter-specific content',
+      score: 0.75,
+      from_folder: 'notes',
+      from_named_context: 'Nested',
+      folder: 'notes',
+      d: 3,
+      at: 123,
+      size: 99,
+      mtime: 456,
+      group_items_ct: 4,
+      truncated: true,
+      truncated_max_items: 1000,
+      missing: true,
+      exclude: false,
+    },
+  });
+
+  const suggestions = await context_suggest_contexts.call(ctx, {
+    modal: build_modal(),
+  });
+  const item_suggestions = await suggestions[0].select_action({
+    modal: build_modal(),
+  });
+  t.is(item_suggestions[1].display_right, 'depth 3');
+  await item_suggestions[1].select_action({ modal: build_modal() });
+
+  t.deepEqual(added_items, [{
+    key: 'notes/a.md#Heading',
+    kind: 'block',
+    source_path: 'notes/a.md',
+    subpath: 'Heading',
+    section: 'Current',
+    content: 'adapter-specific content',
+    score: 0.75,
+  }]);
+});
+
+test('context_suggest_contexts adds a selected derived item as directly removable', async (t) => {
+  const { ctx } = build_ctx();
+  ctx.data.context_items = /** @type {*} */ ({});
+  ctx.env.smart_contexts.items.alpha.data.context_items = /** @type {*} */ ({
+    'notes/direct.md': {
+      key: 'notes/direct.md',
+      kind: 'source',
+      source_path: 'notes/direct.md',
+      from_folder: 'notes',
+      from_named_context: 'Nested',
+      folder: 'notes',
+      d: 3,
+      at: 123,
+      size: 99,
+      mtime: 456,
+    },
+  });
+  ctx.queue_save = () => {};
+  ctx.emit_event = () => {};
+  ctx.add_item = (item) => CoreSmartContext.prototype.add_item.call(ctx, item);
+
+  const suggestions = await context_suggest_contexts.call(ctx, {
+    modal: build_modal(),
+  });
+  const item_suggestions = await suggestions[0].select_action({
+    modal: build_modal(),
+  });
+  await item_suggestions[1].select_action({ modal: build_modal() });
+
+  const added_item = ctx.data.context_items['notes/direct.md'];
+  t.like(added_item, {
+    key: 'notes/direct.md',
+    kind: 'source',
+    source_path: 'notes/direct.md',
+    d: 0,
+  });
+  t.false(Object.prototype.hasOwnProperty.call(added_item, 'from_folder'));
+  t.false(Object.prototype.hasOwnProperty.call(added_item, 'from_named_context'));
+  t.false(Object.prototype.hasOwnProperty.call(added_item, 'folder'));
+  t.not(added_item.at, 123);
+
+  CoreSmartContext.prototype.remove_item.call(ctx, 'notes/direct.md');
+
+  t.false('notes/direct.md' in ctx.data.context_items);
 });

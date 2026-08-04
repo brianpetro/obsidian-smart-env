@@ -69,23 +69,49 @@ function list_context_items(env) {
 
 /**
  * @param {any} other_ctx
- * @returns {Array<{ key: string }>}
+ * @returns {Array<{ key: string } & Object.<string, *> >}
  */
 function get_items_from_context(other_ctx) {
   const data = other_ctx?.data?.context_items || {};
   const entries = Object.entries(data);
 
-  /** @type {Array<{ key: string }>} */
+  /** @type {Array<{ key: string } & Object.<string, *> >} */
   const out = [];
 
   for (let i = 0; i < entries.length; i += 1) {
     const [key, item_data] = entries[i];
     if (!key) continue;
     if (item_data?.exclude) continue;
-    out.push({ key });
+    out.push({
+      ...(item_data && typeof item_data === 'object' ? item_data : {}),
+      key: item_data?.key || key,
+    });
   }
 
   return out;
+}
+
+/**
+ * Copy a persisted context item into the current context as a direct item.
+ *
+ * @param {{ key: string } & Object.<string, *>} item_data
+ * @returns {{ key: string } & Object.<string, *>}
+ */
+function build_direct_context_item(item_data) {
+  const copied_data = { ...item_data };
+  delete copied_data.from_folder;
+  delete copied_data.from_named_context;
+  delete copied_data.d;
+  delete copied_data.at;
+  delete copied_data.size;
+  delete copied_data.mtime;
+  delete copied_data.group_items_ct;
+  delete copied_data.truncated;
+  delete copied_data.truncated_max_items;
+  delete copied_data.missing;
+  delete copied_data.exclude;
+  if (copied_data.folder !== true) delete copied_data.folder;
+  return copied_data;
 }
 
 /**
@@ -98,6 +124,7 @@ function get_items_from_context(other_ctx) {
 function add_named_context(ctx, context_name) {
   ctx.add_item({
     key: context_name,
+    kind: 'named_context',
     named_context: true,
   });
 }
@@ -129,7 +156,7 @@ function build_named_context_item_suggestions(ctx, params = {}) {
       display: payload.key,
       display_right: format_depth_label(payload.d),
       select_action: () => {
-        ctx.add_item(payload);
+        ctx.add_item(build_direct_context_item(payload));
       },
       arrow_left_action: ({ modal } = {}) => {
         return context_suggest_contexts.call(ctx, { modal });

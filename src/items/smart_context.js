@@ -1,4 +1,5 @@
 import { SmartContext as BaseClass } from 'smart-contexts/smart_context.js';
+import { normalize_context_item_data } from 'smart-contexts/context_items.js';
 import {
   item_matches_remove_path,
   normalize_remove_targets,
@@ -46,7 +47,10 @@ export class SmartContext extends BaseClass {
     const context_items = this.data?.context_items || {};
     const remove_keys = [];
 
-    Object.keys(context_items).forEach((key) => {
+    Object.entries(context_items).forEach(([key, item_data]) => {
+      const normalized_data = normalize_context_item_data(key, item_data);
+      if (normalized_data.kind === 'named_context') return;
+
       const target = targets.find((target) => item_matches_remove_path(key, target.norm_key));
       if (!target) return;
       remove_keys.push(key);
@@ -86,17 +90,25 @@ export class SmartContext extends BaseClass {
       key = item;
     }
     const existing = this.data.context_items[key];
-    const context_item = {
+    const context_item = normalize_context_item_data(key, {
       d: 0,
       at: Date.now(),
       ...(existing || {}),
       ...(typeof item === 'object' ? item : {}),
-    };
+    });
     if (!key) return console.error('SmartContext: add_item called with invalid item', item);
     const emit_payload = { add_item: key };
-    const remove_sub_keys = Object.entries(this.data.context_items)
-      .filter(([existing_key]) => existing_key !== key && item_matches_remove_path(existing_key, key))
-      .map(([existing_key]) => existing_key)
+    const remove_sub_keys = context_item.kind === 'named_context'
+      ? []
+      : Object.entries(this.data.context_items)
+        .filter(([existing_key, existing_data]) => {
+          if (existing_key === key) return false;
+          const normalized_data = normalize_context_item_data(existing_key, existing_data);
+          return normalized_data.kind !== 'named_context'
+            && item_matches_remove_path(existing_key, key)
+          ;
+        })
+        .map(([existing_key]) => existing_key)
     ;
     if (remove_sub_keys.length) {
       this.remove_items(remove_sub_keys, { emit_updated: false });

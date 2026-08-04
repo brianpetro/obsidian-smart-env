@@ -24,6 +24,9 @@ export function create_context(context_items = {}) {
         }
         return acc;
       }, { items: {} }),
+    remove_by_paths(paths, params = {}) {
+      return SmartContext.prototype.remove_by_paths.call(this, paths, params);
+    },
     remove_items(keys, params = {}) {
       const items = Array.isArray(keys) ? keys : [keys];
       items.forEach((key) => {
@@ -40,6 +43,33 @@ test('add_item allows block when parent source is not included', (t) => {
 
   t.true('notes/a.md#Heading' in ctx.data.context_items);
   t.false('notes/a.md' in ctx.data.context_items);
+  t.like(ctx.data.context_items['notes/a.md#Heading'], {
+    key: 'notes/a.md#Heading',
+    kind: 'block',
+    source_path: 'notes/a.md',
+    subpath: 'Heading',
+  });
+});
+
+test('add_item preserves explicit folder kind and treats extensionless paths as sources', (t) => {
+  const ctx = create_context({});
+
+  SmartContext.prototype.add_item.call(ctx, 'README');
+  SmartContext.prototype.add_item.call(ctx, {
+    key: 'archive.md',
+    folder: true,
+  });
+
+  t.like(ctx.data.context_items.README, {
+    key: 'README',
+    kind: 'source',
+    source_path: 'README',
+  });
+  t.like(ctx.data.context_items['archive.md'], {
+    key: 'archive.md',
+    kind: 'folder',
+    source_path: 'archive.md',
+  });
 });
 
 test('add_item removes redundant block descendants when parent source is added', (t) => {
@@ -57,6 +87,38 @@ test('add_item removes redundant block descendants when parent source is added',
   t.false('notes/a.md#Heading#{1}' in ctx.data.context_items);
   t.true('notes/a.md2#Heading' in ctx.data.context_items);
   t.true('notes/b.md#Heading' in ctx.data.context_items);
+});
+
+test('add_item preserves hierarchical named-context identity', (t) => {
+  const source_ctx = create_context({
+    'Repo/+mono': {
+      key: 'Repo/+mono',
+      kind: 'named_context',
+      named_context: true,
+    },
+  });
+
+  SmartContext.prototype.add_item.call(source_ctx, 'Repo');
+
+  t.true('Repo/+mono' in source_ctx.data.context_items);
+  t.true('Repo' in source_ctx.data.context_items);
+
+  const named_ctx = create_context({
+    'Repo/a.md': {
+      key: 'Repo/a.md',
+      kind: 'source',
+      source_path: 'Repo/a.md',
+    },
+  });
+
+  SmartContext.prototype.add_item.call(named_ctx, {
+    key: 'Repo',
+    kind: 'named_context',
+    named_context: true,
+  });
+
+  t.true('Repo/a.md' in named_ctx.data.context_items);
+  t.true('Repo' in named_ctx.data.context_items);
 });
 
 // THIS SCENARIO SHOULD NOT HAPPEN (IF SOURCE IS INCLUDED THEN ALL BLOCKS ARE INCLUDED)
@@ -89,6 +151,31 @@ test('remove_by_path removes descendant blocks when parent source is not directl
   t.false('notes/a.md#Heading' in ctx.data.context_items);
   t.false('notes/a.md#Heading{1}' in ctx.data.context_items);
   t.true('notes/b.md' in ctx.data.context_items);
+});
+
+test('remove_by_path preserves hierarchical named-context identity', (t) => {
+  const ctx = create_context({
+    'Repo/+mono': {
+      key: 'Repo/+mono',
+      kind: 'named_context',
+      named_context: true,
+    },
+    'Repo/a.md': {
+      key: 'Repo/a.md',
+      kind: 'source',
+      source_path: 'Repo/a.md',
+    },
+  });
+
+  const removed_keys = SmartContext.prototype.remove_by_path.call(
+    ctx,
+    'Repo',
+    { folder: true },
+  );
+
+  t.deepEqual(removed_keys, ['Repo/a.md']);
+  t.true('Repo/+mono' in ctx.data.context_items);
+  t.false('Repo/a.md' in ctx.data.context_items);
 });
 
 // Core does not mutate or promote named-context children. The UI disables these
