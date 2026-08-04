@@ -17,7 +17,7 @@ function build_html (model, params) {
         <div class="model-action-buttons">
           <button class="edit-model">Edit</button>
           <button class="test-model">Test</button>
-          <button class="delete-model">Delete</button>
+          ${params.is_default ? '<small>Current</small>' : '<button class="delete-model">Delete</button>'}
         </div>
         <div class="model-delete-confirm" hidden>
           <span class="model-delete-confirm-label">Delete?</span>
@@ -51,15 +51,15 @@ async function post_process (model, container, params) {
   test_btn.addEventListener('click', () => {
     new SmartModelModal(model, { test_on_open: true }).open();
   });
-  delete_btn.addEventListener('click', () => {
+  delete_btn?.addEventListener('click', () => {
     action_buttons.hidden = true;
     delete_confirm.hidden = false;
   });
-  cancel_delete_btn.addEventListener('click', () => {
+  cancel_delete_btn?.addEventListener('click', () => {
     delete_confirm.hidden = true;
     action_buttons.hidden = false;
   });
-  confirm_delete_btn.addEventListener('click', () => {
+  confirm_delete_btn?.addEventListener('click', () => {
     model.delete_model();
   });
   

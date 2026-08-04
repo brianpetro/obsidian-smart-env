@@ -32,9 +32,14 @@ async function post_process (models_collection, container, params) {
       }
     );
 
-    const models = models_collection.filter(model => !model.deleted);
+    const models = models_collection.filter(model => !model.deleted)
+      // sort default model first, then by display name
+      .sort((a, b) => a.display_name.localeCompare(b.display_name))
+      .sort((a, b) => (a === default_model ? -1 : b === default_model ? 1 : 0))
+    ;
+
     for (const model of models) {
-      const model_info_el = await models_collection.env.smart_components.render_component('settings_env_model', model, {});
+      const model_info_el = await models_collection.env.smart_components.render_component('settings_env_model', model, { is_default: model === default_model });
       models_group.listEl.appendChild(model_info_el);
     }
   };
