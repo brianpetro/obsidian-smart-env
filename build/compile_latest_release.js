@@ -671,7 +671,10 @@ function compile_latest_release(params) {
     plugin_slug,
     canonical_release_md,
     current_patch_md,
-  });
+  }).replace(
+    /!\[\[([^|\]]+\.(?:avif|bmp|gif|jpe?g|png|svg|webp))(?:\|[^\]]*)?\]\]/gi,
+    '![](<https://smartconnections.app/assets/$1>)',
+  );
 
   if (!dry_run) {
     write_markdown_file(output_path, latest_release_md);
