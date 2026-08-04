@@ -215,7 +215,6 @@ test('context_suggest_contexts strips source-context provenance and hydration st
       truncated: true,
       truncated_max_items: 1000,
       missing: true,
-      exclude: false,
     },
   });
 

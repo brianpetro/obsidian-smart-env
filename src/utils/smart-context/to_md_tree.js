@@ -415,7 +415,6 @@ function list_context_items(smart_context, filter) {
   if (collection && typeof collection.filter === 'function') {
     return collection.filter((item) => {
       if (!item?.key) return false;
-      if (item?.data?.exclude) return false;
       if (user_filter && !user_filter(item)) return false;
       return true;
     });
@@ -428,7 +427,6 @@ function list_context_items(smart_context, filter) {
     .map(([key, item_data]) => ({ key, data: item_data || {} }))
     .filter((item) => {
       if (!item.key) return false;
-      if (item.data?.exclude) return false;
       if (user_filter && !user_filter(item)) return false;
       return true;
     })

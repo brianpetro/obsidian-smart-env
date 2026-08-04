@@ -6,7 +6,7 @@ import {
 } from '../utils/smart-context/remove_path_utils.js';
 
 export class SmartContext extends BaseClass {
-  static version = '2.1.0';
+  static version = '2.1.1';
   get named_contexts () {
     return Object.entries(this.data?.context_items || {})
       .filter(([name, item_data]) => item_data?.named_context)
@@ -97,6 +97,7 @@ export class SmartContext extends BaseClass {
       ...(typeof item === 'object' ? item : {}),
     });
     if (!key) return console.error('SmartContext: add_item called with invalid item', item);
+    delete context_item.exclude;
     const emit_payload = { add_item: key };
     const remove_sub_keys = context_item.kind === 'named_context'
       ? []

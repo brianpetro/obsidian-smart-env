@@ -240,3 +240,18 @@ test('emit_missing_context_item_event debounces duplicate warnings per context i
 });
 
 
+
+test('add_item never persists legacy exclusion metadata', (t) => {
+  const ctx = create_context({});
+
+  SmartContext.prototype.add_item.call(ctx, {
+    key: 'notes/a.md',
+    exclude: true,
+  });
+
+  t.true('notes/a.md' in ctx.data.context_items);
+  t.false(Object.prototype.hasOwnProperty.call(
+    ctx.data.context_items['notes/a.md'],
+    'exclude',
+  ));
+});

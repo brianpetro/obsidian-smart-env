@@ -19,7 +19,7 @@ import { Platform } from 'obsidian';
 
 export const display_name = 'Add named contexts';
 export const display_description = 'Reuse a saved context or browse its sources.';
-export const version = '3.0.1';
+export const version = '3.0.2';
 
 export const menus = {
   'smart_context:suggest': {
@@ -81,7 +81,6 @@ function get_items_from_context(other_ctx) {
   for (let i = 0; i < entries.length; i += 1) {
     const [key, item_data] = entries[i];
     if (!key) continue;
-    if (item_data?.exclude) continue;
     out.push({
       ...(item_data && typeof item_data === 'object' ? item_data : {}),
       key: item_data?.key || key,
@@ -109,7 +108,6 @@ function build_direct_context_item(item_data) {
   delete copied_data.truncated;
   delete copied_data.truncated_max_items;
   delete copied_data.missing;
-  delete copied_data.exclude;
   if (copied_data.folder !== true) delete copied_data.folder;
   return copied_data;
 }

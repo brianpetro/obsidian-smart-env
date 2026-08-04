@@ -88,7 +88,6 @@ test('context_to_md_tree applies a caller filter to the rendered items', (t) => 
       'links/out.md',
       'links/in.md',
       'links/deep.md',
-      'links/excluded.md',
     ],
     {
       item_data: {
@@ -96,7 +95,6 @@ test('context_to_md_tree applies a caller filter to the rendered items', (t) => 
         'links/out.md': { d: 1 },
         'links/in.md': { d: 1, inlink: true },
         'links/deep.md': { d: 2 },
-        'links/excluded.md': { d: 0, exclude: true },
       },
     },
   );
@@ -252,13 +250,12 @@ test('context_to_md_tree keeps expanded external-folder files as file links', (t
   );
 });
 
-test('context_to_md_tree supports folder items and skips excluded raw context_items', (t) => {
+test('context_to_md_tree supports folder items from raw context_items', (t) => {
   const smart_context = {
     data: {
       context_items: {
         'research/': { folder: true },
         'research/plan.md': {},
-        'research/ignore.md': { exclude: true },
       },
     },
   };

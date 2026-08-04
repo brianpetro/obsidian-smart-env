@@ -41,7 +41,6 @@ export async function post_process(ctx, container, params = {}) {
     const env = ctx.env;
     const items = ctx.context_items.filter(params.filter);
     const included_items = items
-      .filter((item) => !item?.data?.exclude) // no excluded items in tree for now (2026-03-24)
       .filter((item) => !is_pending_removal(get_item_key(item)))
     ;
     const context_size = get_total_context_size(included_items);

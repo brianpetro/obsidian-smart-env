@@ -23,7 +23,7 @@ function has_any_context_state(ctx) {
 export function has_linked_depth_items(ctx) {
   if (!ctx?.context_items?.filter) return false;
   return ctx.context_items
-    .filter((item) => !item?.data?.exclude)
+    .filter()
     .some((item) => Number.isFinite(item?.data?.d) && item.data.d > 0)
   ;
 }
