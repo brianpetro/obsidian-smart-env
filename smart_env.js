@@ -29,7 +29,7 @@ import {
   resolve_menu_actions as resolve_registered_menu_actions,
 } from './src/utils/menu_actions.js';
 
-const MIN_COMPATIBLE_SMART_ENV_VERSION = '2.4.0';
+const MIN_COMPATIBLE_SMART_ENV_VERSION = '3.0.0';
 
 export class SmartEnv extends BaseSmartEnv {
   static version = pkg.version;

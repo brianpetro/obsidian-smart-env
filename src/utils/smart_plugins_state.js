@@ -1,3 +1,7 @@
+import { compare_versions } from 'smart-environment/utils/compare_versions.js';
+
+const MIN_COMPATIBLE_SMART_ENV_VERSION = '3.0.0';
+
 export const pro_plugin_ids_without_pro_in_name = new Set(['smart-file-nav']);
 
 /**
@@ -88,7 +92,7 @@ export function should_offer_plugin_update(params = {}) {
  * - row type must match installed type
  * - Pro rows must still be entitled
  * - only applies when enabled, not loaded, and not already deferred
- * - only applies when the currently loaded SmartEnv is outdated (< 2.4)
+ * - only applies when the currently loaded SmartEnv is outdated (< 3.0.0)
  *
  * @param {object} [params={}]
  * @param {string|null} [params.item_type]
@@ -290,11 +294,10 @@ export function get_install_enable_behavior(params = {}) {
 }
 
 export function has_outdated_smart_env_version(version = '') {
-  if (version === '') return false; // not applicable if no version is loaded
-  const version_pcs = String(version || '').trim().split('.');
-  const version_minor = Number.parseInt(version_pcs[1] || '0', 10);
-  if (!Number.isFinite(version_minor)) {
-    return false;
-  }
-  return version_minor < 4;
+  const normalized_version = String(version || '').trim();
+  if (!normalized_version) return false; // not applicable if no version is loaded
+  return compare_versions(
+    normalized_version,
+    MIN_COMPATIBLE_SMART_ENV_VERSION,
+  ) < 0;
 }

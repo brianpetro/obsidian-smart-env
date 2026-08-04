@@ -3,7 +3,7 @@ import path from 'path';
 
 // use a base module version for all unversioned modules (for easy overrides in downstream plugins)
 // increment (patch) to ensure current obsidian-smart-env actions/components take precedence
-const BASE_MODULE_VERSION = '1.0.1';
+const BASE_MODULE_VERSION = '1.0.3';
 
 const roots = [
   path.resolve(process.cwd(), 'src'),

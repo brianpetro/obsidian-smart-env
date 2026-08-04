@@ -2,7 +2,49 @@ import test from 'ava';
 import {
   compute_plugin_list_item_state,
   get_install_enable_behavior,
+  has_outdated_smart_env_version,
+  should_signal_outdated_env_compatibility,
 } from './smart_plugins_state.js';
+
+const smart_env_version_cases = [
+  { version: '', expected: false },
+  { version: '2.4.6', expected: true },
+  { version: '2.5.9', expected: true },
+  { version: '2.99.99', expected: true },
+  { version: '3.0.0', expected: false },
+  { version: '3.1.0', expected: false },
+  { version: '3.2.0', expected: false },
+  { version: '4.0.0', expected: false },
+];
+
+for (const version_case of smart_env_version_cases) {
+  test(`has_outdated_smart_env_version: ${version_case.version || 'empty'}`, (t) => {
+    t.is(
+      has_outdated_smart_env_version(version_case.version),
+      version_case.expected,
+    );
+  });
+}
+
+test('should_signal_outdated_env_compatibility uses the SmartEnv 3.0.0 boundary', (t) => {
+  const params = {
+    item_type: 'core',
+    installed_type: 'core',
+    is_entitled: true,
+    is_enabled: true,
+    is_loaded: false,
+    is_deferred: false,
+  };
+
+  t.true(should_signal_outdated_env_compatibility({
+    ...params,
+    loaded_env_version: '2.99.99',
+  }));
+  t.false(should_signal_outdated_env_compatibility({
+    ...params,
+    loaded_env_version: '3.0.0',
+  }));
+});
 
 function summarize_computed_state(computed_state = {}) {
   return {

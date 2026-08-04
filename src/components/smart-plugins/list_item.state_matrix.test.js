@@ -128,7 +128,7 @@ function create_env(params = {}) {
   const plugin_id = params.plugin_id || 'smart-connections';
   const installed_manifest = params.installed_manifest || null;
   const loaded_version = params.loaded_version || '';
-  const loaded_env_version = params.loaded_env_version || '2.5.4';
+  const loaded_env_version = params.loaded_env_version || '3.1.0';
   const enabled = params.enabled === true;
   const env_plugin_state = params.env_plugin_state || '';
   const emitted_events = params.emitted_events || [];
