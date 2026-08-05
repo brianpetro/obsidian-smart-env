@@ -1,5 +1,8 @@
 /**
  * @deprecated 2026-03-27: move to action-getter-architecture (block_get_display_name)
+ * @param {{key?: string, lines?: number[]}} item
+ * @param {import('smart-types').BlockDisplayParams} [settings]
+ * @returns {string}
  */
 export function get_block_display_name(item, settings = {}) {
   if (!item?.key) return '';

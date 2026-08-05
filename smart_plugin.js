@@ -14,11 +14,12 @@ import {
 } from './src/utils/ribbon_actions.js';
 
 /**
- * @extends Plugin
+ * @template [TEnv=import('smart-types').SmartEnv]
+ * @extends {Plugin}
  */
 export class SmartPlugin extends Plugin {
   SmartEnv = SmartEnv;
-  /** @type {SmartEnv} Set by `SmartEnv.create_env_getter`. */
+  /** @type {TEnv} Set by `SmartEnv.create_env_getter`. */
   env;
   /**
    * override in subclass to provide commands.
