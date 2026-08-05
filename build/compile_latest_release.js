@@ -632,6 +632,7 @@ function compile_latest_release(params) {
     dry_run = false,
   } = params;
   const { plugin_prefix, plugin_slug } = resolve_release_config(params);
+  const release_utm_source = `${params.plugin_id || plugin_slug}-release`;
 
   if (!version) {
     throw new Error('version is required to compile latest_release.md');
@@ -674,6 +675,15 @@ function compile_latest_release(params) {
   }).replace(
     /!\[\[([^|\]]+\.(?:avif|bmp|gif|jpe?g|png|svg|webp))(?:\|[^\]]*)?\]\]/gi,
     '![](https://smartconnections.app/assets/$1)',
+  ).replace(
+    /(?<!!)\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)/gi,
+    (_link, link_text, url) => {
+      const fragment_index = url.indexOf('#');
+      const link_url = fragment_index === -1 ? url : url.slice(0, fragment_index);
+      const fragment = fragment_index === -1 ? '' : url.slice(fragment_index);
+      const query_separator = link_url.includes('?') ? '&' : '?';
+      return `[${link_text}](${link_url}${query_separator}utm_source=${release_utm_source}${fragment})`;
+    },
   );
 
   if (!dry_run) {

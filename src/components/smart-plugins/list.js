@@ -53,7 +53,7 @@ function default_smart_plugins_list() {
       item_name: 'Connections Pro',
       plugin_id: 'smart-connections',
       icon_name: 'smart-connections',
-      item_desc: 'More opportunities for connections. Graph view for visualizing. Inline and footer views (great for mobile!). Configurable algorithms and additional embedding model providers.',
+      item_desc: 'Find the notes that matter with configurable semantic models, filters, scoring, and ranking, then continue the result set in Context or Graph.',
       url: 'https://smartconnections.app/smart-connections/',
     },
     {
@@ -71,7 +71,7 @@ function default_smart_plugins_list() {
       item_name: 'Context Pro',
       plugin_id: 'smart-context',
       icon_name: 'smart-context-builder',
-      item_desc: 'Advanced tools for context engineering. Utilize Bases, images, and external sources (great for coders!) in your contexts.',
+      item_desc: 'Choose exactly what AI should know by building reviewable context from notes, sections, Bases, media, and external sources, then copy or export it.',
       url: 'https://smartconnections.app/smart-context/',
     },
     {
@@ -86,10 +86,10 @@ function default_smart_plugins_list() {
     },
     {
       item_type: 'pro',
-      item_name: 'Chat Pro (API)',
+      item_name: 'Chat Pro',
       plugin_id: 'smart-chat',
       icon_name: 'smart-chat',
-      item_desc: 'Configure chat to use Local and Cloud API providers (Ollama, LM Studio, OpenAI, Gemini, Anthropic, Open Router, and more).',
+      item_desc: 'Keep AI conversations attached to the notes they belong to with universal codeblocks for supported provider threads and Smart Chat API Extension chats.',
       url: 'https://smartconnections.app/smart-chat/',
     },
     {
