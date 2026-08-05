@@ -18,6 +18,8 @@ import {
  */
 export class SmartPlugin extends Plugin {
   SmartEnv = SmartEnv;
+  /** @type {SmartEnv} Set by `SmartEnv.create_env_getter`. */
+  env;
   /**
    * override in subclass to provide commands.
    * use property key to override commands in further subclasses.
@@ -123,6 +125,7 @@ export class SmartPlugin extends Plugin {
 
   /**
    * @deprecated use SmartEnv.notices instead
+   * @returns {{unload: () => void}}
    */
   get notices() {
     if(this.env?.notices) return this.env.notices;
