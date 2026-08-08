@@ -240,3 +240,6 @@ Updated: Smart Environment v3
 
 
 Improved: update version numbers and remove exclusion metadata from context items
+
+
+Improved: vector memory/capacity reservation and error handling in embeddings pipeline
