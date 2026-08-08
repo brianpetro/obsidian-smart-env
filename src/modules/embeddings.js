@@ -12,6 +12,7 @@ import {
 } from '../utils/embedding_item.js';
 
 const EMBEDDING_SAVE_CHECKPOINT_SIZE = 1000;
+const MAX_VECTOR_CAPACITY_HEADROOM_BYTES = 16 * 1024 * 1024;
 
 class EmbeddingsVectorAdapter extends DefaultEntitiesVectorAdapter {
   process_embed_queue() {
@@ -726,13 +727,30 @@ export class Embeddings {
     const vectors = this.ensure_vectors(file, dims);
     if (vectors.length >= min_value_count) return vectors;
 
-    let next_length = vectors.length || 0;
-    while (next_length < min_value_count) {
-      next_length = next_length ? next_length * 2 : dims;
+    const required_growth = min_value_count - vectors.length;
+    const max_headroom = Math.max(
+      dims,
+      Math.floor(
+        MAX_VECTOR_CAPACITY_HEADROOM_BYTES
+        / Float32Array.BYTES_PER_ELEMENT
+        / dims
+      ) * dims,
+    );
+    const headroom = vectors.length
+      ? Math.min(required_growth, max_headroom)
+      : 0
+    ;
+    const next_length = min_value_count + headroom;
+
+    let next_vectors;
+    try {
+      next_vectors = new Float32Array(next_length);
+    } catch (error) {
+      if (!(error instanceof RangeError)) throw error;
+      next_vectors = new Float32Array(min_value_count);
     }
 
     const active_value_count = this.get_vector_value_count(file);
-    const next_vectors = new Float32Array(next_length);
     next_vectors.set(vectors.subarray(0, active_value_count));
     this._vectors_by_file[file] = next_vectors;
     return next_vectors;

@@ -1004,6 +1004,52 @@ test('embed adapter preserves result order across embedding managers', async (t)
   t.is(adapter._stored_since_checkpoint, 3);
 });
 
+test('reserve_vector_capacity bounds headroom for large vector files', async (t) => {
+  const dims = 1536;
+  const current_value_count = dims * 100;
+  const { embeddings, file } = create_embeddings({
+    dims,
+    vectors: new Float32Array(current_value_count),
+  });
+
+  const reserved_vectors = await embeddings.reserve_vector_capacity(1, file);
+
+  t.is(reserved_vectors.length, current_value_count + (dims * 2));
+  t.is(embeddings.get_vector_value_count(file), current_value_count);
+});
+
+test.serial('ensure_vector_capacity retries without headroom after a RangeError', (t) => {
+  const { embeddings, file } = create_embeddings({
+    vectors: default_vector,
+  });
+  const NativeFloat32Array = globalThis.Float32Array;
+  const allocation_lengths = [];
+
+  globalThis.Float32Array = new Proxy(NativeFloat32Array, {
+    construct(target, args) {
+      allocation_lengths.push(args[0]);
+      if (args[0] === 9) {
+        throw new RangeError('Simulated array buffer allocation failure.');
+      }
+      return Reflect.construct(target, args);
+    },
+  });
+
+  try {
+    const reserved_vectors = embeddings.ensure_vector_capacity(
+      file,
+      default_dims,
+      default_dims * 2,
+    );
+
+    t.deepEqual(allocation_lengths, [9, 6]);
+    t.is(reserved_vectors.length, 6);
+    t.deepEqual(Array.from(reserved_vectors.subarray(0, 3)), default_vector);
+  } finally {
+    globalThis.Float32Array = NativeFloat32Array;
+  }
+});
+
 test('reserve_vector_capacity grows once and preserves active vectors', async (t) => {
   const { embeddings, file } = create_embeddings({
     vectors: default_vector,
