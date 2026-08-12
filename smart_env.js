@@ -15,6 +15,8 @@ import {
 } from './utils/add_icons.js';
 import { SmartNotices } from 'smart-notices/smart_notices.js';
 import { exchange_code_for_tokens } from './utils/sc_oauth.js';
+import { SmartSecrets } from './src/smart_secrets.js';
+import { ObsidianSecretsAdapter } from './src/adapters/smart-secrets/obsidian.js';
 import { register_completion_variable_adapter_replacements } from './utils/register_completion_variable_adapter_replacements.js';
 import { remove_smart_plugins_plugin } from './migrations/remove_smart_plugins_plugin.js';
 import { register_first_of_event_notifications } from './src/utils/onboarding_events.js';
@@ -147,6 +149,16 @@ export class SmartEnv extends BaseSmartEnv {
       return env;
     });
 
+  }
+
+
+  async run_load() {
+    if (!this.smart_secrets) {
+      await SmartSecrets.create(this, {
+        adapter: ObsidianSecretsAdapter,
+      });
+    }
+    return super.run_load();
   }
 
 
