@@ -243,3 +243,9 @@ Improved: update version numbers and remove exclusion metadata from context item
 
 
 Improved: vector memory/capacity reservation and error handling in embeddings pipeline
+
+
+Improved: implement SmartSecrets and ObsidianSecretsAdapter for secure storage management
+
+
+Added: top_k action for improved cosine similarity across all embedded items in a collection
