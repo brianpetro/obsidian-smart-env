@@ -73,6 +73,7 @@ import { source_get_embed_input_base as source_get_embed_input_base_action, disp
 import { source_get_embed_input_canvas as source_get_embed_input_canvas_action, display_name as source_get_embed_input_canvas_action_display_name } from './src/actions/source/get_embed_input/canvas.js';
 import { source_get_embed_input_rendered as source_get_embed_input_rendered_action, display_name as source_get_embed_input_rendered_action_display_name } from './src/actions/source/get_embed_input/rendered.js';
 import { source_open as source_open_action, menus as source_open_action_menus } from './src/actions/source/open.js';
+import { top_k as top_k_action } from './src/actions/top_k.js';
 
 
 export const smart_env_config = {
@@ -153,6 +154,7 @@ export const smart_env_config = {
     source_get_embed_input_base: { action: source_get_embed_input_base_action, display_name: source_get_embed_input_base_action_display_name, version: "1.0.3" },
     source_get_embed_input_canvas: { action: source_get_embed_input_canvas_action, display_name: source_get_embed_input_canvas_action_display_name, version: "1.0.3" },
     source_get_embed_input_rendered: { action: source_get_embed_input_rendered_action, display_name: source_get_embed_input_rendered_action_display_name, version: "1.0.3" },
-    source_open: { action: source_open_action, menus: source_open_action_menus, version: "1.0.3" }
+    source_open: { action: source_open_action, menus: source_open_action_menus, version: "1.0.3" },
+    top_k: { action: top_k_action, version: "1.0.3" }
   }
 };
