@@ -249,3 +249,6 @@ Improved: implement SmartSecrets and ObsidianSecretsAdapter for secure storage m
 
 
 Added: top_k action for improved cosine similarity across all embedded items in a collection
+
+
+Improved: secure storage management
