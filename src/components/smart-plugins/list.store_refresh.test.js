@@ -143,8 +143,8 @@ function load_post_process(params = {}) {
     fetch_plugin_file: async () => ({}),
     fetch_server_plugin_list: params.fetch_server_plugin_list,
     get_install_enable_behavior,
-    get_oauth_storage_prefix() {
-      return 'test_smart_plugins_oauth_';
+    get_smart_plugins_token() {
+      return params.token || '';
     },
     infer_installed_plugin_type,
     install_file_names: ['manifest.json', 'main.js', 'styles.css'],
@@ -160,11 +160,6 @@ function load_post_process(params = {}) {
     should_signal_outdated_env_compatibility,
     styles: '',
     write_files_with_adapter: async () => {},
-    localStorage: {
-      getItem() {
-        return '';
-      },
-    },
     window: {
       app: null,
       open(url, target) {

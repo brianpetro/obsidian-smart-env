@@ -1,9 +1,10 @@
 import { Platform, Setting } from 'obsidian';
 import { copy_to_clipboard } from '../../utils/copy_to_clipboard.js';
+import { get_smart_server_url } from '../../utils/smart_plugins.js';
 import {
-  get_oauth_storage_prefix,
-  get_smart_server_url,
-} from '../../utils/smart_plugins.js';
+  clear_smart_plugins_tokens,
+  get_smart_plugins_token,
+} from '../../../utils/sc_oauth.js';
 import { convert_to_time_ago } from 'smart-utils/convert_to_time_ago.js';
 import { convert_to_time_until } from 'smart-utils/convert_to_time_until.js';
 
@@ -20,19 +21,16 @@ export async function render(env, params = {}) {
 }
 
 export async function post_process(env, container, params = {}) {
-  const app = env?.plugin?.app || window.app;
-  const oauth_storage_prefix = get_oauth_storage_prefix(app);
   const sub_exp = Number(params.sub_exp ?? 0) || 0;
   let last_login_url = '';
   let manual_login_el = null;
   let manual_login_parent = container;
 
-  const token = localStorage.getItem(oauth_storage_prefix + 'token') || '';
+  const token = get_smart_plugins_token(env);
   const auth_state = String(params.auth_state || '').trim() || (token ? 'signed_in' : 'signed_out');
 
   const logout = () => {
-    localStorage.removeItem(oauth_storage_prefix + 'token');
-    localStorage.removeItem(oauth_storage_prefix + 'refresh');
+    clear_smart_plugins_tokens(env);
     env?.events?.emit?.('pro_plugins:logged_out', {
       level: 'info',
       message: 'Logged out of Smart Plugins',

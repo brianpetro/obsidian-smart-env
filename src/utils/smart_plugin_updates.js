@@ -2,7 +2,6 @@ import {
   build_plugin_file_record,
   fetch_plugin_file,
   fetch_server_plugin_list,
-  get_oauth_storage_prefix,
   install_file_names,
 } from './smart_plugins.js';
 import {
@@ -18,6 +17,7 @@ import {
   should_offer_plugin_update,
 } from './smart_plugins_state.js';
 import { compare_versions } from 'smart-environment/utils/compare_versions.js';
+import { get_smart_plugins_token } from '../../utils/sc_oauth.js';
 
 const plugin_commit_file_names = ['main.js', 'styles.css', 'manifest.json'];
 
@@ -142,7 +142,7 @@ export async function check_for_smart_plugin_updates(env, params = {}) {
   ;
   const token = Object.prototype.hasOwnProperty.call(params, 'token')
     ? String(params.token || '').trim()
-    : get_smart_plugins_token(app)
+    : get_smart_plugins_token(env)
   ;
   const has_token = Boolean(token);
   let server_response = null;
@@ -285,7 +285,7 @@ async function run_update_all_installed_entitled_pro_plugins(env, params = {}) {
 
   const token = Object.prototype.hasOwnProperty.call(params, 'token')
     ? String(params.token || '').trim()
-    : get_smart_plugins_token(app)
+    : get_smart_plugins_token(env)
   ;
 
   if (!token) {
@@ -780,11 +780,6 @@ function get_app(env) {
   ;
 }
 
-function get_smart_plugins_token(app) {
-  if (typeof localStorage === 'undefined') return '';
-  const oauth_storage_prefix = get_oauth_storage_prefix(app);
-  return localStorage.getItem(oauth_storage_prefix + 'token') || '';
-}
 
 function emit_oauth_token_rejected_once(env, params = {}) {
   if (env?._smart_plugin_update_token_rejected) return;

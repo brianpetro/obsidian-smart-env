@@ -14,7 +14,10 @@ import {
   add_smart_lookup_icon,
 } from './utils/add_icons.js';
 import { SmartNotices } from 'smart-notices/smart_notices.js';
-import { exchange_code_for_tokens } from './utils/sc_oauth.js';
+import {
+  exchange_code_for_tokens,
+  migrate_legacy_oauth_tokens,
+} from './utils/sc_oauth.js';
 import { SmartSecrets } from './src/smart_secrets.js';
 import { ObsidianSecretsAdapter } from './src/adapters/smart-secrets/obsidian.js';
 import { register_completion_variable_adapter_replacements } from './utils/register_completion_variable_adapter_replacements.js';
@@ -158,6 +161,7 @@ export class SmartEnv extends BaseSmartEnv {
         adapter: ObsidianSecretsAdapter,
       });
     }
+    migrate_legacy_oauth_tokens(this);
     return super.run_load();
   }
 
@@ -562,7 +566,7 @@ export class SmartEnv extends BaseSmartEnv {
       return;
     }
     try {
-      await exchange_code_for_tokens(code, this.plugin);
+      await exchange_code_for_tokens(code, this);
       this.events.emit('smart_plugins_oauth_completed');
     } catch (err) {
       console.error('OAuth callback error', err);

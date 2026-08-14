@@ -1,4 +1,5 @@
 import { getIcon } from "obsidian";
+import { get_smart_plugins_token } from '../../utils/sc_oauth.js';
 export function build_html(plugin, opts={}) {
   const {plugin_name = plugin.manifest.name} = opts;
   return `<div class="wrapper">
@@ -72,8 +73,7 @@ async function post_process(plugin, container) {
     this.empty(icon_container);
     icon_container.appendChild(icon);
   }
-  const oauth_storage_prefix = plugin.app.vault.getName().toLowerCase().replace(/[^a-z0-9]/g, '_') + '_smart_plugins_oauth_';
-  const is_logged_in = !!localStorage.getItem(oauth_storage_prefix+'token');
+  const is_logged_in = Boolean(get_smart_plugins_token(plugin.env));
   if (is_logged_in) container.querySelector('#footer-callout').style.display = 'none';
   await this.render_setting_components(container, { scope: plugin.env });
 }

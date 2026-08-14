@@ -253,20 +253,6 @@ export async function disable_plugin(app, plugin_id) {
 }
 
 /**
- * Compute the Smart Plugins OAuth storage prefix based on the vault name.
- *
- *   `${vault_name.toLowerCase().replace(/[^a-z0-9]/g, '_')}_smart_plugins_oauth_`
- *
- * @param {import('obsidian').App} app
- * @returns {string}
- */
-export function get_oauth_storage_prefix(app) {
-  const vault_name = app?.vault?.getName?.() || '';
-  const safe = vault_name.toLowerCase().replace(/[^a-z0-9]/g, '_');
-  return `${safe}_smart_plugins_oauth_`;
-}
-
-/**
  * Safely read a JSON response body.
  *
  * @param {any} response

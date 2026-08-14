@@ -5,7 +5,6 @@ import {
   enable_plugin,
   fetch_plugin_file,
   fetch_server_plugin_list,
-  get_oauth_storage_prefix,
   install_file_names,
   normalize_positive_epoch_ms,
   write_files_with_adapter,
@@ -22,6 +21,7 @@ import styles from './style.css';
 import { compare_versions } from 'smart-environment/utils/compare_versions.js';
 import { convert_to_time_ago } from 'smart-utils/convert_to_time_ago.js';
 import { convert_to_time_until } from 'smart-utils/convert_to_time_until.js';
+import { get_smart_plugins_token } from '../../../utils/sc_oauth.js';
 
 const SMART_PLUGINS_DESC = `
   <div class="smart-plugins-track-guide-item">
@@ -169,7 +169,6 @@ export async function render(env, params = {}) {
 export async function post_process(env, container, params = {}) {
   const plugin = env.plugin || null;
   const app = plugin?.app || window.app;
-  const oauth_storage_prefix = get_oauth_storage_prefix(app);
 
   const login_container = container.querySelector('.smart-plugins-login');
   const referral_container = container.querySelector('.smart-plugins-referral');
@@ -267,7 +266,7 @@ export async function post_process(env, container, params = {}) {
   let viewed_event_emitted = false;
   let handled_token_rejection = false;
   const render_smart_plugins = async () => {
-    const token = localStorage.getItem(oauth_storage_prefix + 'token') || '';
+    const token = get_smart_plugins_token(env);
     const has_token = Boolean(token);
 
     if (!viewed_event_emitted) {
@@ -530,8 +529,7 @@ export class PluginListItem {
   }
 
   get auth_token() {
-    const oauth_storage_prefix = get_oauth_storage_prefix(this.app);
-    return localStorage.getItem(oauth_storage_prefix + 'token') || '';
+    return get_smart_plugins_token(this.env);
   }
 
   get plugin_id() {

@@ -84,8 +84,8 @@ function load_plugin_list_item(params = {}) {
     enable_plugin: params.enable_plugin || (async () => {}),
     fetch_plugin_file: params.fetch_plugin_file || (async () => ({})),
     get_install_enable_behavior,
-    get_oauth_storage_prefix() {
-      return 'test_smart_plugins_oauth_';
+    get_smart_plugins_token() {
+      return params.auth_token || '';
     },
     infer_installed_plugin_type,
     install_file_names: ['manifest.json', 'main.js', 'styles.css'],
@@ -101,11 +101,6 @@ function load_plugin_list_item(params = {}) {
     should_offer_plugin_update,
     should_signal_outdated_env_compatibility,
     write_files_with_adapter: params.write_files_with_adapter || (async () => {}),
-    localStorage: {
-      getItem() {
-        return '';
-      },
-    },
     window: {
       open(url, target) {
         open_calls.push({ url, target });
