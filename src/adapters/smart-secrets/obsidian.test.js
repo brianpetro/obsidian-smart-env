@@ -10,25 +10,20 @@ const console_method_names = [
   'warn',
 ];
 
-test.serial('secret storage operations do not write to the console', (t) => {
+test.serial('exact-ID secret operations do not write to the console', (t) => {
+  const secret_id = 'OpenAI Work #1';
   const secret_value = 'secret-sentinel-value';
-  const secret_path = [
-    'embedding_models',
-    `open_router#${Date.UTC(2026, 6, 4, 12, 34, 56)}`,
-    'api_key',
-  ];
-  const expected_secret_id = 'open-router-2026-07-04-12-34-56';
   const storage_calls = [];
   const secret_storage = {
-    getSecret(secret_id) {
-      storage_calls.push({ type: 'get', secret_id });
+    getSecret(received_id) {
+      storage_calls.push({ type: 'get', secret_id: received_id });
       return secret_value;
     },
-    setSecret(secret_id, value) {
-      storage_calls.push({ type: 'set', secret_id, value });
+    setSecret(received_id, value) {
+      storage_calls.push({ type: 'set', secret_id: received_id, value });
     },
-    deleteSecret(secret_id) {
-      storage_calls.push({ type: 'delete', secret_id });
+    deleteSecret(received_id) {
+      storage_calls.push({ type: 'delete', secret_id: received_id });
     },
   };
   const adapter = new ObsidianSecretsAdapter({
@@ -49,9 +44,9 @@ test.serial('secret storage operations do not write to the console', (t) => {
   });
 
   try {
-    t.is(adapter.get(secret_path), secret_value);
-    adapter.set(secret_path, secret_value);
-    adapter.delete(secret_path);
+    t.is(adapter.get_by_id(secret_id), secret_value);
+    t.true(adapter.set_by_id(secret_id, secret_value));
+    t.true(adapter.delete_by_id(secret_id));
   } finally {
     console_method_names.forEach((method_name) => {
       console[method_name] = original_console_methods[method_name];
@@ -62,33 +57,24 @@ test.serial('secret storage operations do not write to the console', (t) => {
     storage_calls.map((call) => call.type),
     ['get', 'set', 'delete'],
   );
+  t.true(storage_calls.every((call) => call.secret_id === secret_id));
   t.is(storage_calls[1].value, secret_value);
-  t.true(storage_calls.every((call) => call.secret_id === expected_secret_id));
   t.deepEqual(console_calls, []);
 });
 
-test('non-model secret paths use readable IDs', (t) => {
-  const adapter = new ObsidianSecretsAdapter({ env: {} });
-
-  t.is(
-    adapter.get_secret_id(['plugin_settings', 'Open Router', 'api_key']),
-    'plugin-settings-open-router-api-key',
-  );
-});
-
-test('persisted model API key remains accessible after a cold start', async (t) => {
+test('exact credential remains accessible after a cold start', async (t) => {
+  const secret_id = 'openai-work';
   const secret_value = 'secret-sentinel-value';
-  const model_key = `open_router#${Date.UTC(2026, 6, 4, 12, 34, 56)}`;
   const stored_secrets = new Map();
   const secret_storage = {
-    getSecret(secret_id) {
-      return stored_secrets.get(secret_id) ?? null;
+    getSecret(received_id) {
+      return stored_secrets.get(received_id) ?? null;
     },
-    setSecret(secret_id, value) {
-      stored_secrets.set(secret_id, value);
+    setSecret(received_id, value) {
+      stored_secrets.set(received_id, value);
     },
-    deleteSecret(secret_id) {
-      stored_secrets.delete(secret_id);
+    deleteSecret(received_id) {
+      stored_secrets.delete(received_id);
     },
   };
 
@@ -98,9 +84,7 @@ test('persisted model API key remains accessible after a cold start', async (t) 
     },
   };
   await SmartSecrets.create(write_env, { adapter: ObsidianSecretsAdapter });
-  write_env.secrets.embedding_models = {};
-  write_env.secrets.embedding_models[model_key] = {};
-  write_env.secrets.embedding_models[model_key].api_key = secret_value;
+  write_env.smart_secrets.set_by_id(secret_id, secret_value);
 
   const read_env = {
     obsidian_app: {
@@ -108,9 +92,34 @@ test('persisted model API key remains accessible after a cold start', async (t) 
     },
   };
   await SmartSecrets.create(read_env, { adapter: ObsidianSecretsAdapter });
-  if (!read_env.secrets.embedding_models) read_env.secrets.embedding_models = {};
-  const collection_secrets = read_env.secrets.embedding_models;
-  if (!collection_secrets[model_key]) collection_secrets[model_key] = {};
 
-  t.is(collection_secrets[model_key].api_key, secret_value);
+  t.is(read_env.smart_secrets.get_by_id(secret_id), secret_value);
+});
+
+test('exact credential IDs bypass all transformation', (t) => {
+  const requested_ids = [];
+  const credential_id = 'OpenAI Work #1';
+  const adapter = new ObsidianSecretsAdapter({
+    env: {
+      obsidian_app: {
+        secretStorage: {
+          getSecret(secret_id) {
+            requested_ids.push(secret_id);
+            return 'secret-value';
+          },
+        },
+      },
+    },
+  });
+
+  t.is(adapter.get_by_id(credential_id), 'secret-value');
+  t.deepEqual(requested_ids, [credential_id]);
+});
+
+test('exact-ID operations fail closed without native storage', (t) => {
+  const adapter = new ObsidianSecretsAdapter({ env: {} });
+
+  t.is(adapter.get_by_id('openai-work'), null);
+  t.false(adapter.set_by_id('openai-work', 'secret-value'));
+  t.false(adapter.delete_by_id('openai-work'));
 });

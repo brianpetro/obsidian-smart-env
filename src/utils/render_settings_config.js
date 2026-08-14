@@ -1,5 +1,5 @@
 // import { SettingGroup } from 'obsidian';
-import { Setting, setIcon } from 'obsidian';
+import { SecretComponent, Setting, setIcon } from 'obsidian';
 import { get_by_path, set_by_path } from 'smart-utils';
 import {
   build_settings_group_map,
@@ -33,6 +33,13 @@ class SettingGroupPolyfill {
   addClass(class_name) {
     this.groupEl.addClass(class_name);
   }
+}
+
+export function configure_secret_component(component, value, on_change) {
+  component
+    .setValue(String(value || ''))
+    .onChange(on_change)
+  ;
 }
 
 export function render_settings_config(settings_config, scope, container, params = {}) {
@@ -155,16 +162,10 @@ export function render_settings_group(group_name, scope, settings_config, contai
       if (setting_config.description) {
         setting.setDesc(setting_config.description);
       }
-      const secret_scope = setting_config.secret && scope.secrets;
-      const storage_scope = secret_scope || scope.settings;
-      const get_setting_value = () => secret_scope
-        ? secret_scope.$get(setting_path)
-        : get_by_path(storage_scope, setting_path)
-      ;
-      const set_setting_value = (value) => secret_scope
-        ? secret_scope.$set(setting_path, value)
-        : set_by_path(storage_scope, setting_path, value)
-      ;
+      const get_setting_value = () => get_by_path(scope.settings, setting_path);
+      const set_setting_value = (value) => {
+        set_by_path(scope.settings, setting_path, value);
+      };
       switch (setting_config.type) {
         case 'button':
           setting.addButton((btn) => {
@@ -210,6 +211,26 @@ export function render_settings_group(group_name, scope, settings_config, contai
             text.onChange((value) => {
               set_setting_value(value);
             });
+          });
+          break;
+        case 'secret':
+          setting.addComponent((container_el) => {
+            configure_secret_component(
+              new SecretComponent(scope.env.obsidian_app, container_el),
+              get_setting_value(),
+              async (value) => {
+                set_setting_value(value);
+                if (typeof setting_config.callback === 'function') {
+                  await handle_config_callback(
+                    setting,
+                    value,
+                    setting_config.callback,
+                    { scope },
+                  );
+                  rerender_settings_group();
+                }
+              },
+            );
           });
           break;
         case 'number':

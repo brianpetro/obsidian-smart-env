@@ -1,11 +1,9 @@
 import { SecretsAdapter } from './_adapter.js';
 
 /**
- * Implements Obsidian-specific secure storage for sensitive information.
+ * Implements Obsidian-specific secure storage for exact credential IDs.
  * https://docs.obsidian.md/plugins/guides/secret-storage
  * https://docs.obsidian.md/Reference/TypeScript+API/SecretStorage
- * https://docs.obsidian.md/Reference/TypeScript+API/SecretStorage/getSecret
- * https://docs.obsidian.md/Reference/TypeScript+API/SecretStorage/setSecret
  */
 export class ObsidianSecretsAdapter extends SecretsAdapter {
   get secret_storage() {
@@ -19,56 +17,27 @@ export class ObsidianSecretsAdapter extends SecretsAdapter {
     return Boolean(this.secret_storage);
   }
 
-  get(_path) {
+  get_by_id(secret_id) {
     const storage = this.secret_storage;
-    if (!storage) return super.get(_path);
-    const secret_id = this.get_secret_id(_path);
-    return storage.getSecret(secret_id);
+    if (!storage) return null;
+    return storage.getSecret(secret_id) ?? null;
   }
 
-  set(_path, value) {
+  set_by_id(secret_id, value) {
     const storage = this.secret_storage;
-    if (!storage) return super.set(_path, value);
-    const secret_id = this.get_secret_id(_path);
-    storage.setSecret(secret_id, String(value || ''));
+    if (!storage) return false;
+    storage.setSecret(secret_id, String(value ?? ''));
+    return true;
   }
 
-  delete(_path) {
+  delete_by_id(secret_id) {
     const storage = this.secret_storage;
-    if (!storage) return super.delete(_path);
-    const secret_id = this.get_secret_id(_path);
+    if (!storage) return false;
     if (typeof storage.deleteSecret === 'function') {
       storage.deleteSecret(secret_id);
-      return;
+    } else {
+      storage.setSecret(secret_id, '');
     }
-    storage.setSecret(secret_id, '');
-  }
-
-  get_secret_id(_path) {
-    if (typeof _path !== 'string' && !Array.isArray(_path)) {
-      throw new Error('Invalid path for secret storage: ' + JSON.stringify(_path));
-    }
-    const path = this.normalize_path(_path);
-    if (!path.length) {
-      throw new Error('Invalid path for secret storage: ' + JSON.stringify(_path));
-    }
-
-    let secret_id = path.join('-');
-    const [provider_id, created_at] = (path[1] || '').split('#');
-    const is_model_api_key = path.length > 2 && path[path.length - 1] === 'api_key';
-    if (is_model_api_key && provider_id && /^\d+$/.test(created_at)) {
-      const timestamp = new Date(Number(created_at))
-        .toISOString()
-        .slice(0, 19)
-        .replace(/[T:]/g, '-')
-      ;
-      secret_id = `${provider_id}-${timestamp}`;
-    }
-
-    return secret_id
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-    ;
+    return true;
   }
 }

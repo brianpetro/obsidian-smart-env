@@ -5,5 +5,6 @@ import transformers from "../adapters/embedding-model/transformers_v4_worker.js"
 base.providers = {
   transformers,
 };
+base.api_key_is_credential_id = true;
 
 export default base;

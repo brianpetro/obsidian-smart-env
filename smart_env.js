@@ -161,6 +161,11 @@ export class SmartEnv extends BaseSmartEnv {
     return super.run_load();
   }
 
+  get_secret_by_id(secret_id) {
+    if (!secret_id) return null;
+    return this.smart_secrets.get_by_id(secret_id);
+  }
+
 
   async before_load() {
     this.run_migrations();
