@@ -252,3 +252,6 @@ Added: top_k action for improved cosine similarity across all embedded items in 
 
 
 Improved: secure storage management
+
+
+Improved: migrate legacy OAuth tokens to secure storage and refactor related functions
