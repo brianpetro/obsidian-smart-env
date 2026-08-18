@@ -20,6 +20,7 @@ import {
   get_embeddings_file_info,
   has_current_embedding,
 } from '../utils/embedding_diagnostics.js';
+import { collect_vector_file_stats } from '../utils/vector_file_stats.js';
 
 const COLLECTION_KEYS = [
   'smart_sources',
@@ -92,6 +93,19 @@ export function build_html() {
       </div>
       <div class="smart-env-stats__collections"></div>
       ${build_inspector_html()}
+    </section>
+
+    <section class="smart-env-stats__section smart-env-stats__vector-files-section">
+      <div class="smart-env-stats__section-heading">
+        <div>
+          <h3>Vector files</h3>
+          <p>Every stored vector file, its on-disk size, and the configured model matching its fingerprint.</p>
+        </div>
+        <div class="smart-env-stats__vector-files-summary" data-vector-files-summary aria-live="polite">Reading files...</div>
+      </div>
+      <div class="smart-env-stats__vector-files" data-vector-files>
+        ${build_vector_files_loading_html('Reading stored vector files...')}
+      </div>
     </section>
 
     <section class="smart-env-stats__section smart-env-stats__optimization">
@@ -440,6 +454,12 @@ export function post_process(env, container, opts = {}) {
       }
       return memory_usage;
     });
+    const vector_files_promise = get_vector_file_stats(env).then((vector_files) => {
+      if (!disposed && current_scan_id === scan_id) {
+        render_vector_file_stats(container, vector_files);
+      }
+      return vector_files;
+    });
 
     const stats = await collect_environment_stats(env, {
       collection_keys: COLLECTION_KEYS,
@@ -465,12 +485,16 @@ export function post_process(env, container, opts = {}) {
     });
 
     if (disposed || current_scan_id !== scan_id || stats.cancelled) return;
-    const memory_usage = await memory_usage_promise;
+    const [memory_usage, vector_files] = await Promise.all([
+      memory_usage_promise,
+      vector_files_promise,
+    ]);
     if (disposed || current_scan_id !== scan_id) return;
 
     const result = {
       ...stats,
       memory_usage,
+      vector_files,
       total_time_ms: Math.max(0, Math.round(now_ms() - started_at)),
       calculated_at: Date.now(),
     };
@@ -1029,6 +1053,17 @@ function create_inspector_message(document_ref, message, tone = 'empty') {
  * @param {string} message
  * @returns {string}
  */
+function build_vector_files_loading_html(message) {
+  return `<div class="smart-env-stats__vector-files-loading">
+    <span class="smart-env-stats__inspector-spinner" aria-hidden="true"></span>
+    <span>${message}</span>
+  </div>`;
+}
+
+/**
+ * @param {string} message
+ * @returns {string}
+ */
 function build_inspector_loading_html(message) {
   return `<div class="smart-env-stats__inspector-loading">
     <span class="smart-env-stats__inspector-spinner" aria-hidden="true"></span>
@@ -1043,6 +1078,7 @@ function build_inspector_loading_html(message) {
  */
 function render_stats(container, result) {
   render_memory_stats(container, result.memory_usage);
+  render_vector_file_stats(container, result.vector_files);
   render_summary_stats(container, result.totals);
 
   const collections_el = container.querySelector('.smart-env-stats__collections');
@@ -1115,6 +1151,138 @@ function render_memory_stats(container, memory_usage = {}) {
     container.querySelector('[data-memory-utilization]'),
     allocated_bytes ? `${utilization}% utilized` : 'No vectors loaded',
   );
+}
+
+/**
+ * @param {HTMLElement} container
+ * @param {object} result
+ * @returns {void}
+ */
+function render_vector_file_stats(container, result = {}) {
+  const summary_el = container.querySelector('[data-vector-files-summary]');
+  const files_el = container.querySelector('[data-vector-files]');
+  if (!files_el) return;
+
+  const files = result?.files || [];
+  const errors = result?.errors || [];
+  const unknown_size_count = Number(result?.unknown_size_count || 0);
+  const known_size_count = Math.max(0, files.length - unknown_size_count);
+  const file_noun = files.length === 1 ? 'file' : 'files';
+  let summary_text = `${format_number(files.length)} vector ${file_noun}`;
+  if (known_size_count) {
+    summary_text += ` / ${format_bytes(result.total_bytes)} on disk`;
+  }
+  if (unknown_size_count) {
+    summary_text += ` / ${format_number(unknown_size_count)} ${unknown_size_count === 1 ? 'size' : 'sizes'} unavailable`;
+  }
+  set_text(summary_el, summary_text);
+
+  const document_ref = files_el.ownerDocument;
+  const fragment = document_ref.createDocumentFragment();
+  if (!files.length) {
+    fragment.appendChild(create_vector_file_message(
+      document_ref,
+      errors.length
+        ? 'No vector files could be read from the configured collections.'
+        : 'No vector files found.',
+      errors.length ? 'error' : 'empty',
+    ));
+  } else {
+    files.forEach((file) => {
+      fragment.appendChild(create_vector_file_record(document_ref, file));
+    });
+  }
+
+  errors.forEach((error) => {
+    fragment.appendChild(create_vector_file_message(
+      document_ref,
+      `${format_collection_name(error.collection_key)}: ${error.message}`,
+      'error',
+    ));
+  });
+  files_el.replaceChildren(fragment);
+}
+
+/**
+ * @param {Document} document_ref
+ * @param {object} file
+ * @returns {HTMLElement}
+ */
+function create_vector_file_record(document_ref, file) {
+  const article = document_ref.createElement('article');
+  article.className = 'smart-env-stats__vector-file';
+  article.dataset.kind = file.file_kind || 'canonical';
+  if (file.active) article.dataset.active = 'true';
+  if (file.stat_error) article.dataset.error = 'true';
+
+  const identity = document_ref.createElement('div');
+  identity.className = 'smart-env-stats__vector-file-identity';
+  const title = document_ref.createElement('h4');
+  title.textContent = file.configured
+    ? file.model_names.join(' / ')
+    : 'Unrecognized model fingerprint'
+  ;
+
+  const metadata = document_ref.createElement('div');
+  metadata.className = 'smart-env-stats__vector-file-metadata';
+  append_metadata_value(metadata, format_collection_name(file.collection_key));
+  if (file.configured && file.model_keys.length) {
+    append_metadata_value(metadata, file.model_keys.join(' / '));
+  }
+  if (file.fingerprint_type === 'legacy') {
+    append_metadata_value(metadata, 'Legacy fingerprint');
+  }
+  const file_name = document_ref.createElement('code');
+  file_name.textContent = file.file_name;
+  file_name.title = file.path;
+  metadata.appendChild(file_name);
+  identity.append(title, metadata);
+
+  const file_stats = document_ref.createElement('div');
+  file_stats.className = 'smart-env-stats__vector-file-stats';
+  const status = document_ref.createElement('span');
+  status.className = 'smart-env-stats__vector-file-badge';
+  status.dataset.kind = file.active ? 'active' : file.file_kind || 'canonical';
+  status.textContent = get_vector_file_status_label(file);
+  const size = document_ref.createElement('strong');
+  size.textContent = Number.isFinite(file.size_bytes)
+    ? format_bytes(file.size_bytes)
+    : 'Unavailable'
+  ;
+  const size_detail = document_ref.createElement('span');
+  size_detail.textContent = Number.isFinite(file.size_bytes)
+    ? `${format_number(file.size_bytes)} bytes`
+    : file.stat_error || 'File size unavailable'
+  ;
+  file_stats.append(status, size, size_detail);
+
+  article.append(identity, file_stats);
+  return article;
+}
+
+/**
+ * @param {object} file
+ * @returns {string}
+ */
+function get_vector_file_status_label(file) {
+  if (file.active) return 'Active';
+  if (file.file_kind === 'backup') return 'Backup';
+  if (file.file_kind === 'temporary') return 'Temporary';
+  if (file.file_kind === 'related') return 'Related';
+  return 'Stored';
+}
+
+/**
+ * @param {Document} document_ref
+ * @param {string} message
+ * @param {'empty'|'error'} tone
+ * @returns {HTMLElement}
+ */
+function create_vector_file_message(document_ref, message, tone = 'empty') {
+  const element = document_ref.createElement('div');
+  element.className = `smart-env-stats__vector-files-${tone}`;
+  element.textContent = message;
+  return element;
 }
 
 /**
@@ -1332,6 +1500,29 @@ function set_button_loading(button, loading) {
 function set_text(element, value) {
   if (!element) return;
   element.textContent = value == null ? '' : String(value);
+}
+
+/**
+ * @param {object} env
+ * @returns {Promise<object>}
+ */
+async function get_vector_file_stats(env) {
+  try {
+    return await collect_vector_file_stats(env, {
+      collection_keys: COLLECTION_KEYS,
+    });
+  } catch (error) {
+    console.error('[env_stats] Failed to read vector files', error);
+    return {
+      files: [],
+      errors: [{
+        collection_key: 'vector_files',
+        message: error?.message || 'Vector files unavailable',
+      }],
+      total_bytes: 0,
+      unknown_size_count: 0,
+    };
+  }
 }
 
 /**

@@ -185,6 +185,64 @@ class EmbeddingsVectorAdapter extends DefaultEntitiesVectorAdapter {
   }
 }
 
+/**
+ * Build the persisted fingerprint input for a configured embedding model.
+ *
+ * @param {object|null} model_item
+ * @param {string} [embedding_space_id='']
+ * @returns {string}
+ */
+export function get_embedding_model_fingerprint_key(
+  model_item,
+  embedding_space_id = '',
+) {
+  const model_data = model_item?.data || {};
+  const model_key = model_data.model_key || model_item?.model_key || '';
+  const fingerprint_data = {
+    provider_key: model_data.provider_key || '',
+    model_key,
+    dimensions: model_data.dims || model_data.dimensions || '',
+    max_tokens: Number(model_data.max_tokens || 0),
+  };
+  if (embedding_space_id) {
+    fingerprint_data.embedding_space_id = embedding_space_id;
+  }
+  return JSON.stringify(fingerprint_data);
+}
+
+/**
+ * Resolve the semantic embedding space declared by a configured model.
+ *
+ * @param {object|null} model_item
+ * @returns {string}
+ */
+export function get_embedding_model_space_id(model_item) {
+  const model_data = model_item?.data || {};
+  const model_key = model_data.model_key || model_item?.model_key || '';
+  const models = model_item?.ProviderAdapterClass?.defaults?.models;
+  return models?.[model_key]?.semantic_profile?.embedding_space_id || '';
+}
+
+/**
+ * Calculate the exact vector filename fingerprint for a configured model.
+ *
+ * @param {object|null} model_item
+ * @param {object} [params]
+ * @param {boolean} [params.legacy=false]
+ * @returns {string}
+ */
+export function get_embedding_model_fingerprint(model_item, params = {}) {
+  const embedding_space_id = params.legacy
+    ? ''
+    : get_embedding_model_space_id(model_item)
+  ;
+  const fingerprint_key = get_embedding_model_fingerprint_key(
+    model_item,
+    embedding_space_id,
+  );
+  return `mf_${murmur_hash_32_alphanumeric(fingerprint_key)}`;
+}
+
 export class Embeddings {
   static version = 2;
 
@@ -240,26 +298,25 @@ export class Embeddings {
   }
 
   get embedding_space_id() {
-    const models = this.embed_model_item?.ProviderAdapterClass?.defaults?.models;
-    return models?.[this.embed_model_key]?.semantic_profile?.embedding_space_id || '';
+    return get_embedding_model_space_id(this.embed_model_item);
   }
 
-  get_model_fingerprint_key(embedding_space_id = '') {
-    const model_data = this.embed_model_data;
-    const fingerprint_data = {
-      provider_key: model_data.provider_key || '',
-      model_key: model_data.model_key || this.embed_model_key || '',
-      dimensions: model_data.dims || model_data.dimensions || '',
-      max_tokens: Number(model_data.max_tokens || 0),
-    };
-    if (embedding_space_id) {
-      fingerprint_data.embedding_space_id = embedding_space_id;
-    }
-    return JSON.stringify(fingerprint_data);
+  get_model_fingerprint_key(
+    embedding_space_id = '',
+    model_item = this.embed_model_item,
+  ) {
+    return get_embedding_model_fingerprint_key(
+      model_item,
+      embedding_space_id,
+    );
+  }
+
+  get_model_fingerprint(model_item = this.embed_model_item, params = {}) {
+    return get_embedding_model_fingerprint(model_item, params);
   }
 
   get legacy_model_fingerprint() {
-    return `mf_${murmur_hash_32_alphanumeric(this.get_model_fingerprint_key())}`;
+    return this.get_model_fingerprint(this.embed_model_item, { legacy: true });
   }
 
   get dims() {
