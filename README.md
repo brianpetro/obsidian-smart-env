@@ -1,415 +1,53 @@
-# Obsidian Smart Environment
+# Smart Environment for Obsidian
 
-> [!QUESTION] **Ready to build your own AI Obsidian plugin?**
-> You're a vibe coder who wants embeddings, chat models, actions, and settings without spinning up servers or leaking notes.
+The shared local-first foundation behind Smart Plugins.
 
-> [!TIP] **Ship features, not infrastructure**
-> Let Smart Environment handle the index and model plumbing so you can focus on your plugin.
+Smart Environment keeps sources, exclusions, models, indexing, and health consistent across the suite. Install the Smart Plugin for the workflow you want; Smart Environment coordinates the foundation behind it.
 
-> [!WARNING] **Every plugin reinvents the wheel**
-> Homegrown indexing layers slow startup and risk pushing private notes to third‑party APIs.
+![Obsidian Source inspector showing the active note path, current indexing state, block coverage, state filters, and an indexed excerpt.](https://smartconnections.app/assets/environment-source-inspector-active-note-dramatic-3x2-dark-v3.2.1.png)
 
-> [!NOTE] **Share a local‑first Smart Environment across plugins**
-> `obsidian-smart-env` drops in a shared environment that keeps data on the user's device.
+*Inspect how the active note is prepared without leaving Obsidian.*
 
-> [!FAILURE] **The cost of doing nothing**
-> Ship bloated plugins and waste late nights chasing sync bugs that a Smart Environment would have prevented.
+[Settings](https://smartconnections.app/smart-environment/settings/) · [FAQ](https://smartconnections.app/smart-environment/faq/) · [v3 update guide](https://smartconnections.app/smart-environment/releases/3-0/) · [Issues](https://github.com/brianpetro/obsidian-smart-env/issues)
 
-- [Intro to Smart Environments video](https://youtu.be/0obRntW8Cto)
+## Control what is indexed
 
-> [!SUCCESS] **Real-time embeddings**
-> Notes re-embed automatically after edits using Obsidian events—no manual reload.
+Choose the sources and exclusions shared by Smart Plugins.
 
-> [!TIP] **Shared index for every plugin**
-> Multiple plugins connect to one embedding index for faster startup.
+![Smart Environment settings showing source exclusions, block embedding, minimum lengths, and reset controls.](https://smartconnections.app/assets/environment-settings-sources-and-exclusions-current-documentation-1200x800-desktop-2026-08-05.png)
 
-> [!NOTE] **Full control & export**
-> Choose models and inputs, then export the entire environment JSON from the status bar.
+## Choose the model
 
-> [!WARNING] **Muted notices**
-> A built-in notice manager keeps alerts quiet unless explicitly surfaced.
+Select and test the embedding model used by shared semantic features.
 
-```mermaid
-flowchart LR
-	O[Obsidian events] --> S[Smart Environment]
-	S --> I[Shared embedding index]
-	S --> P1[Plugin A]
-	S --> P2[Plugin B]
-```
+![Smart Environment model picker showing the Transformers provider, available embedding models, and controls to test or re-index the model.](https://smartconnections.app/assets/environment-built-in-embedding-model-picker-current-documentation-1280x720-desktop-2026-08-06.png)
 
-## Key Features
+## See what is ready
 
- - **Local-first**: data never leaves the user's device
- - **Shared embeddings**: multiple plugins reuse a single index
- - **Modular architecture**: drop in Smart Modules as needed
- - **Context profiles**: switch between work, home, or project scopes
- - **Real-time updates**: embeddings refresh after each note edit
- - **Status bar export**: save the full Smart Env as JSON
- - **Muted notice manager**: keep alerts out of the way
- - **AI oversight**: review changes made by actions before they apply
+Embedding health separates Current, Missing, Skipped, and Unexpected states for Sources and Blocks.
 
-## Overview
+![Smart Environment Embedding health showing indexed and eligible item counts, current and missing embeddings, vector memory, and separate Sources and Blocks states.](https://smartconnections.app/assets/environment-stats-embedding-health-editorial-3x2-dark-v3.2.1.png)
 
-Smart Environment is designed to be your hub for enabling personal alignment with AI. It provides an efficient, productive environment with AI-powered tools that put the user first.
+*Coverage shows whether eligible sources and blocks are prepared for the selected model.*
 
-Key principles:
-- Maintain an open, interdependent architecture 
-- Orchestrate modular Smart Modules
-- Complement and enhance foundation models
-- Prioritize user agency, privacy and oversight
-- Loads collections (wake-up)
+## Export when needed
 
-### Reset embeddings after changing models
-If notes keep re-embedding after switching embedding models, open Smart Env settings and click **Clear sources data**, then **Reload sources**.
+Export selected Sources, Blocks, and optional embedding vectors.
 
-## Architecture
+![Smart Environment Export data dialog showing Sources and Blocks selected, optional embedding vectors, and a completed export.](https://smartconnections.app/assets/environment-export-data-completed-crop-desktop-publication-srgb-92d6b436e81b-2026-07-29.png)
 
-Smart Environment enables individuals and teams to leverage the power of AI while maintaining control over their data and workflows. Designed for extensibility, it provides a framework for integrating AI capabilities into your existing tools and processes.
+## Local-first
 
-The SmartEnv class uses a singleton pattern to ensure that only one instance of Smart Environment is created. This instance is accessible through a global reference.
+Generated Environment data is stored under `.smart-env/` in the vault. Embeddings run on your device after the runtime and selected model files are downloaded. Provider-backed workflows send their prompt and selected context to the provider you configured.
 
-## Interface
-### `export_json(filename)`
-– download or return serialized environment
+## Updates
 
-```mermaid
-flowchart TD
-	A[Environment] --> B{to_json}
-	B --> C[Collect collection data]
-	C --> D[export_json]
-	D --> E[Download / return string]
-```
+Update installed Smart Plugins together and restart Obsidian when prompted. When moving from older Smart Plugins, follow the [v3 update guide](https://smartconnections.app/smart-environment/releases/3-0/).
 
-### `static async create(main, main_env_opts={})`
+## For maintainers
 
-Creates or updates a SmartEnv instance.
+Smart Environment is the shared first-party substrate for Smart Plugins. Repeated infrastructure belongs here; product-specific workflows stay in the plugin that owns them.
 
-- `main`: The main object to be added to the SmartEnv instance.
-- `main_env_opts`: Options for configuring the SmartEnv instance.
+## License
 
-Returns: The SmartEnv instance.
-
-### `constructor(opts={})`
-
-Initializes a new SmartEnv instance.
-
-- `opts`: Configuration options for the SmartEnv instance.
-
-### `async init(main, main_env_opts = {})`
-
-Initializes the SmartEnv instance with the provided main object and options.
-
-### `init_main(main, main_env_opts = {})`
-
-Adds a new main object to the SmartEnv instance.
-
-### `async load_main(main_key)`
-
-Loads the main object and its associated collections.
-
-### `async init_collections(config=this.opts)`
-
-Initializes collections based on the provided configuration.
-
-### `async load_collections(collections=this.collections)`
-
-Loads the specified collections.
-
-### `merge_env_config(opts)`
-
-Merges provided options into the SmartEnv instance, performing a deep merge for objects.
-
-### `unload_main(main_key)`
-
-Unloads a main object and its associated collections and options.
-
-### `save()`
-
-Saves all collections in the SmartEnv instance.
-
-### `init_module(module_key, opts={})`
-
-Initializes a module with the given key and options.
-
-### `async render_settings(container=this.settings_container)`
-
-Renders the settings UI for the SmartEnv instance.
-
-### `async save_settings(settings)`
-
-Saves the current settings to the file system.
-
-### `async load_settings()`
-
-Loads the settings from the file system.
-
-## Rendering Settings
-
-The Smart Environment provides a flexible and extensible way to render settings for all collections and Smart Modules. This is achieved through the `render_settings` method.
-
-### `render_settings(opts={})`
-
-This method is responsible for rendering the settings UI for each collection and Smart Module. It utilizes a template-based approach for maximum flexibility.
-
-#### Process Overview:
-
-1. **Template Creation**: The method starts by creating a document fragment using the `settings_template` from `./components/settings.js`.
-
-2. **Collection Settings**: It iterates through all initialized collections and calls their individual `render_settings` methods.
-
-3. **Smart Module Settings**: If any Smart Modules have settings, they are also rendered.
-
-4. **Container Handling**: If a container is provided in the options, the rendered settings are appended to it.
-
-### Settings Template
-
-The settings template (`./components/settings.js`) is responsible for structuring the overall settings UI:
-
-This template:
-1. Creates a document fragment
-2. Renders general setting components
-3. Iterates through collections, creating containers for each if not already present
-	- looks for containers based on id `{collection_key}_settings`
-	- if container has `data-settings-keys` attribute, it will only render the settings keys specified
-4. Calls each collection's `render_settings` method
-5. Renders additional setting components if needed
-
-### Collection-Specific Settings
-
-Each collection is expected to implement its own `render_settings` method. This method should populate the provided container with the collection's specific settings UI.
-
-### Customization
-
-The `render_settings` method and its associated template can be easily customized to fit specific UI requirements or to add additional functionality. This could include:
-
-- Adding global settings sections
-- Implementing tabbed interfaces for different setting categories
-- Incorporating real-time setting updates
-- Adding validation and error handling for setting inputs
-
-By leveraging this flexible architecture, Smart Environment ensures that settings for all components can be easily managed and displayed in a cohesive, user-friendly interface.
-
-## Configuration: `smart_env.config.js` and `main_env_opts`
-
-Smart Environment uses a configuration system based on two key concepts:
-
-1. **smart_env.config.js** - A static configuration file that defines the default environment setup
-2. **main_env_opts** - Runtime options passed during initialization
-
-The Smart Environment relies on a configuration object, `main_env_opts`, during initialization to set up the environment according to your specific needs. This configuration defines collections, modules, settings, and other options that the Smart Environment uses to orchestrate its components.
-
-### Config builder conventions
-
-The `obsidian-smart-env/build/build_env_config.js` script embraces a "convention over configuration" approach so plugin authors only need to drop files inside `.smart-env/src/**`. The builder scans well-known folders and generates a deterministic config object:
-
-| Folder segment | Config path | Expected exports |
-| --- | --- | --- |
-| `collections/<KEY>.js` | `smart_env_config.collections.<key>` | default export `{ class, collection_key, item_type }` |
-| `items/<item_key>.js` | `smart_env_config.items.<item_key>.class` | named export (class or factory) |
-| `modules/<module_key>.js` | `smart_env_config.modules.<module_key>` | default export describing Smart Module |
-| `components/<scope>/component.js` | `smart_env_config.components.<scope>.component.render` | named `render` (+ optional `settings_config`) |
-| `actions/<scope>/<action>.js` | `smart_env_config.actions.<scope>.<action>.{action,settings_config?,display_*?,pre_process?}` | named export matching filename |
-
-```mermaid
-flowchart TD
-	A[.smart-env/src] --> B[Collections]
-	A --> C[Items]
-	A --> D[Modules]
-	A --> E[Components]
-	A --> F[Actions]
-	B --> G[Generate imports]
-	C --> G
-	D --> G
-	E --> H[Normalize snake_case keys]
-	F --> H
-	G --> I[smart_env_config object]
-	H --> I
-```
-
-**Key rules**
-
-- Folder and file names are converted to `snake_case` keys inside the config so hyphenated or camelCase folders map predictably.
-- Named exports must match the filename for actions; optional metadata exports (`display_name`, `display_description`, `settings_config`, `pre_process`) are injected automatically.
-- Modules live alongside collections/items and can expose helpers such as `init` or `bootstrap` without extra configuration.
-- Tests in `build_smart_env_config.test.js` enforce these conventions—extend the fixtures first when adding new surface areas.
-
-The `smart_env.config.js` file defines the core configuration for your Smart Environment instance. This file should export a configuration object that defines:
-
-### Understanding `smart_env.config.js`
-
-The `smart_env.config.js` file is the primary place where you define your `main_env_opts`. This file exports a configuration object that specifies how the Smart Environment should be set up. By organizing your configuration in this file, you maintain a clear separation between your application's logic and its configuration, making it easier to manage and scale.
-
-- **`env_path`**: Specifies the base path for your environment. This could be the root directory of your application or any other path where your environment's data will reside.
-- **`collections`**: Defines the collections that the Smart Environment will manage. Each collection should specify its class and any necessary adapters or item types.
-- **`modules`**: Specifies the modules (also known as Smart Modules) to be included in the environment. Each module should define its class and any necessary adapters.
-- **`default_settings`**: Provides default settings for the environment, which can be overridden by user settings.
-- **`components`**: Defines UI components for settings, connections, or other interactive elements.
-
-### Using `main_env_opts` in Initialization
-
-When initializing the Smart Environment, you need to provide `main_env_opts` to the `SmartEnv.create` method. This configuration object should be imported from your `smart_env.config.js` file.
-
-
-### Importance of `main_env_opts`
-
-The `main_env_opts` object is essential for initializing the Smart Environment. It provides all the necessary configurations, including paths, collections, modules, settings, and components. By defining `main_env_opts` in the `smart_env.config.js` file, you achieve:
-
-- **Modularity**: Keep configuration separate from application logic.
-- **Reusability**: Easily share and reuse configurations across different projects or environments.
-- **Maintainability**: Simplify updates and changes to the configuration without modifying the core application code.
-
-### Multiple Mains and Configurations
-
-If your application uses multiple mains (primary objects) or needs to manage different configurations, you can define separate `smart_env.config.js` files for each main. The Smart Environment will merge these configurations appropriately.
-
-### Normalizing Options
-
-The Smart Environment internally normalizes the options provided in `main_env_opts` to ensure consistency. This includes:
-
-- **Key Formatting**: Converts camelCase keys to snake_case to maintain a consistent naming convention.
-- **Class Definitions**: Ensures that collections and modules are properly defined with a `class` property.
-- **Deep Merging**: Merges nested objects without overwriting existing properties unless specified.
-
-### Key Components of `main_env_opts`
-
-- **`env_path`**: The base path for the environment, important for file system operations.
-- **`collections`**: Defines the data collections managed by the environment.
-	- Each collection should have:
-		- **`class`**: The constructor function or class for the collection.
-		- **`data_adapter`**: Adapter for handling data persistence.
-		- **`modules`**: Specifies additional functionalities or services.
-	- Each module should have:
-		- **`class`**: The constructor function or class for the module.
-		- **`adapter`**: Adapter specific to the module's operation.
-- **`default_settings`**: Default configuration settings that can be overridden by user preferences.
-- **`components`**: UI components for rendering settings, views, and other interactive elements.
-
-```js
-export const smart_env_config = {
-	
-	// Base path for the environment
-	env_path: '',
-	
-	// Collections to initialize
-	collections: {
-		smart_sources: {
-			class: SmartSources,
-			data_adapter: SmartCollectionMultiFileDataAdapter,
-			// Collection-specific options...
-		},
-		// Other collections...
-	},
-
-	// Module configurations
-	modules: {
-		smart_fs: {
-			class: SmartFs,
-			adapter: SmartFsAdapter,
-		},
-		smart_view: {
-			class: SmartView,
-			adapter: ViewAdapter,
-		},
-		// Other modules...
-	},
-
-	// Default settings
-		default_settings: {
-				smart_sources: {
-						file_exclusions: 'Untitled',
-						folder_exclusions: 'smart-chats',
-						excluded_headings: '',
-				},
-				// Other default settings...
-		}
-};
-```
-
-### Runtime Options (main_env_opts)
-
-When initializing Smart Environment, you must provide runtime options through `main_env_opts`. These options typically import and extend the base configuration:
-
-```js
-import { smart_env_config } from './smart_env.config.js';
-
-const main_env_opts = {
-	...smart_env_config,
-	// Override or add runtime-specific options
-	env_path: '/custom/path',
-	collections: {
-		...smart_env_config.collections,
-		// Add or modify collections
-	}
-};
-
-// Initialize Smart Environment
-const env = await SmartEnv.create(main, main_env_opts);
-```
-
-### Configuration Merging
-
-Smart Environment merges configurations in this order:
-
-1. Default internal options
-2. Base configuration from smart_env.config.js
-3. Runtime options from main_env_opts
-4. Settings loaded from the environment's data directory
-
-This allows for flexible configuration while maintaining sensible defaults.
-
-### Required Configuration
-
-At minimum, your configuration should specify:
-
-- **collections**: The collection classes to initialize
-- **modules**: Core modules like smart_fs, smart_view
-- **env_path**: Base path for the environment (if not using default)
-
-Example of minimal configuration:
-
-```js
-const minimal_config = {
-	collections: {
-		smart_sources: {
-			class: SmartSources,
-			data_adapter: DataAdapter
-		}
-	},
-	modules: {
-		smart_fs: {
-			class: SmartFs,
-			adapter: FsAdapter
-		}
-	},
-};
-```
-
-## Usage
-
-```js
-import { SmartEnv } from 'smart-environment';
-
-class MyApp {
-	constructor() {
-		this.init();
-	}
-
-	async init() {
-		this.env = await SmartEnv.create(this, {
-			env_path: '/path/to/my/app',
-			collections: {
-				// Define your collections here
-			},
-			modules: {
-				// Define your modules here
-			}
-		});
-		
-		// Your app initialization code here
-	}
-}
-
-const app = new MyApp();
-```
-
-
+Smart Environment is source-available under the [Smart Plugins License](LICENSE). See the [plain-English license guide](https://smartconnections.app/legal/license/) for common scenarios.
