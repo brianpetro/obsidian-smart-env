@@ -255,3 +255,6 @@ Improved: secure storage management
 
 
 Improved: migrate legacy OAuth tokens to secure storage and refactor related functions
+
+
+Added: vector file metrics in environment stats modal
