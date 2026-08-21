@@ -53,7 +53,16 @@ export const tool = {
     return Boolean(env.lookup_lists && env.smart_sources);
   },
 
-  input_schema,
+  input_schema: {
+    ...input_schema,
+    properties: {
+      ...input_schema.properties,
+      include_content: {
+        type: 'boolean',
+        description: 'Include the text content of each returned item.',
+      },
+    },
+  },
 
   project_request: project_lookup_list_request,
 
@@ -80,6 +89,10 @@ export const tool = {
             key: { type: 'string' },
             collection_key: { type: 'string' },
             score: { type: ['number', 'null'] },
+            content: {
+              type: 'string',
+              description: 'Item text when include_content is true.',
+            },
           },
           required: ['key', 'collection_key', 'score'],
           additionalProperties: false,
@@ -95,7 +108,7 @@ export const tool = {
  * Convert the public query into the exact Lookup List scope and natural
  * retrieval params.
  *
- * @param {{query: string}} request
+ * @param {{query: string, include_content?: boolean}} request
  * @param {{env: object}} context
  * @returns {{scope: object, params: {query: string}}}
  */
@@ -118,13 +131,14 @@ export function project_lookup_list_request(request, { env }) {
  * Convert native Lookup List results into the shared public tool result.
  *
  * @param {Array<object>} raw_result
- * @param {{scope: object, params: {query: string}}} context
- * @returns {object}
+ * @param {{scope: object, request?: {include_content?: boolean}, params: {query: string}}} context
+ * @returns {Promise<object>}
  */
-export function project_lookup_list_result(
+export async function project_lookup_list_result(
   raw_result,
   {
     scope,
+    request,
     params,
   },
 ) {
@@ -142,7 +156,14 @@ export function project_lookup_list_result(
   ;
   if (!query) throw new TypeError('Lookup List scope is missing its query.');
 
-  const results = raw_result.map(to_result);
+  const include_content = request?.include_content === true;
+  const results = await Promise.all(
+    raw_result.map((result, result_i) => {
+      return to_result(result, result_i, {
+        include_content,
+      });
+    }),
+  );
 
   return {
     ok: true,
@@ -153,7 +174,13 @@ export function project_lookup_list_result(
   };
 }
 
-function to_result(result, result_i) {
+async function to_result(
+  result,
+  result_i,
+  {
+    include_content = false,
+  } = {},
+) {
   const item = result?.item;
   const key = to_trimmed_string(item?.key)
     || to_trimmed_string(item?.data?.key)
@@ -174,11 +201,38 @@ function to_result(result, result_i) {
     );
   }
 
-  return {
+  const projected_result = {
     key,
     collection_key,
     score: Number.isFinite(result?.score) ? result.score : null,
   };
+
+  if (!include_content) {
+    return projected_result;
+  }
+
+  return {
+    ...projected_result,
+    content: await read_result_content(item, result_i),
+  };
+}
+
+async function read_result_content(item, result_i) {
+  if (typeof item?.read !== 'function') {
+    throw new TypeError(
+      `Lookup List result ${result_i} cannot provide content.`,
+    );
+  }
+
+  const content = await item.read();
+  if (content === null || content === undefined) {
+    return '';
+  }
+
+  return typeof content === 'string'
+    ? content
+    : JSON.stringify(content, null, 2)
+  ;
 }
 
 function to_trimmed_string(value) {
