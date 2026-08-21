@@ -1,5 +1,12 @@
 import test from 'ava';
-import { lookup_list_get_results } from './get_results.js';
+import {
+  action_scope,
+  lookup_list_get_results,
+  output_schema,
+  project_lookup_list_request,
+  project_lookup_list_result,
+  tool,
+} from './get_results.js';
 
 test('lookup_list_get_results delegates params and preserves results', async (t) => {
   const params = { query: 'semantic lookup' };
@@ -45,4 +52,101 @@ test('lookup_list_get_results runs the selected retrieval action', async (t) => 
 
   t.is(received_params, params);
   t.is(results, expected_results);
+});
+
+test('project_lookup_list_request creates the exact list scope', (t) => {
+  const lookup_list = {
+    key: '2026-08-20+alpha',
+    data: {
+      query: 'project alpha',
+    },
+  };
+  const env = {
+    lookup_lists: {
+      new_item(params) {
+        t.deepEqual(params, {
+          query: 'project alpha',
+        });
+        return lookup_list;
+      },
+    },
+  };
+
+  t.deepEqual(
+    project_lookup_list_request(
+      {
+        query: '  project alpha  ',
+      },
+      { env },
+    ),
+    {
+      scope: lookup_list,
+      params: {
+        query: 'project alpha',
+      },
+    },
+  );
+});
+
+test('project_lookup_list_result returns the stable public payload', (t) => {
+  const scope = {
+    key: '2026-08-20+alpha',
+    data: {
+      query: 'project alpha',
+    },
+  };
+  const raw_results = [
+    {
+      item: {
+        key: 'Notes/Alpha.md',
+        collection_key: 'smart_sources',
+      },
+      score: 0.9,
+    },
+  ];
+
+  t.deepEqual(
+    project_lookup_list_result(
+      raw_results,
+      {
+        scope,
+        params: {
+          query: 'project alpha',
+        },
+      },
+    ),
+    {
+      ok: true,
+      key: '2026-08-20+alpha',
+      query: 'project alpha',
+      total: 1,
+      results: [
+        {
+          key: 'Notes/Alpha.md',
+          collection_key: 'smart_sources',
+          score: 0.9,
+        },
+      ],
+    },
+  );
+  t.is(raw_results[0].item.key, 'Notes/Alpha.md');
+});
+
+test('lookup tool metadata targets LookupList and clears the direct schema', (t) => {
+  t.deepEqual(action_scope, {
+    type: 'item',
+    collection_key: 'lookup_lists',
+    item_arg: 'key',
+  });
+  t.is(output_schema, null);
+  t.is(tool.project_request, project_lookup_list_request);
+  t.is(tool.project_result, project_lookup_list_result);
+  t.deepEqual(tool.input_schema.required, ['query']);
+  t.deepEqual(tool.output_schema.required, [
+    'ok',
+    'key',
+    'query',
+    'total',
+    'results',
+  ]);
 });

@@ -64,7 +64,7 @@ import { env_open_notifications as env_open_notifications_action, menus as env_o
 import { env_open_pro_link as env_open_pro_link_action, menus as env_open_pro_link_action_menus } from './src/actions/env/open_pro_link.js';
 import { env_open_status_view as env_open_status_view_action, commands as env_open_status_view_action_commands, menus as env_open_status_view_action_menus } from './src/actions/env/open_status_view.js';
 import { env_show_stats as env_show_stats_action, menus as env_show_stats_action_menus } from './src/actions/env/show_stats.js';
-import { lookup_list_get_results as lookup_list_get_results_action, display_name as lookup_list_get_results_action_display_name } from './src/actions/lookup-list/get_results.js';
+import { lookup_list_get_results as lookup_list_get_results_action, display_name as lookup_list_get_results_action_display_name, display_description as lookup_list_get_results_action_display_description, action_scope as lookup_list_get_results_action_action_scope, tool as lookup_list_get_results_action_tool, input_schema as lookup_list_get_results_action_input_schema, output_schema as lookup_list_get_results_action_output_schema } from './src/actions/lookup-list/get_results.js';
 import { pre_process as lookup_list_pre_process_action, pre_process as lookup_list_pre_process_action_pre_process } from './src/actions/lookup-list/pre_process.js';
 import { plugin_open_release_notes as plugin_open_release_notes_action, commands as plugin_open_release_notes_action_commands } from './src/actions/plugin/open_release_notes.js';
 import { similarity as similarity_action, settings_config as similarity_action_settings_config, display_name as similarity_action_display_name, display_description as similarity_action_display_description } from './src/actions/similarity.js';
@@ -146,7 +146,7 @@ export const smart_env_config = {
     env_open_pro_link: { action: env_open_pro_link_action, menus: env_open_pro_link_action_menus, version: "1.0.3" },
     env_open_status_view: { action: env_open_status_view_action, commands: env_open_status_view_action_commands, menus: env_open_status_view_action_menus, version: "1.0.3" },
     env_show_stats: { action: env_show_stats_action, menus: env_show_stats_action_menus, version: "1.0.3" },
-    lookup_list_get_results: { action: lookup_list_get_results_action, display_name: lookup_list_get_results_action_display_name, version: "1.0.3" },
+    lookup_list_get_results: { action: lookup_list_get_results_action, display_name: lookup_list_get_results_action_display_name, display_description: lookup_list_get_results_action_display_description, action_scope: lookup_list_get_results_action_action_scope, tool: lookup_list_get_results_action_tool, input_schema: lookup_list_get_results_action_input_schema, output_schema: lookup_list_get_results_action_output_schema, version: "1.0.3" },
     lookup_list_pre_process: { action: lookup_list_pre_process_action, pre_process: lookup_list_pre_process_action_pre_process, version: "1.0.3" },
     plugin_open_release_notes: { action: plugin_open_release_notes_action, commands: plugin_open_release_notes_action_commands, version: "1.0.3" },
     similarity: { action: similarity_action, settings_config: similarity_action_settings_config, display_name: similarity_action_display_name, display_description: similarity_action_display_description, version: "1.0.3" },
