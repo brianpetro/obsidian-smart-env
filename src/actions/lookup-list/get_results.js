@@ -43,8 +43,9 @@ export const tool = {
   name: 'smart_lookup_query',
 
   cli: {
+    command: 'smart:lookup',
     aliases: [
-      'smart:lookup',
+      'lookup',
     ],
   },
 
