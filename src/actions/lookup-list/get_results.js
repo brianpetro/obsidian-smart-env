@@ -116,8 +116,7 @@ export function project_lookup_list_request(request, { env }) {
   const query = to_trimmed_string(request.query);
   if (!query) throw new Error('Missing required argument: query');
 
-  const lookup_list = env.lookup_lists?.new_item?.({ query });
-  if (!lookup_list) throw new Error('Unable to create Smart Lookup list.');
+  const lookup_list = env.lookup_lists.new_lookup_list({ query });
 
   return {
     scope: lookup_list,

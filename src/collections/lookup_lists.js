@@ -50,7 +50,7 @@ export class LookupLists extends Collection {
   }
   static version = 0.01;
 
-  new_item({query, filter}) {
+  new_lookup_list({query, filter}) {
     if (!query || typeof query !== 'string' || !query.trim()) {
       throw new Error('LookupLists.new_item requires a non-empty query string.');
     }
@@ -59,15 +59,20 @@ export class LookupLists extends Collection {
     const hash = murmur_hash_32_alphanumeric(query);
     const key = `${date}+${hash}`;
 
-    // Reuse if exists
-    if (this.items[key]) return this.items[key];
-
-    // Create
-    const list = new this.item_type(this.env, {
+    return new this.item_type(this.env, {
       key,
       query,
       filter,
     });
+  }
+
+  new_item(params) {
+    const list = this.new_lookup_list(params);
+
+    // Reuse if exists
+    if (this.items[list.key]) return this.items[list.key];
+
+    // Register
     this.set(list);
 
     return list;

@@ -7,6 +7,32 @@ import {
   project_lookup_list_result,
   tool,
 } from './get_results.js';
+import { LookupLists } from '../../collections/lookup_lists.js';
+
+function create_lookup_lists_fixture() {
+  class TestLookupList {
+    constructor(env, data) {
+      this.env = env;
+      this.data = data;
+    }
+
+    get key() {
+      return this.data.key;
+    }
+  }
+
+  const env = {};
+  const lookup_lists = Object.create(LookupLists.prototype);
+  lookup_lists.env = env;
+  lookup_lists.items = {};
+  lookup_lists._item_type = TestLookupList;
+  env.lookup_lists = lookup_lists;
+
+  return {
+    env,
+    lookup_lists,
+  };
+}
 
 test('lookup_list_get_results delegates params and preserves results', async (t) => {
   const params = { query: 'semantic lookup' };
@@ -54,39 +80,46 @@ test('lookup_list_get_results runs the selected retrieval action', async (t) => 
   t.is(results, expected_results);
 });
 
-test('project_lookup_list_request creates the exact list scope', (t) => {
-  const lookup_list = {
-    key: '2026-08-20+alpha',
-    data: {
+test('project_lookup_list_request creates a fresh unregistered scope', (t) => {
+  const {
+    env,
+    lookup_lists,
+  } = create_lookup_lists_fixture();
+
+  const first = project_lookup_list_request(
+    {
+      query: '  project alpha  ',
+      include_content: true,
+    },
+    { env },
+  );
+  const second = project_lookup_list_request(
+    {
       query: 'project alpha',
     },
-  };
-  const env = {
-    lookup_lists: {
-      new_item(params) {
-        t.deepEqual(params, {
-          query: 'project alpha',
-        });
-        return lookup_list;
-      },
-    },
-  };
-
-  t.deepEqual(
-    project_lookup_list_request(
-      {
-        query: '  project alpha  ',
-        include_content: true,
-      },
-      { env },
-    ),
-    {
-      scope: lookup_list,
-      params: {
-        query: 'project alpha',
-      },
-    },
+    { env },
   );
+
+  t.deepEqual(first.params, {
+    query: 'project alpha',
+  });
+  t.is(first.scope.data.query, 'project alpha');
+  t.not(first.scope, second.scope);
+  t.deepEqual(lookup_lists.items, {});
+
+  const registered = lookup_lists.new_item({
+    query: 'project alpha',
+  });
+  const registered_items = { ...lookup_lists.items };
+  const third = project_lookup_list_request(
+    {
+      query: 'project alpha',
+    },
+    { env },
+  );
+
+  t.not(third.scope, registered);
+  t.deepEqual(lookup_lists.items, registered_items);
 });
 
 test('project_lookup_list_result returns the stable public payload', async (t) => {
