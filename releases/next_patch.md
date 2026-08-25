@@ -258,3 +258,6 @@ Improved: migrate legacy OAuth tokens to secure storage and refactor related fun
 
 
 Added: vector file metrics in environment stats modal
+
+
+Added: block embedding integrity checks and repair functionality in environment stats
