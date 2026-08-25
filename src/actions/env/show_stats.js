@@ -4,6 +4,7 @@ import {
   has_current_embedding,
   yield_to_main_thread,
 } from '../../utils/embedding_diagnostics.js';
+import { DEFAULT_EMBEDDING_TYPE } from '../../utils/embedding_item.js';
 
 const DEFAULT_COLLECTION_KEYS = [
   'smart_sources',
@@ -176,6 +177,14 @@ export async function collect_collection_stats(collection, params = {}) {
 
   const embeddings = collection.embeddings;
   const file_info = get_embeddings_file_info(embeddings);
+  const block_refs = (
+    collection_key === 'smart_blocks'
+    && file_info?.model_fingerprint
+    && file_info?.file
+  )
+    ? new Map()
+    : null
+  ;
   let yielded_at = started_at;
 
   for (let item_i = 0; item_i < item_keys.length; item_i += 1) {
@@ -187,6 +196,7 @@ export async function collect_collection_stats(collection, params = {}) {
     const item = items[item_keys[item_i]];
     if (!item) continue;
 
+    if (block_refs) add_block_embedding_ref(block_refs, item, file_info);
     const should_embed = get_should_embed(item);
     const vectorized = has_current_embedding(item, embeddings, file_info);
 
@@ -209,7 +219,131 @@ export async function collect_collection_stats(collection, params = {}) {
     yielded_at = now_ms();
   }
 
+  if (block_refs) {
+    stats.embedding_integrity = build_block_embedding_integrity(block_refs);
+  }
   return finalize_collection_stats(stats, started_at);
+}
+
+/**
+ * Clear shared active block references, then re-import their sources so the
+ * affected blocks are embedded again.
+ *
+ * @param {object} env
+ * @returns {Promise<object>}
+ */
+export async function repair_block_embedding_integrity(env) {
+  const block_collection = env?.smart_blocks;
+  const source_collection = env?.smart_sources;
+  if (!block_collection?.items) {
+    throw new Error('Smart Blocks must be loaded before embedding integrity can be repaired');
+  }
+  if (typeof block_collection.embeddings?.set_item_vector !== 'function') {
+    throw new Error('Block embedding references cannot be updated');
+  }
+  if (
+    typeof source_collection?.queue_source_re_import !== 'function'
+    || typeof source_collection?.run_re_import !== 'function'
+  ) {
+    throw new Error('Source re-import is unavailable');
+  }
+
+  const stats = await collect_collection_stats(block_collection, {
+    collection_key: 'smart_blocks',
+    state: 'loaded',
+  });
+  const integrity = stats.embedding_integrity;
+  if (!integrity?.duplicate_block_count) {
+    return {
+      cleared_block_refs: 0,
+      reimported_sources: 0,
+    };
+  }
+
+  const sources = integrity.sources.map(({ source_key }) => (
+    source_collection.get(source_key)
+  ));
+  if (sources.some((source) => !source)) {
+    throw new Error('A flagged source could not be resolved');
+  }
+
+  integrity.blocks.forEach((block) => {
+    block_collection.embeddings.set_item_vector(
+      block,
+      null,
+      DEFAULT_EMBEDDING_TYPE,
+    );
+  });
+  sources.forEach((source) => {
+    source_collection.queue_source_re_import(source, {
+      event_source: 'env_stats.repair_embedding_integrity',
+    });
+  });
+  await source_collection.run_re_import();
+
+  return {
+    cleared_block_refs: integrity.duplicate_block_count,
+    reimported_sources: sources.length,
+  };
+}
+
+/**
+ * @param {Map} refs_by_key
+ * @param {object} block
+ * @param {object} file_info
+ * @returns {void}
+ */
+function add_block_embedding_ref(refs_by_key, block, file_info) {
+  const refs = block.data?.embedding?.[DEFAULT_EMBEDDING_TYPE];
+  let ref = refs?.[file_info.model_fingerprint];
+  if (refs?.file) {
+    const model_fingerprint = refs.model_fingerprint || refs.file;
+    if (model_fingerprint !== file_info.model_fingerprint) return;
+    ref = refs;
+  }
+  if (
+    ref?.file !== file_info.file
+    || !Number.isInteger(ref.file_i)
+    || ref.file_i < 0
+  ) {
+    return;
+  }
+
+  const ref_key = JSON.stringify([ref.file, ref.file_i]);
+  const blocks = refs_by_key.get(ref_key) || [];
+  blocks.push(block);
+  refs_by_key.set(ref_key, blocks);
+}
+
+/**
+ * @param {Map} refs_by_key
+ * @returns {object}
+ */
+function build_block_embedding_integrity(refs_by_key) {
+  const duplicate_groups = [...refs_by_key.values()].filter((blocks) => (
+    blocks.length > 1
+  ));
+  const blocks = duplicate_groups.flat();
+  const sources_by_key = new Map();
+
+  blocks.forEach((block) => {
+    const source_key = block.source_key || (block.key || '').split('#')[0];
+    const record = sources_by_key.get(source_key) || {
+      source_key,
+      block_count: 0,
+    };
+    record.block_count += 1;
+    sources_by_key.set(source_key, record);
+  });
+
+  return {
+    duplicate_ref_count: duplicate_groups.length,
+    duplicate_block_count: blocks.length,
+    blocks,
+    sources: [...sources_by_key.values()].sort((a, b) => (
+      a.source_key.localeCompare(b.source_key)
+    )),
+  };
 }
 
 /**

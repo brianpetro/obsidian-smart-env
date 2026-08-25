@@ -1,5 +1,9 @@
 import test from 'ava';
-import { collect_collection_inspection_records } from './show_stats.js';
+import {
+  collect_collection_inspection_records,
+  collect_collection_stats,
+  repair_block_embedding_integrity,
+} from './show_stats.js';
 
 const MODEL_FINGERPRINT = 'model-a';
 const VECTOR_FILE = 'vectors-a';
@@ -238,4 +242,165 @@ test('inspection rejects unsupported statuses', async (t) => {
       message: 'Unsupported collection inspection status: missing',
     },
   );
+});
+
+test('block stats flag sources whose active embedding refs share a vector row', async (t) => {
+  const source_a = { key: 'a.md' };
+  const source_b = { key: 'b.md' };
+  const source_c = { key: 'c.md' };
+  const collection = {
+    collection_key: 'smart_blocks',
+    embeddings: create_embeddings(),
+    items: {
+      a_first: create_item({
+        key: 'a.md#First',
+        source_key: source_a.key,
+        vectorized: true,
+        file_i: 3,
+      }),
+      a_second: create_item({
+        key: 'a.md#Second',
+        source_key: source_a.key,
+        vectorized: true,
+        file_i: 4,
+      }),
+      b_first: create_item({
+        key: 'b.md#First',
+        source_key: source_b.key,
+        vectorized: true,
+        file_i: 3,
+      }),
+      c_first: create_item({
+        key: 'c.md#First',
+        source_key: source_c.key,
+        vectorized: true,
+        file_i: 4,
+      }),
+      unique: create_item({
+        key: 'c.md#Unique',
+        source_key: source_c.key,
+        vectorized: true,
+        file_i: 5,
+      }),
+    },
+  };
+  collection.items.unique.data.embedding.default[MODEL_FINGERPRINT].file = 'vectors-old';
+
+  const stats = await collect_collection_stats(collection, {
+    collection_key: 'smart_blocks',
+    state: 'loaded',
+    yield_after_ms: Number.POSITIVE_INFINITY,
+  });
+
+  t.is(stats.embedding_integrity.duplicate_ref_count, 2);
+  t.is(stats.embedding_integrity.duplicate_block_count, 4);
+  t.deepEqual(
+    stats.embedding_integrity.sources.map((record) => ({
+      source_key: record.source_key,
+      block_count: record.block_count,
+    })),
+    [
+      { source_key: 'a.md', block_count: 2 },
+      { source_key: 'b.md', block_count: 1 },
+      { source_key: 'c.md', block_count: 1 },
+    ],
+  );
+});
+
+test('embedding integrity repair clears shared refs and re-imports flagged sources once', async (t) => {
+  const calls = [];
+  const source_a = { key: 'a.md' };
+  const source_b = { key: 'b.md' };
+  const first = create_item({
+    key: 'a.md#First',
+    source_key: source_a.key,
+    vectorized: true,
+    file_i: 9,
+  });
+  const second = create_item({
+    key: 'b.md#Second',
+    source_key: source_b.key,
+    vectorized: true,
+    file_i: 9,
+  });
+  const unique = create_item({
+    key: 'b.md#Unique',
+    source_key: source_b.key,
+    vectorized: true,
+    file_i: 10,
+  });
+  const embeddings = create_embeddings();
+  embeddings.set_item_vector = (item, vec) => {
+    t.is(vec, null);
+    calls.push(`clear:${item.key}`);
+    delete item.data.embedding.default[MODEL_FINGERPRINT];
+  };
+  const block_collection = {
+    collection_key: 'smart_blocks',
+    embeddings,
+    items: { first, second, unique },
+  };
+  const env = {
+    smart_blocks: block_collection,
+    smart_sources: {
+      get(source_key) {
+        return source_key === source_a.key ? source_a : source_b;
+      },
+      queue_source_re_import(source) {
+        calls.push(`queue:${source.key}`);
+      },
+      async run_re_import() {
+        calls.push('run');
+      },
+    },
+  };
+
+  const result = await repair_block_embedding_integrity(env);
+
+  t.deepEqual(result, {
+    cleared_block_refs: 2,
+    reimported_sources: 2,
+  });
+  t.deepEqual(calls, [
+    'clear:a.md#First',
+    'clear:b.md#Second',
+    'queue:a.md',
+    'queue:b.md',
+    'run',
+  ]);
+  t.truthy(unique.data.embedding.default[MODEL_FINGERPRINT]);
+});
+
+test('embedding integrity repair validates source re-import before clearing refs', async (t) => {
+  const source_a = { key: 'a.md' };
+  const source_b = { key: 'b.md' };
+  const cleared = [];
+  const embeddings = create_embeddings();
+  embeddings.set_item_vector = (item) => cleared.push(item);
+
+  await t.throwsAsync(
+    repair_block_embedding_integrity({
+      smart_blocks: {
+        collection_key: 'smart_blocks',
+        embeddings,
+        items: {
+          first: create_item({
+            key: 'a.md#First',
+            source_key: source_a.key,
+            vectorized: true,
+            file_i: 11,
+          }),
+          second: create_item({
+            key: 'b.md#Second',
+            source_key: source_b.key,
+            vectorized: true,
+            file_i: 11,
+          }),
+        },
+      },
+      smart_sources: {},
+    }),
+    { message: 'Source re-import is unavailable' },
+  );
+  t.deepEqual(cleared, []);
 });

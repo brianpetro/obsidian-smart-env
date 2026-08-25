@@ -58,6 +58,7 @@
 }
 
 .smart-env-stats__status,
+.smart-env-stats__integrity-status,
 .smart-env-stats__optimization-status,
 .smart-env-stats__section-heading p,
 .smart-env-stats__collection-state,
@@ -160,6 +161,7 @@
 }
 
 .smart-env-stats__memory-section,
+.smart-env-stats__integrity,
 .smart-env-stats__optimization {
   padding: var(--size-4-3);
   border: 1px solid var(--background-modifier-border);
@@ -167,6 +169,7 @@
   background: color-mix(in srgb, var(--background-secondary) 58%, transparent);
 }
 
+.smart-env-stats__integrity-status,
 .smart-env-stats__optimization-status {
   min-height: 1.35em;
   margin: 0;
@@ -666,6 +669,7 @@
   font-variant-numeric: tabular-nums;
 }
 
+.smart-env-stats__integrity-sources,
 .smart-env-stats__inspector-list {
   display: flex;
   flex-direction: column;

@@ -14,6 +14,7 @@ import { format_collection_name } from '../utils/format_collection_name.js';
 import {
   collect_collection_inspection_records,
   collect_environment_stats,
+  repair_block_embedding_integrity,
 } from '../actions/env/show_stats.js';
 import { open_source } from '../utils/open_source.js';
 import {
@@ -108,6 +109,20 @@ export function build_html() {
       </div>
     </section>
 
+    <section class="smart-env-stats__section smart-env-stats__integrity" data-embedding-integrity>
+      <div class="smart-env-stats__section-heading">
+        <div>
+          <h3>Block embedding integrity</h3>
+          <p>Flags blocks that point to the same row in the active block vector file.</p>
+        </div>
+        <button type="button" data-action="repair-embedding-integrity" disabled>Force re-import + embed</button>
+      </div>
+      <p class="smart-env-stats__integrity-status" data-integrity-status aria-live="polite">Waiting for exact stats...</p>
+      <div class="smart-env-stats__integrity-sources" data-integrity-sources>
+        ${build_inspector_loading_html('Waiting for the Smart Blocks scan...')}
+      </div>
+    </section>
+
     <section class="smart-env-stats__section smart-env-stats__optimization">
       <div class="smart-env-stats__section-heading">
         <div>
@@ -160,6 +175,9 @@ export function post_process(env, container, opts = {}) {
   const collections_el = container.querySelector('.smart-env-stats__collections');
   const footer_el = container.querySelector('.smart-env-stats__footer');
   const inspector_elements = get_inspector_elements(container);
+  const integrity_status_el = container.querySelector('[data-integrity-status]');
+  const integrity_sources_el = container.querySelector('[data-integrity-sources]');
+  const repair_integrity_btn = container.querySelector('[data-action="repair-embedding-integrity"]');
   const optimize_btn = container.querySelector('.smart-env-stats__optimize');
   const optimization_status_el = container.querySelector('.smart-env-stats__optimization-status');
   const optimization_confirm_el = container.querySelector('.smart-env-stats__optimization-confirm');
@@ -183,6 +201,8 @@ export function post_process(env, container, opts = {}) {
   let disposed = false;
   let scan_id = 0;
   let start_timeout = null;
+  let embedding_integrity = null;
+  let integrity_busy = false;
   let unexpected_embedding_count = 0;
   let optimization_busy = false;
   let optimization_plan = null;
@@ -236,6 +256,30 @@ export function post_process(env, container, opts = {}) {
     set_inspector_loading(inspector_elements, false);
   };
 
+  const set_integrity_action_state = () => {
+    repair_integrity_btn.disabled = (
+      integrity_busy
+      || optimization_busy
+      || optimization_plan
+      || !optimization_confirm_el.hidden
+      || !embedding_integrity?.duplicate_ref_count
+    );
+    repair_integrity_btn.textContent = integrity_busy
+      ? 'Re-importing...'
+      : 'Force re-import + embed'
+    ;
+  };
+
+  const set_integrity_stats = (collection_stats) => {
+    embedding_integrity = collection_stats?.embedding_integrity || null;
+    render_embedding_integrity(
+      integrity_status_el,
+      integrity_sources_el,
+      collection_stats,
+    );
+    set_integrity_action_state();
+  };
+
   const show_optimization_count = () => {
     const noun = unexpected_embedding_count === 1 ? 'embedding' : 'embeddings';
     optimize_btn.disabled = unexpected_embedding_count === 0;
@@ -246,6 +290,7 @@ export function post_process(env, container, opts = {}) {
         ? `${format_number(unexpected_embedding_count)} unexpected ${noun} can be removed.`
         : 'No unexpected embeddings to clean up.',
     );
+    set_integrity_action_state();
   };
 
   const set_optimization_stats = (totals = {}) => {
@@ -262,6 +307,7 @@ export function post_process(env, container, opts = {}) {
 
   const prepare_source_data_optimization = async (replace_existing_backups = false) => {
     optimization_busy = true;
+    set_integrity_action_state();
     optimization_confirm_el.hidden = true;
     optimize_btn.disabled = true;
     optimize_btn.textContent = 'Optimizing...';
@@ -306,11 +352,13 @@ export function post_process(env, container, opts = {}) {
       );
     } finally {
       optimization_busy = false;
+      set_integrity_action_state();
     }
   };
 
   const finish_source_data_optimization = async () => {
     optimization_busy = true;
+    set_integrity_action_state();
     optimize_btn.disabled = true;
     optimize_btn.textContent = 'Finishing...';
     set_text(optimization_status_el, 'Applying optimized source and vector files...');
@@ -330,6 +378,7 @@ export function post_process(env, container, opts = {}) {
       );
     } finally {
       optimization_busy = false;
+      set_integrity_action_state();
     }
   };
 
@@ -417,6 +466,9 @@ export function post_process(env, container, opts = {}) {
 
     if (cached) {
       render_stats(container, cached);
+      set_integrity_stats(cached.collections?.find((stats) => (
+        stats.collection_key === 'smart_blocks'
+      )));
       set_optimization_stats(cached.totals);
       set_text(
         status_el,
@@ -434,6 +486,13 @@ export function post_process(env, container, opts = {}) {
 
     inspector_cache.clear();
     close_inspector();
+    repair_integrity_btn.disabled = true;
+    set_text(integrity_status_el, 'Scanning active block embedding references...');
+    if (!embedding_integrity) {
+      integrity_sources_el.innerHTML = build_inspector_loading_html(
+        'Scanning active block embedding references...',
+      );
+    }
 
     if (!optimization_busy && !optimization_plan) {
       optimization_confirm_el.hidden = true;
@@ -474,6 +533,12 @@ export function post_process(env, container, opts = {}) {
           status_el,
           `Scanning ${format_collection_name(collection_key)}: ${format_number(collection_stats.scanned_items)} of ${format_number(collection_stats.total_items)}...`,
         );
+        if (collection_key === 'smart_blocks') {
+          set_text(
+            integrity_status_el,
+            `Scanning ${format_number(collection_stats.scanned_items)} of ${format_number(collection_stats.total_items)} blocks...`,
+          );
+        }
       },
       on_collection: (collection_stats) => {
         if (disposed || current_scan_id !== scan_id) return;
@@ -500,6 +565,9 @@ export function post_process(env, container, opts = {}) {
     };
     stats_cache.set(env, result);
     render_stats(container, result);
+    set_integrity_stats(result.collections?.find((stats) => (
+      stats.collection_key === 'smart_blocks'
+    )));
     set_optimization_stats(result.totals);
     set_text(
       status_el,
@@ -516,12 +584,15 @@ export function post_process(env, container, opts = {}) {
       optimize_btn.disabled = true;
       set_text(optimization_status_el, 'Exact stats could not be refreshed.');
     }
+    repair_integrity_btn.disabled = true;
+    set_text(integrity_status_el, 'Embedding integrity could not be refreshed.');
     set_text(status_el, 'Failed to calculate stats. See the developer console for details.');
     container.setAttribute('aria-busy', 'false');
     set_button_loading(refresh_btn, false);
   };
 
   const handle_refresh = () => {
+    if (integrity_busy) return;
     if (start_timeout) {
       clearTimeout(start_timeout);
       start_timeout = null;
@@ -589,8 +660,47 @@ export function post_process(env, container, opts = {}) {
     }
   };
 
+  const handle_repair_embedding_integrity = async () => {
+    if (repair_integrity_btn.disabled || integrity_busy) return;
+
+    integrity_busy = true;
+    set_integrity_action_state();
+    refresh_btn.disabled = true;
+    optimize_btn.disabled = true;
+    set_text(
+      integrity_status_el,
+      'Clearing shared block references and re-importing flagged sources...',
+    );
+
+    try {
+      const result = await repair_block_embedding_integrity(env);
+      if (disposed) return;
+
+      stats_cache.delete(env);
+      set_text(
+        integrity_status_el,
+        `Cleared ${format_number(result.cleared_block_refs)} shared block ${result.cleared_block_refs === 1 ? 'reference' : 'references'} and re-imported ${format_number(result.reimported_sources)} ${result.reimported_sources === 1 ? 'source' : 'sources'}. Refreshing...`,
+      );
+      await load_stats({ force: true });
+    } catch (error) {
+      if (disposed) return;
+      console.error('[env_stats] Failed to repair block embedding integrity', error);
+      set_text(
+        integrity_status_el,
+        'Embedding integrity repair failed. See the developer console for details.',
+      );
+    } finally {
+      integrity_busy = false;
+      if (!disposed) {
+        set_button_loading(refresh_btn, false);
+        show_optimization_count();
+        set_integrity_action_state();
+      }
+    }
+  };
+
   const handle_optimize_source_data = () => {
-    if (optimization_busy) return;
+    if (optimization_busy || integrity_busy) return;
     if (optimization_plan) {
       finish_source_data_optimization();
       return;
@@ -600,7 +710,7 @@ export function post_process(env, container, opts = {}) {
   };
 
   const handle_confirm_source_data_optimization = () => {
-    if (optimization_busy) return;
+    if (optimization_busy || integrity_busy) return;
     prepare_source_data_optimization(true);
   };
 
@@ -618,6 +728,7 @@ export function post_process(env, container, opts = {}) {
   inspector_elements.load_more_btn?.addEventListener('click', handle_load_more);
   inspector_elements.close_btn?.addEventListener('click', handle_close_inspector);
   inspector_elements.list?.addEventListener('click', handle_inspector_list_click);
+  repair_integrity_btn.addEventListener('click', handle_repair_embedding_integrity);
   optimize_btn.addEventListener('click', handle_optimize_source_data);
   confirm_optimize_btn.addEventListener('click', handle_confirm_source_data_optimization);
   cancel_optimize_btn.addEventListener('click', handle_cancel_source_data_optimization);
@@ -640,6 +751,7 @@ export function post_process(env, container, opts = {}) {
     inspector_elements.load_more_btn?.removeEventListener('click', handle_load_more);
     inspector_elements.close_btn?.removeEventListener('click', handle_close_inspector);
     inspector_elements.list?.removeEventListener('click', handle_inspector_list_click);
+    repair_integrity_btn.removeEventListener('click', handle_repair_embedding_integrity);
     optimize_btn.removeEventListener('click', handle_optimize_source_data);
     confirm_optimize_btn.removeEventListener('click', handle_confirm_source_data_optimization);
     cancel_optimize_btn.removeEventListener('click', handle_cancel_source_data_optimization);
@@ -1069,6 +1181,61 @@ function build_inspector_loading_html(message) {
     <span class="smart-env-stats__inspector-spinner" aria-hidden="true"></span>
     <span>${message}</span>
   </div>`;
+}
+
+/**
+ * @param {HTMLElement|null} status_el
+ * @param {HTMLElement|null} sources_el
+ * @param {object} stats
+ * @returns {void}
+ */
+function render_embedding_integrity(status_el, sources_el, stats = {}) {
+  if (!sources_el) return;
+
+  if (stats.state !== 'loaded') {
+    set_text(status_el, 'Smart Blocks is not loaded.');
+    sources_el.replaceChildren(create_inspector_message(
+      sources_el.ownerDocument,
+      'Load Smart Blocks to check embedding integrity.',
+    ));
+    return;
+  }
+
+  const integrity = stats.embedding_integrity;
+  if (!integrity) {
+    set_text(status_el, 'Active block embedding metadata is unavailable.');
+    sources_el.replaceChildren(create_inspector_message(
+      sources_el.ownerDocument,
+      'No active block vector file could be inspected.',
+    ));
+    return;
+  }
+
+  if (!integrity.duplicate_ref_count) {
+    set_text(
+      status_el,
+      'No blocks share a row in the active block vector file.',
+    );
+    sources_el.replaceChildren(create_inspector_message(
+      sources_el.ownerDocument,
+      'Embedding references are unique.',
+    ));
+    return;
+  }
+
+  const source_count = integrity.sources.length;
+  set_text(
+    status_el,
+    `${format_number(source_count)} flagged ${source_count === 1 ? 'source contains' : 'sources contain'} ${format_number(integrity.duplicate_block_count)} ${integrity.duplicate_block_count === 1 ? 'block' : 'blocks'} sharing ${format_number(integrity.duplicate_ref_count)} active vector ${integrity.duplicate_ref_count === 1 ? 'row' : 'rows'}.`,
+  );
+
+  const list = sources_el.ownerDocument.createElement('ul');
+  integrity.sources.forEach((record) => {
+    const item = sources_el.ownerDocument.createElement('li');
+    item.textContent = `${record.source_key} - ${format_number(record.block_count)} affected ${record.block_count === 1 ? 'block' : 'blocks'}`;
+    list.appendChild(item);
+  });
+  sources_el.replaceChildren(list);
 }
 
 /**
