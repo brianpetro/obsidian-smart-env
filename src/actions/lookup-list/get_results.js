@@ -12,9 +12,12 @@ export async function lookup_list_get_results(params = {}) {
   const action_key = this.settings?.get_results_action_key;
   if (action_key && action_key !== 'lookup_list_get_results') {
     const selected_action = this.actions?.[action_key];
-    if (typeof selected_action === 'function') {
-      return await selected_action.call(this, params);
+    if (typeof selected_action !== 'function') {
+      throw new Error(
+        `Configured Lookup retrieval action not found: ${action_key}`,
+      );
     }
+    return await selected_action.call(this, params);
   }
   return await this.get_results(params);
 }

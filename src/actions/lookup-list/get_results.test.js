@@ -80,6 +80,28 @@ test('lookup_list_get_results runs the selected retrieval action', async (t) => 
   t.is(results, expected_results);
 });
 
+test('lookup_list_get_results fails for a missing configured strategy', async (t) => {
+  const scope = {
+    settings: {
+      get_results_action_key: 'lookup_list_get_results_missing',
+    },
+    actions: {},
+    async get_results() {
+      t.fail('The default retrieval method must not hide a configuration error.');
+    },
+  };
+
+  await t.throwsAsync(
+    () => lookup_list_get_results.call(scope, {
+      query: 'semantic lookup',
+    }),
+    {
+      message:
+        'Configured Lookup retrieval action not found: lookup_list_get_results_missing',
+    },
+  );
+});
+
 test('project_lookup_list_request creates a fresh unregistered scope', (t) => {
   const {
     env,
