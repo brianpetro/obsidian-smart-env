@@ -261,3 +261,6 @@ Added: vector file metrics in environment stats modal
 
 
 Added: block embedding integrity checks and repair functionality in environment stats
+
+
+Added smart_source_read tool action for CLI/MCP integration
