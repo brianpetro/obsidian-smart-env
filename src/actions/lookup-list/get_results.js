@@ -45,13 +45,6 @@ export const action_scope = {
 export const tool = {
   name: 'smart_lookup_query',
 
-  cli: {
-    command: 'smart:lookup',
-    aliases: [
-      'lookup',
-    ],
-  },
-
   when({ env }) {
     return Boolean(env.lookup_lists && env.smart_sources);
   },
