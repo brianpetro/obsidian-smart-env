@@ -264,3 +264,6 @@ Added: block embedding integrity checks and repair functionality in environment 
 
 
 Added smart_source_read tool action for CLI/MCP integration
+
+
+Improved: drag handling (addresses https://github.com/brianpetro/obsidian-smart-connections/issues/1367)
