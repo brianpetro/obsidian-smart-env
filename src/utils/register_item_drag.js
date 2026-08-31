@@ -1,4 +1,4 @@
-import { parse_item_key_to_wikilink } from "obsidian-smart-env/utils/parse_item_key_to_wikilink.js";
+import { parse_item_key_to_wikilink } from "../../utils/parse_item_key_to_wikilink.js";
 import { write_smart_drag_data } from "./smart_drag_drop.js";
 
 function handle_connection_drag(obsidian_app, item, params, event){
@@ -14,9 +14,14 @@ function handle_connection_drag(obsidian_app, item, params, event){
   }
 }
 
+function handle_connection_drag_end(obsidian_app) {
+  obsidian_app.dragManager.onDragEnd();
+}
+
 export function register_item_drag(container, item, params = {}) {
   const env = item.env;
   const app = env.obsidian_app;
   container.setAttribute('draggable', 'true');
-  container.addEventListener('dragstart', handle_connection_drag.bind(null, app, item, params))
+  container.addEventListener('dragstart', handle_connection_drag.bind(null, app, item, params));
+  container.addEventListener('dragend', handle_connection_drag_end.bind(null, app));
 }

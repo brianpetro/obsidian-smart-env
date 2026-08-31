@@ -14,8 +14,9 @@ function create_data_transfer() {
   };
 }
 
-test('register_item_drag preserves native drag behavior and writes Smart identity', (t) => {
+test('register_item_drag preserves repeated native drag lifecycles and writes Smart identity', (t) => {
   let dragstart_handler = null;
+  let dragend_handler = null;
   const native_calls = [];
   const emitted_events = [];
   const container = {
@@ -25,6 +26,7 @@ test('register_item_drag preserves native drag behavior and writes Smart identit
     },
     addEventListener(event_name, handler) {
       if (event_name === 'dragstart') dragstart_handler = handler;
+      if (event_name === 'dragend') dragend_handler = handler;
     },
   };
   const drag_manager = {
@@ -34,6 +36,9 @@ test('register_item_drag preserves native drag behavior and writes Smart identit
     },
     onDragStart(event, drag_data) {
       native_calls.push({ type: 'onDragStart', event, drag_data });
+    },
+    onDragEnd() {
+      native_calls.push({ type: 'onDragEnd' });
     },
   };
   const item = {
@@ -55,6 +60,7 @@ test('register_item_drag preserves native drag behavior and writes Smart identit
 
   t.is(container.attributes.draggable, 'true');
   t.is(typeof dragstart_handler, 'function');
+  t.is(typeof dragend_handler, 'function');
 
   const event = {
     dataTransfer: create_data_transfer(),
@@ -70,4 +76,32 @@ test('register_item_drag preserves native drag behavior and writes Smart identit
     },
   ]);
   t.deepEqual(emitted_events, ['connections:drag_result']);
+
+  dragend_handler();
+  t.is(native_calls[2].type, 'onDragEnd');
+
+  const second_event = {
+    dataTransfer: create_data_transfer(),
+  };
+  dragstart_handler(second_event);
+  dragend_handler();
+
+  t.deepEqual(read_smart_drag_data(second_event.dataTransfer)?.items, [
+    {
+      collection_key: 'smart_blocks',
+      item_key: 'Folder/Note.md#Heading',
+    },
+  ]);
+  t.deepEqual(native_calls.map(({ type }) => type), [
+    'dragLink',
+    'onDragStart',
+    'onDragEnd',
+    'dragLink',
+    'onDragStart',
+    'onDragEnd',
+  ]);
+  t.deepEqual(emitted_events, [
+    'connections:drag_result',
+    'connections:drag_result',
+  ]);
 });
