@@ -257,7 +257,7 @@ export const EVENTS_CHECKLIST_ITEMS_BY_EVENT_KEY = {
   },
   'connect_pro:request': {
     group: 'Connect Pro',
-    milestone: 'Connect Pro request received (remote action hit /obsidian-cli).',
+    milestone: 'Connect Pro request received (connector Tool action invoked).',
     link: 'https://smartconnections.app/connect-pro/?utm_source=milestones#request-flow',
     is_pro: true,
   },
