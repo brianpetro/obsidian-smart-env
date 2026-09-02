@@ -1,4 +1,15 @@
-export async function smart_source_read() {
+const OUTPUT_TYPES = [
+  'text',
+  'meta',
+];
+
+export async function smart_source_read(params = {}) {
+  const output_type = params.output_type || 'text';
+
+  if (output_type === 'meta') return this.data || {};
+  if (output_type !== 'text') {
+    throw new Error(`Unsupported Smart Source output type: ${output_type}`);
+  }
   if (typeof this.read !== 'function') {
     throw new Error('Unable to read Smart Source.');
   }
@@ -11,14 +22,23 @@ export async function smart_source_read() {
 }
 
 export const display_name = 'Read Smart Source';
-export const display_description = 'Returns the text for an exact Smart Source key.';
+export const display_description = 'Returns text or metadata for an exact Smart Source key.';
 export const input_schema = {
   type: 'object',
-  properties: {},
+  properties: {
+    output_type: {
+      type: 'string',
+      enum: OUTPUT_TYPES,
+      description: 'Return source text or metadata. Defaults to text.',
+    },
+  },
   additionalProperties: false,
 };
 export const output_schema = {
-  type: 'string',
+  type: [
+    'string',
+    'object',
+  ],
 };
 export const action_scope = {
   type: 'item',
@@ -37,6 +57,11 @@ export const tool = {
         type: 'string',
         minLength: 1,
         description: 'Exact Smart Source key.',
+      },
+      output_type: {
+        type: 'string',
+        enum: OUTPUT_TYPES,
+        description: 'Return source text or metadata. Defaults to text.',
       },
     },
     required: ['key'],
@@ -61,6 +86,8 @@ export function project_smart_source_read_request(request, { env }) {
 
   return {
     scope: source,
-    params: {},
+    params: request.output_type
+      ? { output_type: request.output_type }
+      : {},
   };
 }
