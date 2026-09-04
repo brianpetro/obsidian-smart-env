@@ -32,6 +32,153 @@ export const input_schema = {
       minLength: 1,
       description: 'Smart Lookup query.',
     },
+    limit: {
+      type: 'integer',
+      minimum: 1,
+      description: 'Maximum number of ranked results to return.',
+    },
+    results_collection_key: {
+      type: 'string',
+      enum: ['smart_sources', 'smart_blocks'],
+      description: 'Candidate collection to search: smart_sources for note-level results or smart_blocks for block-level results. Uses the configured collection when omitted.',
+    },
+    filter: {
+      type: 'object',
+      description: 'Optional key filters for candidate result items. String comparisons are case-sensitive. Smart Sources and Smart Blocks also support frontmatter filters.',
+      properties: {
+        exclude_key: {
+          type: 'string',
+          minLength: 1,
+          description: 'Exclude the item with this exact key.',
+        },
+        exclude_keys: {
+          type: 'array',
+          description: 'Exclude items with any of these exact keys.',
+          items: {
+            type: 'string',
+            minLength: 1,
+          },
+        },
+        exclude_key_starts_with: {
+          type: 'string',
+          minLength: 1,
+          description: 'Exclude items whose keys start with this value.',
+        },
+        exclude_key_starts_with_any: {
+          type: 'array',
+          description: 'Exclude items whose keys start with any of these values.',
+          items: {
+            type: 'string',
+            minLength: 1,
+          },
+        },
+        exclude_key_includes: {
+          type: 'string',
+          minLength: 1,
+          description: 'Exclude items whose keys contain this value.',
+        },
+        exclude_key_includes_any: {
+          type: 'array',
+          description: 'Exclude items whose keys contain any of these values.',
+          items: {
+            type: 'string',
+            minLength: 1,
+          },
+        },
+        exclude_key_ends_with: {
+          type: 'string',
+          minLength: 1,
+          description: 'Exclude items whose keys end with this value.',
+        },
+        exclude_key_ends_with_any: {
+          type: 'array',
+          description: 'Exclude items whose keys end with any of these values.',
+          items: {
+            type: 'string',
+            minLength: 1,
+          },
+        },
+        key_ends_with: {
+          type: 'string',
+          minLength: 1,
+          description: 'Include only items whose keys end with this value.',
+        },
+        key_starts_with: {
+          type: 'string',
+          minLength: 1,
+          description: 'Include only items whose keys start with this value.',
+        },
+        key_starts_with_any: {
+          type: 'array',
+          description: 'Include only items whose keys start with any of these values.',
+          items: {
+            type: 'string',
+            minLength: 1,
+          },
+        },
+        key_includes: {
+          type: 'string',
+          minLength: 1,
+          description: 'Include only items whose keys contain this value.',
+        },
+        key_includes_any: {
+          type: 'array',
+          description: 'Include only items whose keys contain any of these values.',
+          items: {
+            type: 'string',
+            minLength: 1,
+          },
+        },
+        frontmatter: {
+          type: 'object',
+          description: 'Filter Smart Sources by their frontmatter, or Smart Blocks by their source frontmatter. Use lowercase key and value strings.',
+          properties: {
+            include: {
+              type: 'array',
+              description: 'Include only items matching at least one entry.',
+              items: {
+                type: 'object',
+                properties: {
+                  key: {
+                    type: 'string',
+                    minLength: 1,
+                    description: 'Lowercase frontmatter key to match.',
+                  },
+                  value: {
+                    type: ['string', 'null'],
+                    description: 'Optional lowercase exact value. Omit or use null to match any value for the key.',
+                  },
+                },
+                required: ['key'],
+                additionalProperties: false,
+              },
+            },
+            exclude: {
+              type: 'array',
+              description: 'Exclude items matching any entry.',
+              items: {
+                type: 'object',
+                properties: {
+                  key: {
+                    type: 'string',
+                    minLength: 1,
+                    description: 'Lowercase frontmatter key to match.',
+                  },
+                  value: {
+                    type: ['string', 'null'],
+                    description: 'Optional lowercase exact value. Omit or use null to match any value for the key.',
+                  },
+                },
+                required: ['key'],
+                additionalProperties: false,
+              },
+            },
+          },
+          additionalProperties: false,
+        },
+      },
+      additionalProperties: false,
+    },
   },
   required: ['query'],
   additionalProperties: false,
@@ -104,9 +251,9 @@ export const tool = {
  * Convert the public query into the exact Lookup List scope and natural
  * retrieval params.
  *
- * @param {{query: string, include_content?: boolean}} request
+ * @param {{query: string, limit?: number, results_collection_key?: string, filter?: object, include_content?: boolean}} request
  * @param {{env: object}} context
- * @returns {{scope: object, params: {query: string}}}
+ * @returns {{scope: object, params: {query: string, limit?: number, results_collection_key?: string, filter?: object}}}
  */
 export function project_lookup_list_request(request, { env }) {
   const query = to_trimmed_string(request.query);
@@ -118,6 +265,11 @@ export function project_lookup_list_request(request, { env }) {
     scope: lookup_list,
     params: {
       query,
+      ...(request.limit ? { limit: request.limit } : {}),
+      ...(request.results_collection_key
+        ? { results_collection_key: request.results_collection_key }
+        : {}),
+      ...(request.filter ? { filter: request.filter } : {}),
     },
   };
 }
