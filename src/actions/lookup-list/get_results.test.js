@@ -1,4 +1,5 @@
 import test from 'ava';
+import { collection_item_filter_schema } from '../../utils/collection_item_filter_schema.js';
 import {
   action_scope,
   input_schema,
@@ -246,6 +247,7 @@ test('project_lookup_list_result includes item content when requested', async (t
 test('lookup tool metadata targets LookupList and clears the direct schema', (t) => {
   const filter_schema = input_schema.properties.filter;
 
+  t.is(filter_schema, collection_item_filter_schema);
   t.is(input_schema.properties.limit.type, 'integer');
   t.is(input_schema.properties.limit.minimum, 1);
   t.deepEqual(input_schema.properties.results_collection_key.enum, [
