@@ -1,4 +1,4 @@
-import { collection_item_filter_schema } from '../../utils/collection_item_filter_schema.js';
+import { collection_tool_action_schemas } from '../../utils/collection_tool_action_schemas.js';
 
 /**
  * Retrieve results for the current Lookup List using the selected strategy.
@@ -34,17 +34,7 @@ export const input_schema = {
       minLength: 1,
       description: 'Smart Lookup query.',
     },
-    limit: {
-      type: 'integer',
-      minimum: 1,
-      description: 'Maximum number of ranked results to return.',
-    },
-    results_collection_key: {
-      type: 'string',
-      enum: ['smart_sources', 'smart_blocks'],
-      description: 'Candidate collection to search: smart_sources for note-level results or smart_blocks for block-level results. Uses the configured collection when omitted.',
-    },
-    filter: collection_item_filter_schema,
+    ...collection_tool_action_schemas,
   },
   required: ['query'],
   additionalProperties: false,
