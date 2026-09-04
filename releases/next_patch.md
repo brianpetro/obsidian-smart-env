@@ -267,3 +267,6 @@ Added smart_source_read tool action for CLI/MCP integration
 
 
 Improved: drag handling (addresses https://github.com/brianpetro/obsidian-smart-connections/issues/1367)
+
+
+Add input schema enhancements for lookup_list_get_results and project_lookup_list_request
