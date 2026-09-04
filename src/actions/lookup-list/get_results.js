@@ -57,6 +57,10 @@ export const action_scope = {
 };
 export const tool = {
   name: 'smart_lookup_query',
+  description:
+    'Use for semantic discovery when the request is expressed as a topic, question, or concept and no exact source or block key is known.'
+    + ' Searches Smart Sources or Smart Blocks with the configured retrieval strategy and returns ranked keys, scores, and optional content.'
+    + ' Do not use to read a known key or find items related to a known source; use smart_source_read, smart_block_read, or smart_connections_list.',
 
   when({ env }) {
     return Boolean(env.lookup_lists && env.smart_sources);

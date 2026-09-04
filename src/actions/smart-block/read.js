@@ -27,6 +27,10 @@ export const action_scope = {
 };
 export const tool = {
   name: 'smart_block_read',
+  description:
+    'Use to read the text of one existing Smart Block when its exact block key is known.'
+    + ' Do not use for an entire source or discovery; use smart_source_read for a source and smart_lookup_query with results_collection_key set to smart_blocks when the key is unknown.'
+    + ' This tool does not modify the vault.',
   when({ env }) {
     return Boolean(env.smart_blocks);
   },
