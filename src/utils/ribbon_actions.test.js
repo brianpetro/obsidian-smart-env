@@ -23,11 +23,14 @@ function create_plugin(actions, manifest_id = 'smart-context') {
     };
 
     addRibbonIcon(icon_name, description, callback) {
+      const ribbon_el = {};
       registered_ribbons.push({
         icon_name,
         description,
         callback,
+        ribbon_el,
       });
+      return ribbon_el;
     }
   }
 
@@ -81,6 +84,7 @@ test('registers only ribbon icons applicable to the exact plugin instance', (t) 
   t.is(registered_ribbons[0].icon_name, 'target-icon');
   t.is(registered_ribbons[0].description, 'Target action');
   t.is(typeof registered_ribbons[0].callback, 'function');
+  t.is(plugin._ribbon_action_elements.get('target'), registered_ribbons[0].ribbon_el);
 });
 
 test('rejects applicable duplicate ribbon IDs before registration', (t) => {
@@ -275,6 +279,8 @@ test('repeated registration does not duplicate ribbon icons', (t) => {
     plugin._registered_ribbon_actions.get('stable'),
     'stable_action',
   );
+  t.is(plugin._ribbon_action_elements.size, 1);
+  t.is(plugin._ribbon_action_elements.get('stable'), registered_ribbons[0].ribbon_el);
 });
 
 test('a synchronous action failure is reported without changing ribbon availability', (t) => {

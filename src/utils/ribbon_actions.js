@@ -70,6 +70,8 @@ export function register_ribbon_actions(plugin) {
   }
 
   plugin._registered_ribbon_actions ||= new Map();
+  // Retain native elements for plugin-owned presentation updates.
+  plugin._ribbon_action_elements ||= new Map();
   const registered_ribbons = plugin._registered_ribbon_actions;
 
   for (const { action_key, ribbon_id } of candidates) {
@@ -103,11 +105,12 @@ export function register_ribbon_actions(plugin) {
       ribbon_spec,
     });
 
-    plugin.addRibbonIcon(
+    const ribbon_el = plugin.addRibbonIcon(
       icon_name,
       description,
       callback,
     );
+    plugin._ribbon_action_elements.set(ribbon_id, ribbon_el);
     registered_ribbons.set(ribbon_id, action_key);
   }
 }
