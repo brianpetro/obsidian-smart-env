@@ -4,7 +4,7 @@ Switch embedding models without deleting the embeddings saved for models you've 
 
 ![[environment-built-in-embedding-model-picker-current-documentation-1280x720-desktop-2026-08-06.png]]
 
-*Compare the available built-in models in the model editor.*
+*Compare the expanded built-in model choices directly in the model editor.*
 
 ### Find out why a source was skipped
 
@@ -12,7 +12,7 @@ Search skipped or unexpected items in Environment stats, filter by reason, and i
 
 ![[environment-inspector-skipped-blocks-filter-crop-desktop-publication-srgb-c4826d611ed3-2026-07-29.png]]
 
-*Filter Source Inspector to see which blocks were skipped and inspect their text.*
+*Filter skipped blocks, then inspect the source text behind each result.*
 
 ### Read notifications without losing your place
 
