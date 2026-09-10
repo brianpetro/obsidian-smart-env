@@ -2,9 +2,17 @@
 
 Switch embedding models without deleting the embeddings saved for models you've already used. Local embedding performance has also improved, with more built-in model choices.
 
+![[environment-built-in-embedding-model-picker-current-documentation-1280x720-desktop-2026-08-06.png]]
+
+*Compare the available built-in models in the model editor.*
+
 ### Find out why a source was skipped
 
 Search skipped or unexpected items in Environment stats, filter by reason, and inspect memory and storage use. Re-import a source from Source Inspector, check and repair block embeddings, or optimize stored data with backup validation. Long source paths are no longer excluded by the old 200-character limit during normal use.
+
+![[environment-inspector-skipped-blocks-filter-crop-desktop-publication-srgb-c4826d611ed3-2026-07-29.png]]
+
+*Filter Source Inspector to see which blocks were skipped and inspect their text.*
 
 ### Read notifications without losing your place
 
