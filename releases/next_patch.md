@@ -100,3 +100,7 @@ Open **View more** when you need the details behind an event, then load incoming
 - Release uploads check for required assets and no longer create ZIP files during the upload step.
 - GitHub release requests now use native fetch instead of Axios, with improved request-error handling.
 - Release creation can read and reuse an existing release-notes file.
+
+---
+
+- Updated to version 3.1.3
