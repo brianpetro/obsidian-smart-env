@@ -1,22 +1,28 @@
-### Change models without losing prepared data
+### Switch embedding models without starting over
 
-Switch embedding models without deleting the embeddings saved for models you've already used. Local embedding performance has also improved, with more built-in model choices.
+Change embedding models without deleting data saved for models you have already used. You also get more built-in model choices and faster processing for the default local model.
 
 ![[environment-built-in-embedding-model-picker-current-documentation-1280x720-desktop-2026-08-06.png]]
 
-*Compare the expanded built-in model choices directly in the model editor.*
+*Compare the expanded built-in model choices before choosing what should index your vault.*
 
-### Find out why a source was skipped
+### See what was skipped - and fix it
 
-Search skipped or unexpected items in Environment stats, filter by reason, and inspect memory and storage use. Re-import a source from Source Inspector, check and repair block embeddings, or optimize stored data with backup validation. Long source paths are no longer excluded by the old 200-character limit during normal use.
+Environment stats makes skipped and unexpected items easier to investigate. Search the list, filter by reason, inspect the source behind a result, force a re-import, repair block embeddings, or optimize stored source data with backup validation.
+
+Long source paths no longer get excluded during normal indexing simply because they exceed 200 characters.
 
 ![[environment-inspector-skipped-blocks-filter-crop-desktop-publication-srgb-c4826d611ed3-2026-07-29.png]]
 
-*Filter skipped blocks, then inspect the source text behind each result.*
+*Filter skipped blocks by reason, then inspect the source behind each result.*
 
-### Read notifications without losing your place
+### Keep credentials in secure storage
 
-Open **View more** for event details, then load new events with **Show more**. The feed no longer shifts automatically while you're reading it.
+API keys and legacy OAuth tokens now use shared secure storage, backed by Obsidian's native secret storage where available. Migration checks that secure storage can persist a secret before moving existing credentials.
+
+### A calmer event feed
+
+Open **View more** when you need the details behind an event, then load incoming events with **Show more** when you are ready. New activity no longer shifts the feed while you are reading.
 
 ### Full release notes
 
