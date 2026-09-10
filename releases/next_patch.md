@@ -270,3 +270,6 @@ Improved: drag handling (addresses https://github.com/brianpetro/obsidian-smart-
 
 
 Add input schema enhancements for lookup_list_get_results and project_lookup_list_request
+
+
+Improved: submenu hover functionality to fix navigation between adjacent sub-menus
