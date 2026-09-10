@@ -16,5 +16,9 @@ export async function pre_process(params) {
   params.to_item = { ...embedding };
   // default use similarity as score algorithm
   if(!params.score_algo_key) params.score_algo_key = 'similarity';
+  // Scoring settings belong to this retrieval, not to the candidate's collection.
+  if (params.score_settings == null) {
+    params.score_settings = this.settings?.actions?.[params.score_algo_key] || {};
+  }
   return params;
 }

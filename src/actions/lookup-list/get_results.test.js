@@ -1,4 +1,5 @@
 import test from 'ava';
+import { pre_process } from './pre_process.js';
 import { collection_tool_action_schemas } from '../../utils/collection_tool_action_schemas.js';
 import {
   action_scope,
@@ -313,4 +314,26 @@ test('lookup tool metadata targets LookupList and clears the direct schema', (t)
     'total',
     'results',
   ]);
+});
+
+test('Lookup preprocessing supplies its own settings and keeps explicit empty overrides', async t => {
+  const settings = Object.freeze({ key_weights: { 'Projects/': 3 } });
+  const scope = {
+    settings: { actions: { weight_by_key_frontmatter: settings } },
+    env: {
+      smart_sources: { embed_model: { async embed() { return { vec: [1, 0] }; } } },
+      settings: { connections_lists: { actions: { weight_by_key_frontmatter: { key_weights: { 'Projects/': 9 } } } } },
+    },
+  };
+  const params = { query: 'project', score_algo_key: 'weight_by_key_frontmatter' };
+  await pre_process.call(scope, params);
+  t.is(params.score_settings, settings);
+  const empty = Object.freeze({});
+  const explicit = {
+    query: 'project',
+    score_algo_key: 'weight_by_key_frontmatter',
+    score_settings: empty,
+  };
+  await pre_process.call(scope, explicit);
+  t.is(explicit.score_settings, empty);
 });
