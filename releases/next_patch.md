@@ -273,3 +273,6 @@ Add input schema enhancements for lookup_list_get_results and project_lookup_lis
 
 
 Improved: submenu hover functionality to fix navigation between adjacent sub-menus
+
+
+Improved: settings inclusion handled before scoring algorithm called so score algo can be used by multiple caller types with different configurations
