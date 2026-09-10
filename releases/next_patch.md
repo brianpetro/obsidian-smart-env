@@ -1,278 +1,88 @@
-feat: support long source paths with shared sharded persistence
-
-- Removed the legacy 200-character runtime exclusion from the core Obsidian filesystem adapter.
-- Kept the V2 per-source filename limit only inside the one-time legacy migration path.
-
-fix: own embedding-store unload lifecycle in core
-
-- Flush and clear source and block embedding stores during environment unload.
-
-
-
-
-feat: Update badge HTML generation to use aria-label for tooltips and optimize icon display
-
-
-Make named context badges clickable in tree
-Update tree if included named context is updated
-
-
-Fixed: Ollama chat adapter should work regardless of whether model info contains context limit info.
-
-Improved Smart Plugins install flow: Fewer notifications; Added links to release pages
-
-
-Added: `btn_event_key` with `btn_event_payload` as alternative to `btn_callback` in event payloads
-
-
-Improved: removal in context tree should allow multiple subsequent removals without having to wait on background precesses and rerendering.
-
-
-Improved: SmartEnv config version handling and add tests for environment creation lifecycle
-
-
-Improved: remove unused collection settings component and update references in smart_env_config
-
-
-Improved: added missing context item handling: missing items are now highlighted in the builder and a notification is emitted with option to remove the missing item
-
-
-Improved: refactor context remove path utilities and add tests for normalization and matching logic
-
-
-Improved: add last updated date to the latest release markdown output
-
-
-Improved: refactor upload_release_assets to remove zip creation and enforce required asset checks
-
-
-Improved: removed extraneous model dependencies
-
-
-refactor: remove axios dependency and implement fetch for GitHub API requests
-
-- Removed axios from dependencies and refactored the code to use the native fetch API for making GitHub API requests.
-- Added a function to read existing release notes from a file.
-- Updated the release creation process to optionally use existing release notes.
-- Enhanced error handling for GitHub API requests.
-- Adjusted asset upload logic to ensure required assets are present.
-
-
-Improved: streamline plugin installation behavior by removing unnecessary state checks
-
-
-Improved: Core context copy now runs queued source re-imports before compiling direct clipboard exports and emits an info notice only when queued changes exist.
-
-
-Improved: Smart Context: added current file indication to output and link tree
-
-
-Added: re-import wait time setting to Smart Environment settings.
-
-- Added configurable debounce timing for queue saves in Collection and EventLogs (reduce event logs save frequency to improve performance)
-
-
-
-improved: canvas file link parsing
-
-
-fixed: used new Obsidian protocol API
-
-- Notifications improved:
-	- Added "View more" button to notifications to open the events modal with the details
-	- Added "Show more" button to notifications/events feed modal instead of auto-rendering new events to prevent "jank" when viewing
-
-added: implement read_binary method to read files as binary bytes
-
-
-added: implement help link functionality and mute button visibility control in notifications
-
-
-added: implement menu registration and building functions for enhanced menu actions
-
-
-added: implement gitignore exclusions and enhance folder exclusion functionality
-
-
-added: enhance merge_template function to include section in key variable if present in link (mediated through context_item data)
-
-
-added: implement context actions for clearing context, copying link tree, and copying text to clipboard as menu actions
-
-
-Added: context item menu actions
-Migrated: SMart Env status bar menu to new menu actions architecture
-
-
-Added: context tree leaf renders source menu
-
-
-Improved Smart Plugins list modal
-
-
-Add resolve_menu_actions function and corresponding tests
-
-
-- Update default settings to use arrays for file and folder exclusions.
-- Normalize exclusion lists in utils to ensure consistent handling.
-- Add tests for exclusion logic.
-- Enhance CSS for fuzzy header display.
-
-
-Update Transformers library version to 4.2.0 for improved functionality
-
-
-Add embed_input_action_key getter to Bases, Canvas, and Rendered source adapters
-
-
-improved: get_embed_input delegates to actions architecture for improved flexibility
-
-
-Added: command and ribbon action registration
-
-
-Added generic release notes opener as command action (migrating away from ItemView registering it's own commands)
-
-
-Improved: Prevent erroneous event values from crashing modal/renderer
-
-
-Fixed: item view registrations should register before workspace rendering so that the icons display properly
-
-
-Improved: Add params handling for menu actions and ribbon actions to support event propagation
-
-
-Improved: Implement drag-and-drop functionality with Smart item identity handling
-
-
-Improved: Enhance batch size handling and add batch window and sorting configurations for TransformersIframeEmbeddingModelAdapter
-
-
-Improved: Refactor command registration for Smart Plugins and Environment Status View, adding parameter handling and tests
-
-Improved: source persistence and vector files
-
-- Added `AjsonShardedSourcesDataAdapter` with numeric sequential replay, bounded append rotation, explicit compaction, and legacy base-last commit protection.
-- Changed source shard rotation and compaction from record-count limits to byte limits
-- Moved collection-scoped binary vector loading, durable `file_i` refs, vector-before-ref checkpoints, and typed-array similarity into Smart Env v2.
-
-
-Add memory usage calculation for embedding vectors and update env_stats display
-
-
-Added: worker implementation for better default built-in model performance.
-
-
-Improved: embedding model handling: make switching between models possible without losing embedding data
-
-
-feat: support long source paths and improve embedding unload lifecycle
-
-- Removed the 200-character limit for source paths in the filesystem adapter.
-- Updated the unload process to flush and clear embedding stores during environment unload.
-- Enhanced tests to validate handling of long source paths and legacy filename exclusions.
-
-
-Improved: New v2 context builder UI
-
-
-Improved environment statistics handling and source inspection
-
-Improved: Environment data export
-
-Add lookup_list_get_results action and integrate into settings configuration
-
-
-Added: block read tool action
-
-
-Improved: environment stats inspector with detailed diagnostics and improved UI
-
-- Added a new inspector section for inspecting skipped and unexpected items in collections.
-- Implemented search functionality and reason filtering in the inspector.
-- Improved styling for buttons and inputs within the inspector for better accessibility and usability.
-- Updated collection cards to allow inspection of items, with appropriate aria attributes for accessibility.
-- Enhanced loading states and error handling in the inspector.
-- Refactored related functions for better code organization and readability.
-
-
-Improved: refine block embedding logic to exclude deselected blocks and added tests for embedding selection
-
-
-Added: source data optimization functionality with backup validation and error handling
-
-
-Added: force re-import functionality to source inspector
-
-
-move vec index logic to correct scope
-
-
-Enhance context_to_md_tree to support filtering and add corresponding tests
-
-
-Added: Implement source data optimization UI in environment stats modal
-
-
-Add env status menu action to status bar and add buttons to status view
-
-
-Improved: embedding save logic
-
-
-Improved: context_suggest_sources with source filter support
-
-
-Improved: include API response JSON in embedding error events
-
-
-Added: implement reindex_embeddings method for active embedding model
-
-
-Improved: added additional Transformers models and revision support
-
-
-Improved: enhance model settings UI and functionality with delete confirmation and better layout
-
-
-Updated: Smart Environment v3
-
-
-Improved: update version numbers and remove exclusion metadata from context items
-
-
-Improved: vector memory/capacity reservation and error handling in embeddings pipeline
-
-
-Improved: implement SmartSecrets and ObsidianSecretsAdapter for secure storage management
-
-
-Added: top_k action for improved cosine similarity across all embedded items in a collection
-
-
-Improved: secure storage management
-
-
-Improved: migrate legacy OAuth tokens to secure storage and refactor related functions
-
-
-Added: vector file metrics in environment stats modal
-
-
-Added: block embedding integrity checks and repair functionality in environment stats
-
-
-Added smart_source_read tool action for CLI/MCP integration
-
-
-Improved: drag handling (addresses https://github.com/brianpetro/obsidian-smart-connections/issues/1367)
-
-
-Add input schema enhancements for lookup_list_get_results and project_lookup_list_request
-
-
-Improved: submenu hover functionality to fix navigation between adjacent sub-menus
-
-
-Improved: settings inclusion handled before scoring algorithm called so score algo can be used by multiple caller types with different configurations
+### Change models without losing prepared data
+
+Switch embedding models without deleting the embeddings saved for models you've already used. Local embedding performance has also improved, with more built-in model choices.
+
+### Find out why a source was skipped
+
+Search skipped or unexpected items in Environment stats, filter by reason, and inspect memory and storage use. Re-import a source from Source Inspector, check and repair block embeddings, or optimize stored data with backup validation. Long source paths are no longer excluded by the old 200-character limit during normal use.
+
+### Read notifications without losing your place
+
+Open **View more** for event details, then load new events with **Show more**. The feed no longer shifts automatically while you're reading it.
+
+### Full release notes
+
+#### Models and indexing
+
+- Switch embedding models without deleting previously saved embedding data.
+- The default built-in embedding model now uses background-worker processing for improved performance.
+- Improved local embedding batch-size handling and added batch-window and sorting configuration.
+- Added more Transformers embedding models and support for selecting model revisions.
+- Improved the model settings layout and added confirmation before deleting a model configuration.
+- Added a way to re-index embeddings for the active model.
+- Deselected blocks are excluded from embedding preparation, with automated checks for block selection.
+- Improved embedding saves, memory-capacity reservation, and error handling during embedding processing.
+- Pending source and block embeddings are saved before their in-memory stores are cleared when Smart Environment unloads. This lifecycle is now handled in Core.
+
+#### Sources and stored data
+
+- Removed the old 200-character source-path exclusion during normal use, with long paths supported through shared, sharded storage. The V2 per-source filename limit remains only in the one-time legacy migration.
+- Improved file-link parsing in Canvas files.
+- Added .gitignore exclusions and improved folder-exclusion handling.
+- Standardized file and folder exclusion settings as lists and normalized how they are handled.
+- Added **Re-import wait time** in Smart Environment settings to control the delay before automatic re-import.
+- Added configurable delays for queued collection and event-log saves, with less frequent event-log writes.
+- Improved Environment data export.
+
+#### Diagnostics and recovery
+
+- Improved Environment statistics and source inspection, including memory usage for embedding vectors and vector-file storage metrics.
+- Added an inspector for skipped and unexpected source and block items, with search and reason filters.
+- Collection cards now open item inspection. Inspector buttons, inputs, and accessibility labels have been improved, along with loading states and error handling.
+- Source Inspector now offers a force re-import option.
+- Environment stats now includes block-embedding integrity checks and repair controls.
+- Added source-data optimization to Environment stats, including backup validation and error handling.
+- Embedding-error events now include the provider's API response JSON for troubleshooting.
+
+#### Credentials
+
+- API keys and other secrets now use shared secure storage in Core, with Obsidian-native secret storage where available. This support is no longer Pro-only.
+- Improved secret migration and legacy OAuth-token handling. Migration now checks that the secure-storage adapter can persist secrets before proceeding.
+
+#### Notifications and navigation
+
+- Notifications now offer **View more** to open event details.
+- The events feed uses **Show more** to load new events instead of shifting the content automatically.
+- Added notification help links and control over whether a notification shows a mute button.
+- Invalid event values no longer crash event dialogs or their displays.
+- Improved badge icons and added accessible tooltip labels.
+- Plugin installation uses fewer notifications, links to release pages, and fewer unnecessary installation-state checks.
+- Improved the Smart Plugins list dialog and header styling in fuzzy-search dialogs.
+- Updated the Environment status-bar menu, added an Environment status option, and added buttons to the status view.
+- Added a shared command for opening release notes, replacing separate per-view command registration.
+- Fixed missing view icons by registering views before the workspace renders.
+- Fixed hover navigation between adjacent submenus.
+- Updated Obsidian-link handling to the newer protocol API.
+
+#### Shared infrastructure and maintenance
+
+- Added support for reading files as binary bytes.
+- Added sharded source storage with numeric replay order, bounded append-file rotation, explicit compaction, and protection for legacy base-last commits. Rotation and compaction limits now use byte sizes instead of record counts.
+- Core now handles collection-level binary vector loading and typed-array similarity calculations. Durable vector references (`file_i`) are saved only after the vector data they reference.
+- Corrected the scope of vector-index operations and added shared retrieval of the strongest cosine-similarity matches across all embedded items in a collection.
+- Standardized embedding-input preparation through shared actions, with dedicated handling for Bases, Canvas, and rendered sources.
+- Updated Transformers to version 4.2.0 and removed unused model dependencies.
+- Standardized menu registration, resolution, and building, and added shared registration for Command Palette and ribbon actions. Added automated checks for menu behavior.
+- Improved parameter and event handling for menus, ribbon actions, Smart Plugins commands, and Environment Status View commands, with automated checks.
+- Notification buttons can now use `btn_event_key` and `btn_event_payload` instead of `btn_callback`.
+- Improved configuration-version handling and added automated checks for Environment creation.
+- Removed an unused collection-settings component, updated shared configuration references, and simplified the internal organization of stats inspection.
+- Added automated checks for exclusion rules, long source paths, and legacy filename exclusions.
+- Updated to Smart Environment v3 and refreshed related version metadata.
+
+#### Release publishing
+
+- Generated release notes now include a last-updated date.
+- Release uploads check for required assets and no longer create ZIP files during the upload step.
+- GitHub release requests now use native fetch instead of Axios, with improved request-error handling.
+- Release creation can read and reuse an existing release-notes file.
