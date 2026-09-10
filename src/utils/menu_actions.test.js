@@ -450,3 +450,294 @@ test('menu discovery rejects unsupported placement values', (t) => {
     },
   );
 });
+
+/** Minimal native-menu surface for testing hover lifecycle calls, not rendering. */
+function create_hover_menu() {
+  const menu = create_menu();
+  const add_item = menu.addItem;
+  const listeners = [];
+
+  Object.assign(menu, {
+    currentSubmenu: null,
+    selected: -1,
+    visible: false,
+    calls: [],
+    listeners,
+    dom: {
+      addEventListener(type, callback, capture) {
+        listeners.push({ type, callback, capture });
+      },
+    },
+    addItem(callback) {
+      return add_item.call(this, (item) => {
+        item.dom = {
+          closest(selector) {
+            return selector === '.menu-item' ? this : null;
+          },
+        };
+        item.setSubmenu = () => {
+          item.submenu = create_hover_menu();
+          return item.submenu;
+        };
+        callback(item);
+      });
+    },
+    closeSubmenu() {
+      this.calls.push('close');
+      if (this.currentSubmenu) {
+        this.currentSubmenu.closeSubmenu();
+        this.currentSubmenu.visible = false;
+      }
+      this.currentSubmenu = null;
+    },
+    select(index) {
+      this.calls.push(['select', index]);
+      this.selected = index;
+    },
+    openSubmenu(item) {
+      this.calls.push(['open', item.title]);
+      this.currentSubmenu = item.submenu;
+      item.submenu.visible = true;
+    },
+  });
+
+  return menu;
+}
+
+function create_hover_fixture() {
+  const menu = create_hover_menu();
+  const env = {
+    config: {
+      actions: {
+        target_action: {
+          action() {},
+          menus: {
+            'test:menu': {
+              build() {
+                this.menu.addItem((item) => {
+                  item.setTitle('Change target');
+                  const submenu = item.setSubmenu();
+                  ['History', 'Blocks'].forEach((title) => {
+                    submenu.addItem((child) => {
+                      child.setTitle(title);
+                      child.setSubmenu().addItem((leaf) => {
+                        leaf.setTitle(`${title} target`);
+                      });
+                    });
+                  });
+                });
+              },
+            },
+          },
+        },
+      },
+    },
+  };
+  const scope = { env };
+  build_menu(env, 'test:menu', menu, scope);
+  const target_item = menu.items[0];
+  const target_menu = target_item.submenu;
+  const [history, blocks] = target_menu.items;
+
+  return { env, scope, menu, target_item, target_menu, history, blocks };
+}
+
+function dispatch_menu_hover(menu, target, type = 'mouseover') {
+  const event = { target };
+  menu.listeners
+    .filter((listener) => listener.type === type)
+    .forEach((listener) => listener.callback(event))
+  ;
+}
+
+function set_open_submenu(menu, item) {
+  menu.selected = menu.items.indexOf(item);
+  menu.currentSubmenu = item.submenu;
+  item.submenu.visible = true;
+}
+
+test('adjacent submenus switch in both directions without reopening the parent', (t) => {
+  const { menu, target_item, target_menu, history, blocks } = create_hover_fixture();
+  set_open_submenu(menu, target_item);
+  set_open_submenu(target_menu, history);
+
+  for (const [previous, next] of [[history, blocks], [blocks, history], [history, blocks]]) {
+    target_menu.calls.length = 0;
+    dispatch_menu_hover(target_menu, next.dom);
+
+    t.is(target_menu.currentSubmenu, next.submenu);
+    t.false(previous.submenu.visible);
+    t.true(next.submenu.visible);
+    t.is(target_menu.selected, target_menu.items.indexOf(next));
+    t.deepEqual(target_menu.calls, [
+      'close',
+      ['select', target_menu.items.indexOf(next)],
+      ['open', next.title],
+    ]);
+    t.is(menu.currentSubmenu, target_menu);
+    t.true(target_menu.visible);
+  }
+});
+
+test('pointerover followed by mouseover switches a submenu only once', (t) => {
+  const { target_menu, history, blocks } = create_hover_fixture();
+  set_open_submenu(target_menu, history);
+  const icon = { closest: () => blocks.dom };
+
+  dispatch_menu_hover(target_menu, icon, 'pointerover');
+  dispatch_menu_hover(target_menu, icon, 'mouseover');
+
+  t.is(target_menu.currentSubmenu, blocks.submenu);
+  t.deepEqual(target_menu.calls, ['close', ['select', 1], ['open', 'Blocks']]);
+  t.true(target_menu.listeners.every((listener) => listener.capture === true));
+});
+
+test('first-open timing and hovering the already-open item remain native', (t) => {
+  const { target_menu, history } = create_hover_fixture();
+
+  dispatch_menu_hover(target_menu, history.dom);
+  t.deepEqual(target_menu.calls, []);
+  t.is(target_menu.currentSubmenu, null);
+
+  set_open_submenu(target_menu, history);
+  dispatch_menu_hover(target_menu, history.dom);
+  t.deepEqual(target_menu.calls, []);
+  t.is(target_menu.currentSubmenu, history.submenu);
+});
+
+test('nested hover events leave ancestor selections and child clicks intact', async (t) => {
+  const { menu, target_item, target_menu, history, blocks } = create_hover_fixture();
+  set_open_submenu(menu, target_item);
+  set_open_submenu(target_menu, history);
+
+  // Capture reaches ancestors first, but only the row's own menu should switch.
+  dispatch_menu_hover(menu, blocks.dom, 'pointerover');
+  dispatch_menu_hover(target_menu, blocks.dom, 'pointerover');
+  const leaf = blocks.submenu.items[0];
+  dispatch_menu_hover(menu, leaf.dom);
+  dispatch_menu_hover(target_menu, leaf.dom);
+  dispatch_menu_hover(blocks.submenu, leaf.dom);
+
+  let click_count = 0;
+  leaf.onClick(() => { click_count += 1; });
+  await leaf.on_click();
+
+  t.deepEqual(menu.calls, []);
+  t.is(menu.currentSubmenu, target_menu);
+  t.is(menu.selected, 0);
+  t.is(target_menu.currentSubmenu, blocks.submenu);
+  t.is(target_menu.selected, 1);
+  t.is(click_count, 1);
+});
+
+test('disabled adjacent submenu items do not override native handling', (t) => {
+  const { target_menu, history, blocks } = create_hover_fixture();
+  set_open_submenu(target_menu, history);
+  blocks.setDisabled(true);
+
+  dispatch_menu_hover(target_menu, blocks.dom, 'pointerover');
+  dispatch_menu_hover(target_menu, blocks.dom);
+
+  t.deepEqual(target_menu.calls, []);
+  t.is(target_menu.currentSubmenu, history.submenu);
+  t.false(blocks.submenu.visible);
+});
+
+test('hovering an ordinary sibling closes the old child without opening a menu', (t) => {
+  const { target_menu, history } = create_hover_fixture();
+  target_menu.addItem((item) => item.setTitle('Refresh'));
+  set_open_submenu(target_menu, history);
+
+  dispatch_menu_hover(target_menu, target_menu.items[2].dom);
+
+  t.deepEqual(target_menu.calls, ['close', ['select', 2]]);
+  t.is(target_menu.currentSubmenu, null);
+  t.false(history.submenu.visible);
+});
+
+test('padding, separators, and unrelated rows do not close an open submenu', (t) => {
+  const { target_menu, history } = create_hover_fixture();
+  target_menu.addSeparator();
+  set_open_submenu(target_menu, history);
+
+  for (const target of [null, {}, { closest: () => null }, { closest: () => ({}) }]) {
+    dispatch_menu_hover(target_menu, target);
+  }
+
+  t.deepEqual(target_menu.calls, []);
+  t.is(target_menu.currentSubmenu, history.submenu);
+});
+
+test('composed builds bind new child menus without duplicating existing handlers', (t) => {
+  const { env, scope, menu, target_menu } = create_hover_fixture();
+  env.config.actions.more_action = {
+    action() {},
+    menus: {
+      'test:more': {
+        build() {
+          this.menu.addItem((item) => {
+            const submenu = item.setSubmenu();
+            submenu.addItem((child) => child.setSubmenu());
+          });
+        },
+      },
+    },
+  };
+
+  build_menu(env, 'test:more', menu, scope);
+  build_menu(env, 'test:more', menu, scope);
+
+  t.is(menu.listeners.length, 2);
+  t.is(target_menu.listeners.length, 2);
+  t.is(menu.items[1].submenu.listeners.length, 2);
+  t.is(menu.items[2].submenu.listeners.length, 2);
+  t.is(target_menu.items[0].submenu.listeners.length, 0);
+});
+
+test('closing a branch closes its descendants and allows the branch to reopen', (t) => {
+  const { menu, target_item, target_menu, history, blocks } = create_hover_fixture();
+  menu.addItem((item) => {
+    item.setTitle('Other');
+    item.setSubmenu().addItem((child) => child.setTitle('Other action'));
+  });
+  const other = menu.items[1];
+  set_open_submenu(menu, target_item);
+  set_open_submenu(target_menu, history);
+
+  dispatch_menu_hover(menu, other.dom);
+  t.false(target_menu.visible);
+  t.false(history.submenu.visible);
+  t.is(target_menu.currentSubmenu, null);
+
+  dispatch_menu_hover(menu, target_item.dom);
+  t.true(target_menu.visible);
+  t.false(other.submenu.visible);
+  // The first child still opens natively after re-entering its parent.
+  set_open_submenu(target_menu, blocks);
+  dispatch_menu_hover(target_menu, history.dom);
+  t.is(target_menu.currentSubmenu, history.submenu);
+  t.false(blocks.submenu.visible);
+});
+
+test('hosts without the required native menu capabilities are left untouched', (t) => {
+  for (const capability of ['dom', 'closeSubmenu', 'select', 'openSubmenu']) {
+    const { env, scope } = create_hover_fixture();
+    const menu = create_hover_menu();
+    delete menu[capability];
+
+    t.notThrows(() => build_menu(env, 'test:menu', menu, scope));
+    t.is(menu.listeners.length, 0);
+    t.is(menu.items[0].submenu.listeners.length, 2);
+  }
+});
+
+test('foreign scopes do not attach handlers to an existing menu', (t) => {
+  const { env } = create_hover_fixture();
+  const menu = create_hover_menu();
+  menu.addItem((item) => item.setSubmenu());
+
+  build_menu(env, 'test:menu', menu, { env: { config: { actions: {} } } });
+
+  t.is(menu.listeners.length, 0);
+  t.is(menu.items.length, 1);
+});

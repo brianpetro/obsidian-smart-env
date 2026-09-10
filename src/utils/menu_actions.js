@@ -4,6 +4,8 @@ import {
   run_action_entry,
 } from 'smart-environment';
 
+const submenu_hover_menus = new WeakSet();
+
 /**
  * Build configured menu entries for a menu instance.
  *
@@ -32,6 +34,8 @@ export function build_menu(env, menu_key, menu, scope, params = {}) {
   menu_contexts.forEach((menu_ctx) => {
     build_menu_entry(menu_ctx);
   });
+
+  if (menu_contexts.length) bind_submenu_hover(menu);
 
   return menu;
 }
@@ -137,6 +141,56 @@ function resolve_menu_contexts(env, menu_key, menu, scope, params) {
     })
     .filter(should_show)
   ;
+}
+
+/**
+ * Keep an open submenu from blocking hover navigation to an adjacent item.
+ *
+ * Use the native selection and submenu lifecycle so positioning, keyboard
+ * navigation, and dismissal remain owned by Obsidian. Capture only switches
+ * away from an open child; let native handling open the first submenu.
+ *
+ * @param {object} menu
+ */
+function bind_submenu_hover(menu) {
+  if (!Array.isArray(menu?.items)) return;
+
+  const submenu_items = menu.items.filter((item) => item?.submenu);
+  if (!submenu_items.length) return;
+
+  // Revisit children when multiple logical menus compose into one menu.
+  submenu_items.forEach((item) => bind_submenu_hover(item.submenu));
+
+  if (
+    submenu_hover_menus.has(menu)
+    || typeof menu.dom?.addEventListener !== 'function'
+    || typeof menu.closeSubmenu !== 'function'
+    || typeof menu.select !== 'function'
+    || typeof menu.openSubmenu !== 'function'
+  ) return;
+
+  const on_menu_hover = (event) => {
+    const item_dom = event.target?.closest?.('.menu-item');
+    if (!item_dom) return;
+
+    // A nested menu's events must not change an ancestor menu's selection.
+    const item_index = menu.items.findIndex((item) => item?.dom === item_dom);
+    const item = menu.items[item_index];
+    if (
+      !item
+      || item.disabled
+      || !menu.currentSubmenu
+      || menu.currentSubmenu === item.submenu
+    ) return;
+
+    menu.closeSubmenu();
+    menu.select(item_index);
+    if (item.submenu) menu.openSubmenu(item);
+  };
+
+  menu.dom.addEventListener('pointerover', on_menu_hover, true);
+  menu.dom.addEventListener('mouseover', on_menu_hover, true);
+  submenu_hover_menus.add(menu);
 }
 
 function build_menu_entry(menu_ctx) {
