@@ -70,10 +70,10 @@ import { plugin_open_release_notes as plugin_open_release_notes_action, commands
 import { similarity as similarity_action, settings_config as similarity_action_settings_config, display_name as similarity_action_display_name, display_description as similarity_action_display_description } from './src/actions/similarity.js';
 import { smart_block_read as smart_block_read_action, display_name as smart_block_read_action_display_name, display_description as smart_block_read_action_display_description, action_scope as smart_block_read_action_action_scope, tool as smart_block_read_action_tool, input_schema as smart_block_read_action_input_schema, output_schema as smart_block_read_action_output_schema } from './src/actions/smart-block/read.js';
 import { smart_source_read as smart_source_read_action, display_name as smart_source_read_action_display_name, display_description as smart_source_read_action_display_description, action_scope as smart_source_read_action_action_scope, tool as smart_source_read_action_tool, input_schema as smart_source_read_action_input_schema, output_schema as smart_source_read_action_output_schema } from './src/actions/smart-source/read.js';
-import { source_get_embed_input_base as source_get_embed_input_base_action, display_name as source_get_embed_input_base_action_display_name } from './src/actions/source/get_embed_input/base.js';
-import { source_get_embed_input_canvas as source_get_embed_input_canvas_action, display_name as source_get_embed_input_canvas_action_display_name } from './src/actions/source/get_embed_input/canvas.js';
-import { source_get_embed_input_rendered as source_get_embed_input_rendered_action, display_name as source_get_embed_input_rendered_action_display_name } from './src/actions/source/get_embed_input/rendered.js';
+import { source_base_get_embed_input as source_base_get_embed_input_action, display_name as source_base_get_embed_input_action_display_name } from './src/actions/source/base/get_embed_input.js';
+import { source_canvas_get_embed_input as source_canvas_get_embed_input_action, display_name as source_canvas_get_embed_input_action_display_name } from './src/actions/source/canvas/get_embed_input.js';
 import { source_open as source_open_action, menus as source_open_action_menus } from './src/actions/source/open.js';
+import { source_rendered_get_embed_input as source_rendered_get_embed_input_action, display_name as source_rendered_get_embed_input_action_display_name } from './src/actions/source/rendered/get_embed_input.js';
 import { top_k as top_k_action } from './src/actions/top_k.js';
 
 
@@ -153,10 +153,10 @@ export const smart_env_config = {
     similarity: { action: similarity_action, settings_config: similarity_action_settings_config, display_name: similarity_action_display_name, display_description: similarity_action_display_description, version: "1.0.3" },
     smart_block_read: { action: smart_block_read_action, display_name: smart_block_read_action_display_name, display_description: smart_block_read_action_display_description, action_scope: smart_block_read_action_action_scope, tool: smart_block_read_action_tool, input_schema: smart_block_read_action_input_schema, output_schema: smart_block_read_action_output_schema, version: "1.0.3" },
     smart_source_read: { action: smart_source_read_action, display_name: smart_source_read_action_display_name, display_description: smart_source_read_action_display_description, action_scope: smart_source_read_action_action_scope, tool: smart_source_read_action_tool, input_schema: smart_source_read_action_input_schema, output_schema: smart_source_read_action_output_schema, version: "1.0.3" },
-    source_get_embed_input_base: { action: source_get_embed_input_base_action, display_name: source_get_embed_input_base_action_display_name, version: "1.0.3" },
-    source_get_embed_input_canvas: { action: source_get_embed_input_canvas_action, display_name: source_get_embed_input_canvas_action_display_name, version: "1.0.3" },
-    source_get_embed_input_rendered: { action: source_get_embed_input_rendered_action, display_name: source_get_embed_input_rendered_action_display_name, version: "1.0.3" },
+    source_base_get_embed_input: { action: source_base_get_embed_input_action, display_name: source_base_get_embed_input_action_display_name, version: "1.0.3" },
+    source_canvas_get_embed_input: { action: source_canvas_get_embed_input_action, display_name: source_canvas_get_embed_input_action_display_name, version: "1.0.3" },
     source_open: { action: source_open_action, menus: source_open_action_menus, version: "1.0.3" },
+    source_rendered_get_embed_input: { action: source_rendered_get_embed_input_action, display_name: source_rendered_get_embed_input_action_display_name, version: "1.0.3" },
     top_k: { action: top_k_action, version: "1.0.3" }
   }
 };

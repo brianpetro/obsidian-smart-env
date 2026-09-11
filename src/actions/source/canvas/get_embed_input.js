@@ -1,5 +1,3 @@
-import { source_get_embed_input_markdown } from 'smart-sources/actions/get_embed_input/markdown.js';
-
 export const display_name = 'Get Canvas source embed input';
 
 /**
@@ -10,6 +8,6 @@ export const display_name = 'Get Canvas source embed input';
  * @param {object} [params={}]
  * @returns {Promise<string>}
  */
-export async function source_get_embed_input_canvas(params = {}) {
-  return await source_get_embed_input_markdown.call(this, params);
+export async function source_canvas_get_embed_input(params = {}) {
+  return await this.actions.source_markdown_get_embed_input(params);
 }

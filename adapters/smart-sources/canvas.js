@@ -25,7 +25,7 @@ export function parse_canvas_json({ content } = {}) {
  */
 export class CanvasSourceContentAdapter extends FileSourceContentAdapter {
   static extensions = ['canvas'];
-  static embed_input_action_key = 'source_get_embed_input_canvas';
+  static embed_input_action_key = 'source_canvas_get_embed_input';
 
   get embed_input_action_key() {
     return this.constructor.embed_input_action_key;

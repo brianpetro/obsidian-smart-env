@@ -10,7 +10,7 @@ test('get_embed_input inherits the strict core block contract', async t => {
     CoreSmartBlock.prototype.get_embed_input,
   );
 
-  const action_key = 'block_get_embed_input_markdown';
+  const action_key = 'block_markdown_get_embed_input';
   const block_adapter = { embed_input_action_key: action_key };
   let unused_reads = 0;
   const configured_actions = {
@@ -76,7 +76,7 @@ test('get_embed_input rejects a missing block adapter action key', async t => {
 });
 
 test('get_embed_input rejects a missing configured block action', async t => {
-  const action_key = 'block_get_embed_input_markdown';
+  const action_key = 'block_markdown_get_embed_input';
   const block = {
     key: 'Notes/Test.md#Heading',
     block_adapter: { embed_input_action_key: action_key },

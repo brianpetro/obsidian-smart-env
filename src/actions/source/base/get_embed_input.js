@@ -7,7 +7,7 @@ export const display_name = 'Get Base source embed input';
  * @this {import('smart-sources').SmartSource}
  * @returns {Promise<string>}
  */
-export async function source_get_embed_input_base() {
+export async function source_base_get_embed_input() {
   this._embed_input = '';
   return '';
 }

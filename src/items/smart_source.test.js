@@ -10,7 +10,7 @@ test('get_embed_input inherits the strict core source contract', async t => {
     CoreSmartSource.prototype.get_embed_input,
   );
 
-  const action_key = 'source_get_embed_input_markdown';
+  const action_key = 'source_markdown_get_embed_input';
   const source_adapter = { embed_input_action_key: action_key };
   let unused_reads = 0;
   const configured_actions = {
@@ -76,7 +76,7 @@ test('get_embed_input rejects a missing source adapter action key', async t => {
 });
 
 test('get_embed_input rejects a missing configured source action', async t => {
-  const action_key = 'source_get_embed_input_markdown';
+  const action_key = 'source_markdown_get_embed_input';
   const source = {
     key: 'Notes/Test.md',
     source_adapter: { embed_input_action_key: action_key },
