@@ -35,6 +35,11 @@ export const provider_options = {
       disabled: true,
     },
     {
+      label: 'PRO: Groq (cloud)',
+      value: 'groq',
+      disabled: true,
+    },
+    {
       label: 'PRO: xAI Grok (cloud)',
       value: 'xai',
       disabled: true,
