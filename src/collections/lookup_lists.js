@@ -3,24 +3,6 @@ import { LookupList } from '../items/lookup_list.js';
 import { murmur_hash_32_alphanumeric } from 'smart-utils/create_hash.js';
 
 export const settings_config = {
-  get_results_action_key: {
-    name: "Lookup retrieval strategy",
-    type: "dropdown",
-    description: "Choose the action used to retrieve and rank Lookup results.",
-    options_callback: (scope) => {
-      return Object.entries(scope.env.config.actions)
-        .filter(([action_key]) => {
-          return action_key === 'lookup_list_get_results'
-            || action_key.startsWith('lookup_list_get_results_')
-          ;
-        })
-        .map(([value, action]) => ({
-          value,
-          name: action.display_name || value,
-        }))
-      ;
-    }
-  },
   results_collection_key: {
     name: "Lookup results type",
     type: "dropdown",
@@ -42,26 +24,29 @@ export const settings_config = {
 export class LookupLists extends Collection {
   static get default_settings() {
     return {
-      get_results_action_key: 'lookup_list_get_results',
       results_collection_key: 'smart_blocks',
-      score_algo_key: 'similarity',
       results_limit: 20,
     };
   }
   static version = 0.01;
 
-  new_lookup_list({query, filter}) {
-    if (!query || typeof query !== 'string' || !query.trim()) {
+  new_lookup_list({ query, hypothetical_document, results_collection_key, filter }) {
+    if (query !== undefined && (typeof query !== 'string' || !query.trim())) {
       throw new Error('LookupLists.new_item requires a non-empty query string.');
+    }
+    if (query === undefined && !hypothetical_document) {
+      throw new Error('LookupLists.new_lookup_list requires query or hypothetical_document.');
     }
 
     const date = format_ymd(new Date());
-    const hash = murmur_hash_32_alphanumeric(query);
-    const key = `${date}+${hash}`;
+    // Document-only tool scopes are detached. Hash the input without retaining it in data.
+    const identity = query ?? JSON.stringify([results_collection_key, hypothetical_document.path, hypothetical_document.content]);
+    const hash = murmur_hash_32_alphanumeric(identity);
+    const key = `${date}+${query === undefined ? 'hyde-' : ''}${hash}`;
 
     return new this.item_type(this.env, {
       key,
-      query,
+      ...(query === undefined ? {} : { query }),
       filter,
     });
   }

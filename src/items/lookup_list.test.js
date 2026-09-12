@@ -129,3 +129,35 @@ test('get_results includes the query in the lookup event', async (t) => {
     payload: { query },
   }]);
 });
+
+
+test('Lookup does not run saved post-processing actions', async t => {
+  const results = [];
+  const scope = {
+    env: {},
+    settings: { lookup_post_process: 'chat_rank' },
+    should_post_process: true,
+    async pre_process() {},
+    filter_and_score() { return results; },
+    async post_process() { t.fail('Lookup must not run a post-processing action.'); },
+    emit_event() {},
+  };
+  t.is(await LookupList.prototype.get_results.call(scope, { query: 'test' }), results);
+});
+
+for (const query of [undefined, 'Original UI query']) {
+  test(`document retrieval events retain only actual scope query context: ${query}`, async t => {
+    const events = [];
+    const scope = {
+      env: {},
+      data: query === undefined ? {} : { query },
+      async pre_process() {},
+      filter_and_score() { return []; },
+      emit_event(key, payload) { events.push({ key, payload }); },
+    };
+    await LookupList.prototype.get_results.call(scope, {
+      embed_request: { embed_input: 'Prepared document text', purpose: 'document' },
+    });
+    t.deepEqual(events, [{ key: 'lookup:get_results', payload: { query } }]);
+  });
+}
