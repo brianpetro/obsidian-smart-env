@@ -20,7 +20,7 @@ export const input_schema = {
   required: ['query'],
   additionalProperties: false,
 };
-export { action_scope, output_schema } from './get_results.js';
+export { action_scope, output_schema, version } from './get_results.js';
 export const tool = {
   ...lookup_tool,
   name: 'smart_lookup_query',

@@ -1,3 +1,6 @@
+// Retrieval and preprocessing must supersede older query-only registrations together.
+export { version } from './get_results.js';
+
 /**
  * Embed one retrieval input while preserving the original lookup query.
  *

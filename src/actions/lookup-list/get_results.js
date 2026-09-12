@@ -1,5 +1,8 @@
 import { collection_tool_action_schemas } from '../../utils/collection_tool_action_schemas.js';
 
+// Keep the query/document contract ahead of query-only actions bundled by other plugins.
+export const version = '3.1.4';
+
 /**
  * Retrieve exactly the supplied query and/or hypothetical document.
  * Query and document passes share candidate controls, but never embedding purpose.
