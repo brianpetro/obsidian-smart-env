@@ -39,6 +39,8 @@ class EmbeddingsVectorAdapter extends DefaultEntitiesVectorAdapter {
   }
 
   async process_embed_queue_once() {
+    // A saved model may not have loaded yet; do not prepare vectors for an unresolved model.
+    if (!this.collection?.embeddings?.embed_model_item) return;
     const embed_queue = this.collection?.embed_queue || [];
     if (!embed_queue.length) return;
 
@@ -86,6 +88,7 @@ class EmbeddingsVectorAdapter extends DefaultEntitiesVectorAdapter {
         }
       }
 
+      if (!this.collection.embeddings.embed_model_item) return;
       return await super.process_embed_queue();
     } finally {
       previous_defer_states.forEach((state) => {
