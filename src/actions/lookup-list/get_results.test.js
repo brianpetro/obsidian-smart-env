@@ -269,8 +269,10 @@ test('lookup tool metadata targets LookupList and clears the direct schema', (t)
   t.is(tool.project_request, project_lookup_list_request);
   t.is(tool.project_result, project_lookup_list_result);
   t.deepEqual(tool.input_schema.anyOf, [{ required: ['query'] }, { required: ['hypothetical_document'] }]);
-  t.false(Object.hasOwn(input_schema.properties, 'embed_request'));
-  t.false(Object.hasOwn(tool.input_schema.properties, 'embed_request'));
+  for (const key of ['embed_request', 'score_algo_key', 'score_settings']) {
+    t.false(Object.hasOwn(input_schema.properties, key));
+    t.false(Object.hasOwn(tool.input_schema.properties, key));
+  }
   t.is(tool.input_schema.properties.limit, input_schema.properties.limit);
   t.is(
     tool.input_schema.properties.results_collection_key,
@@ -500,4 +502,28 @@ test('Document-only projection creates distinct detached scopes without fabricat
   const result = await project_lookup_list_result([], { scope: first.scope, params: first.params });
   t.deepEqual(result, { ok: true, key: first.scope.key, total: 0, results: [] });
   t.false(JSON.stringify(first.scope.data).includes('Body'));
+});
+
+
+test('Direct and projected Lookup requests drop presenter and retired scoring fields', async t => {
+  const { env } = create_lookup_lists_fixture();
+  const request = {
+    query: '  intent  ', limit: 4, results_collection_key: 'smart_sources',
+    filter: { key_starts_with: 'Notes/' },
+    view: {}, app: {}, workspace: {}, container: {}, is_current: () => true,
+    score_algo_key: 'chat_rank', score_settings: { weight: 9 }, include_content: true,
+    embed_request: { embed_input: 'override', purpose: 'document' },
+  };
+  const projected = project_lookup_list_request(request, { env });
+  t.deepEqual(projected.params, {
+    query: 'intent', limit: 4, results_collection_key: 'smart_sources', filter: request.filter,
+  });
+  const calls = [];
+  const scope = { env, settings: {}, async get_results(params) { calls.push(params); return []; } };
+  await lookup_list_get_results.call(scope, request);
+  await lookup_list_get_results.call(scope, projected.params);
+  t.deepEqual(calls[0], calls[1]);
+  t.deepEqual(calls[0], {
+    ...projected.params, embed_request: { embed_input: 'intent', purpose: 'query' },
+  });
 });
