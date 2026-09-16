@@ -3,6 +3,7 @@ import {
   SMART_DRAG_DATA_TYPE,
   has_smart_drag_data,
   read_smart_drag_data,
+  resolve_smart_drag_items,
   write_smart_drag_data,
 } from './smart_drag_drop.js';
 
@@ -157,4 +158,34 @@ test('read_smart_drag_data preserves an exact block key', (t) => {
   });
 
   t.is(read_smart_drag_data(data_transfer)?.items[0].item_key, block_key);
+});
+
+test('read_smart_drag_data rejects an entire batch containing a malformed ref', t => {
+  const data_transfer = create_data_transfer({
+    [SMART_DRAG_DATA_TYPE]: JSON.stringify({
+      schema: 'smart-env-drag', version: 1,
+      items: [{ collection_key: 'smart_sources', item_key: 'A.md' }, { item_key: 'B.md' }],
+    }),
+  });
+  t.is(read_smart_drag_data(data_transfer), null);
+});
+
+test('resolve_smart_drag_items preserves exact heterogeneous selection order and deduplicates refs', t => {
+  const source = { collection_key: 'smart_sources', key: 'Projects/Plan.md' };
+  const block = { collection_key: 'smart_blocks', key: 'Projects/Plan.md#Scope#{12-18}' };
+  const context = { collection_key: 'smart_contexts', key: 'stable-context-id' };
+  const items = [block, context, source, block];
+  const env = Object.fromEntries([source, block, context].map(item => [item.collection_key, { get: key => key === item.key ? item : null }]));
+  t.deepEqual(resolve_smart_drag_items(env, items.map(item => ({ collection_key: item.collection_key, item_key: item.key }))), [block, context, source]);
+});
+
+test('resolve_smart_drag_items rejects missing, gone and mismatched identities instead of recovering names', t => {
+  const ref = { collection_key: 'smart_sources', item_key: 'Projects/Plan.md' };
+  for (const item of [null,
+    { collection_key: ref.collection_key, key: 'Other/Plan.md' },
+    { collection_key: 'smart_blocks', key: ref.item_key },
+    { collection_key: ref.collection_key, key: ref.item_key, is_gone: true },
+  ]) {
+    t.throws(() => resolve_smart_drag_items({ smart_sources: { get: () => item } }, [ref]), { message: /no longer exists/ });
+  }
 });

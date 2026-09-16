@@ -128,13 +128,38 @@ export function read_smart_drag_data(data_transfer) {
         item?.item_key,
       );
     })
-    .filter(Boolean)
   ;
-  if (!items.length) return null;
+  // A malformed ref invalidates the whole batch; never upload a partial selection.
+  if (!items.length || items.some(item => !item)) return null;
 
   return {
     schema: SMART_DRAG_SCHEMA,
     version: SMART_DRAG_VERSION,
     items,
   };
+}
+
+/**
+ * Resolve validated Smart refs without changing their identity or selection order.
+ * Destinations decide which collections they support before calling this helper.
+ *
+ * @param {object} env
+ * @param {Array<{collection_key:string,item_key:string}>} refs
+ * @returns {object[]}
+ * @throws {Error} If any selected item is missing or no longer has that identity.
+ */
+export function resolve_smart_drag_items(env, refs) {
+  const seen = new Set();
+  const items = [];
+  for (const { collection_key, item_key } of refs) {
+    const item = env?.[collection_key]?.get?.(item_key);
+    if (!item || item.key !== item_key || item.collection_key !== collection_key || item.is_gone) {
+      throw new Error(`Dragged Smart item no longer exists: ${collection_key}/${item_key}`);
+    }
+    const identity = JSON.stringify([collection_key, item_key]);
+    if (seen.has(identity)) continue;
+    seen.add(identity);
+    items.push(item);
+  }
+  return items;
 }
