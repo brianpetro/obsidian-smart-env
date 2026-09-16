@@ -14,3 +14,6 @@ Added: new lookup strategies for semantic retrieval and enhance input validation
 - Enhanced `pre_process` function to validate embedding requests and ensure proper input handling.
 - Modified `LookupLists` to support document-only scopes and improved error handling for invalid inputs.
 - Updated tests to cover new functionality and ensure correct behavior of lookup strategies.
+
+
+Improved: Smart drag-and-drop functionality
