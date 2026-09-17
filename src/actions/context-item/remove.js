@@ -9,6 +9,7 @@
  * @param {Function} [params.on_remove]
  * @param {Function} [params.on_remove_disabled]
  * @param {boolean} [params.remove_disabled]
+ * @param {boolean} [params.folder]
  * @returns {Promise<boolean>}
  */
 export async function context_item_remove(params = {}) {
@@ -26,14 +27,19 @@ export async function context_item_remove(params = {}) {
     return true;
   }
 
-  const smart_context = this?.collection?.smart_context
+  const smart_context = this?.context_items?.smart_context
     || params.smart_context
     || params.ctx
+    || this?.collection?.smart_context
   ;
-  if (typeof smart_context?.remove_item !== 'function') return false;
+  if (typeof smart_context?.remove_by_path !== 'function') return false;
 
-  smart_context.remove_item(this.key);
-  return true;
+  const folder = params.folder === true
+    || this.data?.folder === true
+    || this.data?.kind === 'folder'
+  ;
+  const removed_keys = await smart_context.remove_by_path(this.key, { folder });
+  return removed_keys.length > 0;
 }
 
 export const menus = {

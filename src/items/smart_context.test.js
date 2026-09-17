@@ -255,3 +255,39 @@ test('add_item never persists legacy exclusion metadata', (t) => {
     'exclude',
   ));
 });
+
+for (const folder_first of [false, true]) {
+  test(`remove_by_paths preserves duplicate folder metadata with folder first: ${folder_first}`, (t) => {
+    const ctx = create_context({
+      'notes/branch/a.md': {},
+      'notes/branch/a.md#Heading': {},
+      'notes/branch/a.md{1}': {},
+      'notes/branchish/b.md': {},
+      'notes/branch/Named': { named_context: true },
+      'external:notes/branch/a.md': {},
+    });
+    const events = [];
+    let saves = 0;
+    ctx.emit_event = (event, payload) => events.push({ event, payload });
+    ctx.queue_save = () => { saves += 1; };
+    const weak_target = { path: 'notes/branch/' };
+    const folder_target = { path: 'notes/branch', folder: true };
+    const targets = folder_first ? [folder_target, weak_target] : [weak_target, folder_target];
+
+    const removed = ctx.remove_by_paths(targets);
+
+    t.deepEqual(removed, [
+      'notes/branch/a.md', 'notes/branch/a.md#Heading', 'notes/branch/a.md{1}',
+    ]);
+    t.deepEqual(Object.keys(ctx.data.context_items), [
+      'notes/branchish/b.md', 'notes/branch/Named', 'external:notes/branch/a.md',
+    ]);
+    t.is(saves, 1);
+    t.is(events.length, 1);
+    t.true(events[0].payload.folder);
+    t.deepEqual(events[0].payload.removed_keys, [folder_first ? 'notes/branch' : 'notes/branch/']);
+    t.deepEqual(ctx.remove_by_paths(targets), []);
+    t.is(saves, 1);
+    t.is(events.length, 1);
+  });
+}

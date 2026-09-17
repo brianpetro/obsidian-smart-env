@@ -26,7 +26,10 @@ export function context_suggest_blocks(params={}) {
         this.add_item(block.key);
       },
       arrow_left_action: ({modal}) => {
-        modal.update_suggestions('context_suggest_sources');
+        if (modal.set_active_source_mode) {
+          return modal.set_active_source_mode('context_suggest_sources');
+        }
+        return modal.update_suggestions('context_suggest_sources');
       }
     }))
   ;

@@ -32,7 +32,7 @@ export function item_matches_remove_path(item_key = '', target_path = '') {
 }
 
 /**
- * Normalize, dedupe, and compress remove targets.
+ * Normalize, dedupe, and compress remove targets, retaining folder flags.
  *
  * When a broader parent target is present, child targets are redundant and are
  * removed from the final list. This keeps batch remove behavior stable across
@@ -60,6 +60,14 @@ export function normalize_remove_targets(target_paths = [], params = {}) {
       norm_key: normalize_remove_path(normalized_path),
       folder: target?.folder === true || params.folder === true,
     };
+
+    const duplicate_target = targets.find((existing_target) => {
+      return existing_target.norm_key === next_target.norm_key;
+    });
+    if (duplicate_target) {
+      duplicate_target.folder = duplicate_target.folder || next_target.folder;
+      return;
+    }
 
     for (const existing_target of targets) {
       if (item_matches_remove_path(next_target.norm_key, existing_target.norm_key)) return;

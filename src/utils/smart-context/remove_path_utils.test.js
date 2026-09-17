@@ -59,3 +59,55 @@ test('normalize_remove_targets supports object key/path inputs and shared folder
     },
   ]);
 });
+
+for (const folder_first of [false, true]) {
+  test(`normalize_remove_targets preserves duplicate folder flags with folder first: ${folder_first}`, (t) => {
+    const weak_target = { path: ' notes/branch/// ' };
+    const folder_target = { key: 'notes/branch', folder: true };
+    const items = folder_first ? [folder_target, weak_target] : [weak_target, folder_target];
+
+    t.deepEqual(normalize_remove_targets(items), [{
+      path: folder_first ? 'notes/branch' : 'notes/branch///',
+      norm_key: 'notes/branch',
+      folder: true,
+    }]);
+    t.deepEqual(weak_target, { path: ' notes/branch/// ' });
+    t.deepEqual(folder_target, { key: 'notes/branch', folder: true });
+  });
+}
+
+test('normalize_remove_targets merges duplicate parents while compressing descendant targets', (t) => {
+  const targets = [
+    'notes/branch/a.md#Heading',
+    'notes/branch/',
+    { key: 'notes/branch', folder: true },
+    'notes/branch/b.md{1}',
+  ];
+  for (const items of [targets, [...targets].reverse()]) {
+    const normalized = normalize_remove_targets(items);
+    t.is(normalized.length, 1);
+    t.is(normalized[0].norm_key, 'notes/branch');
+    t.true(normalized[0].folder);
+  }
+});
+
+test('normalize_remove_targets keeps external identities and source boundaries distinct', (t) => {
+  const targets = normalize_remove_targets([
+    'notes/a.md#Heading',
+    'notes/a.md{1}',
+    'notes/a.md',
+    'notes/a.md2',
+    'external:notes/a.md#Heading',
+    { key: 'external:notes/a.md' },
+    'external:../notes/a.md',
+  ]);
+
+  t.deepEqual(targets.map((target) => target.norm_key), [
+    'notes/a.md',
+    'notes/a.md2',
+    'external:notes/a.md',
+    'external:../notes/a.md',
+  ]);
+  t.false(item_matches_remove_path('notes/a.md', 'external:notes/a.md'));
+  t.false(item_matches_remove_path('external:notes/a.md', 'notes/a.md'));
+});
