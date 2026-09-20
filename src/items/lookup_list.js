@@ -4,6 +4,8 @@ import { sort_by_score_descending } from 'smart-utils/sort_by_score.js';
 
 export class LookupList extends CollectionItem {
   static key = 'lookup_list';
+  /** @type {import('jsbrains/smart-types').LookupResult[]|null} Final displayed results; session-only, never item data. */
+  results = null;
   static get defaults() {
     return { data: {} };
   }

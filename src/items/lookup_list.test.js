@@ -161,3 +161,26 @@ for (const query of [undefined, 'Original UI query']) {
     t.deepEqual(events, [{ key: 'lookup:get_results', payload: { query } }]);
   });
 }
+
+
+test('Retained results are item-local runtime state and retrieval passes do not replace them', async t => {
+  const env = {
+    create_env_getter() {},
+    lookup_lists: { item_class_name: 'LookupList' },
+  };
+  const lookup_list = new LookupList(env, { key: 'first', query: 'first query' });
+  const other_list = new LookupList(env, { key: 'second', query: 'second query' });
+  t.is(lookup_list.results, null);
+  const retained_results = [{ item: { key: 'Retained.md' }, score: 0.8 }];
+  lookup_list.results = retained_results;
+  t.is(other_list.results, null);
+  t.false(Object.hasOwn(lookup_list.data, 'results'));
+  t.is(lookup_list.data.query, 'first query');
+
+  const pass_results = [{ item: { key: 'Intermediate.md' }, score: 0.9 }];
+  lookup_list.pre_process = async () => {};
+  lookup_list.filter_and_score = () => pass_results;
+  lookup_list.emit_event = () => {};
+  t.is(await lookup_list.get_results({ query: 'first query' }), pass_results);
+  t.is(lookup_list.results, retained_results);
+});
