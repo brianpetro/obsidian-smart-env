@@ -5,6 +5,7 @@ import {
 } from 'smart-environment';
 
 const submenu_hover_menus = new WeakSet();
+const submenu_hover_delay_ms = 250;
 
 /**
  * Build configured menu entries for a menu instance.
@@ -148,7 +149,8 @@ function resolve_menu_contexts(env, menu_key, menu, scope, params) {
  *
  * Use the native selection and submenu lifecycle so positioning, keyboard
  * navigation, and dismissal remain owned by Obsidian. Capture only switches
- * away from an open child; let native handling open the first submenu.
+ * away from an open child after a short hover delay; let native handling open
+ * the first submenu. Returning to the open branch cancels a pending switch.
  *
  * @param {object} menu
  */
@@ -169,27 +171,78 @@ function bind_submenu_hover(menu) {
     || typeof menu.openSubmenu !== 'function'
   ) return;
 
+  let owner_document;
+  let owner_window = globalThis;
+  const cancel_events = ['keydown', 'pointerdown', 'mousedown', 'click'];
+  let hover_timeout = null;
+  let pending_item = null;
+
+  const cancel_hover = () => {
+    if (hover_timeout !== null) owner_window.clearTimeout(hover_timeout);
+    hover_timeout = null;
+    pending_item = null;
+    cancel_events.forEach((type) => {
+      owner_document?.removeEventListener?.(type, cancel_hover, true);
+    });
+    owner_window.removeEventListener?.('blur', cancel_hover);
+  };
+
   const on_menu_hover = (event) => {
     const item_dom = event.target?.closest?.('.menu-item');
-    if (!item_dom) return;
 
     // A nested menu's events must not change an ancestor menu's selection.
     const item_index = menu.items.findIndex((item) => item?.dom === item_dom);
     const item = menu.items[item_index];
     if (
-      !item
+      !item_dom
+      || !item
       || item.disabled
       || !menu.currentSubmenu
       || menu.currentSubmenu === item.submenu
-    ) return;
+    ) {
+      cancel_hover();
+      return;
+    }
 
-    menu.closeSubmenu();
-    menu.select(item_index);
-    if (item.submenu) menu.openSubmenu(item);
+    // Pointer/mouse compatibility events and movement within a row share one delay.
+    if (pending_item === item && owner_document === menu.dom.ownerDocument) return;
+    cancel_hover();
+    // The menu may be shown in a different window after it was built.
+    owner_document = menu.dom.ownerDocument;
+    owner_window = owner_document?.defaultView || globalThis;
+    pending_item = item;
+    const current_submenu = menu.currentSubmenu;
+    hover_timeout = owner_window.setTimeout(() => {
+      cancel_hover();
+      const next_index = menu.items.indexOf(item);
+      // Native dismissal or navigation must not be undone by a stale hover.
+      if (
+        menu.currentSubmenu !== current_submenu
+        || menu.dom.ownerDocument !== owner_document
+        || menu.dom.isConnected === false
+        || current_submenu.dom?.isConnected === false
+        || item.disabled
+        || next_index < 0
+      ) return;
+
+      menu.closeSubmenu();
+      menu.select(next_index);
+      if (item.submenu) menu.openSubmenu(item);
+    }, submenu_hover_delay_ms);
+
+    // Observe explicit input only while a switch is pending; never consume it.
+    cancel_events.forEach((type) => {
+      owner_document?.addEventListener?.(type, cancel_hover, true);
+    });
+    owner_window.addEventListener?.('blur', cancel_hover);
   };
 
   menu.dom.addEventListener('pointerover', on_menu_hover, true);
   menu.dom.addEventListener('mouseover', on_menu_hover, true);
+  // Submenus can be mounted separately, so leaving the parent also cancels.
+  menu.dom.addEventListener('pointerleave', cancel_hover);
+  menu.dom.addEventListener('mouseleave', cancel_hover);
+  menu.onHide?.(cancel_hover);
   submenu_hover_menus.add(menu);
 }
 

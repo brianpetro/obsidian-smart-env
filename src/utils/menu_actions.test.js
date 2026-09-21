@@ -451,11 +451,92 @@ test('menu discovery rejects unsupported placement values', (t) => {
   );
 });
 
+/** Event targets and a per-window clock keep hover tests deterministic. */
+function create_hover_event_target() {
+  const listeners = [];
+  return {
+    listeners,
+    addEventListener(type, callback, capture = false) {
+      if (listeners.some((listener) => {
+        return listener.type === type
+          && listener.callback === callback
+          && listener.capture === capture;
+      })) return;
+      listeners.push({ type, callback, capture });
+    },
+    removeEventListener(type, callback, capture = false) {
+      const index = listeners.findIndex((listener) => {
+        return listener.type === type
+          && listener.callback === callback
+          && listener.capture === capture;
+      });
+      if (index >= 0) listeners.splice(index, 1);
+    },
+    dispatch(type, target = this, params = {}) {
+      const event = {
+        type,
+        target,
+        defaultPrevented: false,
+        propagation_stopped: false,
+        preventDefault() { this.defaultPrevented = true; },
+        stopPropagation() { this.propagation_stopped = true; },
+        stopImmediatePropagation() { this.propagation_stopped = true; },
+        ...params,
+      };
+      listeners.slice()
+        .filter((listener) => listener.type === type)
+        .forEach((listener) => listener.callback(event))
+      ;
+      return event;
+    },
+  };
+}
+
+function create_hover_document() {
+  const owner_document = create_hover_event_target();
+  const owner_window = create_hover_event_target();
+  const timers = new Map();
+  let now = 0;
+  let next_id = 0;
+
+  Object.assign(owner_window, {
+    setTimeout(callback, delay) {
+      const id = next_id++;
+      timers.set(id, { callback, at: now + delay });
+      return id;
+    },
+    clearTimeout(id) {
+      timers.delete(id);
+    },
+    tick(duration) {
+      const until = now + duration;
+      while (timers.size) {
+        const [id, timer] = Array.from(timers.entries())
+          .sort((left, right) => left[1].at - right[1].at)[0];
+        if (timer.at > until) break;
+        now = timer.at;
+        timers.delete(id);
+        timer.callback();
+      }
+      now = until;
+    },
+  });
+  Object.defineProperty(owner_window, 'pending_count', {
+    get: () => timers.size,
+  });
+  owner_document.defaultView = owner_window;
+  return owner_document;
+}
+
 /** Minimal native-menu surface for testing hover lifecycle calls, not rendering. */
-function create_hover_menu() {
+function create_hover_menu(owner_document = create_hover_document()) {
   const menu = create_menu();
   const add_item = menu.addItem;
-  const listeners = [];
+  const dom = create_hover_event_target();
+  const listeners = dom.listeners;
+  const hide_callbacks = [];
+  dom.ownerDocument = owner_document;
+  dom.isConnected = false;
 
   Object.assign(menu, {
     currentSubmenu: null,
@@ -463,10 +544,17 @@ function create_hover_menu() {
     visible: false,
     calls: [],
     listeners,
-    dom: {
-      addEventListener(type, callback, capture) {
-        listeners.push({ type, callback, capture });
-      },
+    hide_callbacks,
+    dom,
+    onHide(callback) {
+      hide_callbacks.push(callback);
+    },
+    hide() {
+      this.closeSubmenu();
+      this.visible = false;
+      this.dom.isConnected = false;
+      hide_callbacks.forEach((callback) => callback());
+      return this;
     },
     addItem(callback) {
       return add_item.call(this, (item) => {
@@ -476,7 +564,7 @@ function create_hover_menu() {
           },
         };
         item.setSubmenu = () => {
-          item.submenu = create_hover_menu();
+          item.submenu = create_hover_menu(owner_document);
           return item.submenu;
         };
         callback(item);
@@ -485,8 +573,7 @@ function create_hover_menu() {
     closeSubmenu() {
       this.calls.push('close');
       if (this.currentSubmenu) {
-        this.currentSubmenu.closeSubmenu();
-        this.currentSubmenu.visible = false;
+        this.currentSubmenu.hide();
       }
       this.currentSubmenu = null;
     },
@@ -498,6 +585,7 @@ function create_hover_menu() {
       this.calls.push(['open', item.title]);
       this.currentSubmenu = item.submenu;
       item.submenu.visible = true;
+      item.submenu.dom.isConnected = true;
     },
   });
 
@@ -539,31 +627,36 @@ function create_hover_fixture() {
   const target_menu = target_item.submenu;
   const [history, blocks] = target_menu.items;
 
-  return { env, scope, menu, target_item, target_menu, history, blocks };
+  const owner_document = menu.dom.ownerDocument;
+  const clock = owner_document.defaultView;
+  return { env, scope, menu, target_item, target_menu, history, blocks, owner_document, clock };
 }
 
 function dispatch_menu_hover(menu, target, type = 'mouseover') {
-  const event = { target };
-  menu.listeners
-    .filter((listener) => listener.type === type)
-    .forEach((listener) => listener.callback(event))
-  ;
+  return menu.dom.dispatch(type, target);
 }
 
 function set_open_submenu(menu, item) {
+  menu.visible = true;
+  menu.dom.isConnected = true;
   menu.selected = menu.items.indexOf(item);
   menu.currentSubmenu = item.submenu;
   item.submenu.visible = true;
+  item.submenu.dom.isConnected = true;
 }
 
 test('adjacent submenus switch in both directions without reopening the parent', (t) => {
-  const { menu, target_item, target_menu, history, blocks } = create_hover_fixture();
+  const { menu, target_item, target_menu, history, blocks, clock } = create_hover_fixture();
   set_open_submenu(menu, target_item);
   set_open_submenu(target_menu, history);
 
   for (const [previous, next] of [[history, blocks], [blocks, history], [history, blocks]]) {
     target_menu.calls.length = 0;
     dispatch_menu_hover(target_menu, next.dom);
+    clock.tick(249);
+    t.is(target_menu.currentSubmenu, previous.submenu);
+    t.deepEqual(target_menu.calls, []);
+    clock.tick(1);
 
     t.is(target_menu.currentSubmenu, next.submenu);
     t.false(previous.submenu.visible);
@@ -580,39 +673,50 @@ test('adjacent submenus switch in both directions without reopening the parent',
 });
 
 test('pointerover followed by mouseover switches a submenu only once', (t) => {
-  const { target_menu, history, blocks } = create_hover_fixture();
+  const { target_menu, history, blocks, clock } = create_hover_fixture();
   set_open_submenu(target_menu, history);
   const icon = { closest: () => blocks.dom };
 
   dispatch_menu_hover(target_menu, icon, 'pointerover');
+  clock.tick(100);
   dispatch_menu_hover(target_menu, icon, 'mouseover');
+  t.is(clock.pending_count, 1);
+  clock.tick(149);
+  t.is(target_menu.currentSubmenu, history.submenu);
+  clock.tick(1);
 
   t.is(target_menu.currentSubmenu, blocks.submenu);
   t.deepEqual(target_menu.calls, ['close', ['select', 1], ['open', 'Blocks']]);
-  t.true(target_menu.listeners.every((listener) => listener.capture === true));
+  t.true(target_menu.listeners
+    .filter((listener) => listener.type.endsWith('over'))
+    .every((listener) => listener.capture === true));
+  t.is(clock.pending_count, 0);
 });
 
 test('first-open timing and hovering the already-open item remain native', (t) => {
-  const { target_menu, history } = create_hover_fixture();
+  const { target_menu, history, clock } = create_hover_fixture();
 
   dispatch_menu_hover(target_menu, history.dom);
+  clock.tick(500);
   t.deepEqual(target_menu.calls, []);
   t.is(target_menu.currentSubmenu, null);
 
   set_open_submenu(target_menu, history);
   dispatch_menu_hover(target_menu, history.dom);
+  clock.tick(500);
   t.deepEqual(target_menu.calls, []);
   t.is(target_menu.currentSubmenu, history.submenu);
 });
 
 test('nested hover events leave ancestor selections and child clicks intact', async (t) => {
-  const { menu, target_item, target_menu, history, blocks } = create_hover_fixture();
+  const { menu, target_item, target_menu, history, blocks, clock } = create_hover_fixture();
   set_open_submenu(menu, target_item);
   set_open_submenu(target_menu, history);
 
   // Capture reaches ancestors first, but only the row's own menu should switch.
   dispatch_menu_hover(menu, blocks.dom, 'pointerover');
   dispatch_menu_hover(target_menu, blocks.dom, 'pointerover');
+  clock.tick(250);
   const leaf = blocks.submenu.items[0];
   dispatch_menu_hover(menu, leaf.dom);
   dispatch_menu_hover(target_menu, leaf.dom);
@@ -631,12 +735,13 @@ test('nested hover events leave ancestor selections and child clicks intact', as
 });
 
 test('disabled adjacent submenu items do not override native handling', (t) => {
-  const { target_menu, history, blocks } = create_hover_fixture();
+  const { target_menu, history, blocks, clock } = create_hover_fixture();
   set_open_submenu(target_menu, history);
   blocks.setDisabled(true);
 
   dispatch_menu_hover(target_menu, blocks.dom, 'pointerover');
   dispatch_menu_hover(target_menu, blocks.dom);
+  clock.tick(500);
 
   t.deepEqual(target_menu.calls, []);
   t.is(target_menu.currentSubmenu, history.submenu);
@@ -644,11 +749,14 @@ test('disabled adjacent submenu items do not override native handling', (t) => {
 });
 
 test('hovering an ordinary sibling closes the old child without opening a menu', (t) => {
-  const { target_menu, history } = create_hover_fixture();
+  const { target_menu, history, clock } = create_hover_fixture();
   target_menu.addItem((item) => item.setTitle('Refresh'));
   set_open_submenu(target_menu, history);
 
   dispatch_menu_hover(target_menu, target_menu.items[2].dom);
+  clock.tick(249);
+  t.is(target_menu.currentSubmenu, history.submenu);
+  clock.tick(1);
 
   t.deepEqual(target_menu.calls, ['close', ['select', 2]]);
   t.is(target_menu.currentSubmenu, null);
@@ -656,13 +764,14 @@ test('hovering an ordinary sibling closes the old child without opening a menu',
 });
 
 test('padding, separators, and unrelated rows do not close an open submenu', (t) => {
-  const { target_menu, history } = create_hover_fixture();
+  const { target_menu, history, clock } = create_hover_fixture();
   target_menu.addSeparator();
   set_open_submenu(target_menu, history);
 
   for (const target of [null, {}, { closest: () => null }, { closest: () => ({}) }]) {
     dispatch_menu_hover(target_menu, target);
   }
+  clock.tick(500);
 
   t.deepEqual(target_menu.calls, []);
   t.is(target_menu.currentSubmenu, history.submenu);
@@ -687,15 +796,17 @@ test('composed builds bind new child menus without duplicating existing handlers
   build_menu(env, 'test:more', menu, scope);
   build_menu(env, 'test:more', menu, scope);
 
-  t.is(menu.listeners.length, 2);
-  t.is(target_menu.listeners.length, 2);
-  t.is(menu.items[1].submenu.listeners.length, 2);
-  t.is(menu.items[2].submenu.listeners.length, 2);
+  t.is(menu.listeners.length, 4);
+  t.is(target_menu.listeners.length, 4);
+  t.is(menu.items[1].submenu.listeners.length, 4);
+  t.is(menu.items[2].submenu.listeners.length, 4);
   t.is(target_menu.items[0].submenu.listeners.length, 0);
+  t.is(menu.hide_callbacks.length, 1);
+  t.is(target_menu.hide_callbacks.length, 1);
 });
 
 test('closing a branch closes its descendants and allows the branch to reopen', (t) => {
-  const { menu, target_item, target_menu, history, blocks } = create_hover_fixture();
+  const { menu, target_item, target_menu, history, blocks, clock } = create_hover_fixture();
   menu.addItem((item) => {
     item.setTitle('Other');
     item.setSubmenu().addItem((child) => child.setTitle('Other action'));
@@ -705,16 +816,19 @@ test('closing a branch closes its descendants and allows the branch to reopen', 
   set_open_submenu(target_menu, history);
 
   dispatch_menu_hover(menu, other.dom);
+  clock.tick(250);
   t.false(target_menu.visible);
   t.false(history.submenu.visible);
   t.is(target_menu.currentSubmenu, null);
 
   dispatch_menu_hover(menu, target_item.dom);
+  clock.tick(250);
   t.true(target_menu.visible);
   t.false(other.submenu.visible);
   // The first child still opens natively after re-entering its parent.
   set_open_submenu(target_menu, blocks);
   dispatch_menu_hover(target_menu, history.dom);
+  clock.tick(250);
   t.is(target_menu.currentSubmenu, history.submenu);
   t.false(blocks.submenu.visible);
 });
@@ -727,7 +841,7 @@ test('hosts without the required native menu capabilities are left untouched', (
 
     t.notThrows(() => build_menu(env, 'test:menu', menu, scope));
     t.is(menu.listeners.length, 0);
-    t.is(menu.items[0].submenu.listeners.length, 2);
+    t.is(menu.items[0].submenu.listeners.length, 4);
   }
 });
 
@@ -740,4 +854,299 @@ test('foreign scopes do not attach handlers to an existing menu', (t) => {
 
   t.is(menu.listeners.length, 0);
   t.is(menu.items.length, 1);
+});
+
+
+test('a brief excursion over a sibling is cancelled by returning to the open row', (t) => {
+  const { target_menu, history, blocks, clock, owner_document } = create_hover_fixture();
+  set_open_submenu(target_menu, history);
+
+  dispatch_menu_hover(target_menu, blocks.dom);
+  clock.tick(100);
+  dispatch_menu_hover(target_menu, history.dom);
+  clock.tick(500);
+
+  t.is(target_menu.currentSubmenu, history.submenu);
+  t.deepEqual(target_menu.calls, []);
+  t.is(clock.pending_count, 0);
+  t.is(owner_document.listeners.length, 0);
+  t.is(clock.listeners.length, 0);
+});
+
+test('leaving the parent for a separately mounted submenu cancels a pending switch', (t) => {
+  for (const type of ['pointerleave', 'mouseleave']) {
+    const { target_menu, history, blocks, clock } = create_hover_fixture();
+    set_open_submenu(target_menu, history);
+
+    dispatch_menu_hover(target_menu, blocks.dom);
+    clock.tick(100);
+    dispatch_menu_hover(target_menu, target_menu.dom, type);
+    dispatch_menu_hover(history.submenu, history.submenu.items[0].dom);
+    clock.tick(500);
+
+    t.is(target_menu.currentSubmenu, history.submenu);
+    t.deepEqual(target_menu.calls, []);
+    t.is(clock.pending_count, 0);
+  }
+});
+
+test('re-entering a nested child cancels an ancestor switch without changing selection', (t) => {
+  const { target_menu, history, blocks, clock } = create_hover_fixture();
+  set_open_submenu(target_menu, history);
+
+  dispatch_menu_hover(target_menu, blocks.dom);
+  clock.tick(100);
+  dispatch_menu_hover(target_menu, history.submenu.items[0].dom);
+  clock.tick(500);
+
+  t.is(target_menu.currentSubmenu, history.submenu);
+  t.is(target_menu.selected, 0);
+  t.deepEqual(target_menu.calls, []);
+  t.is(clock.pending_count, 0);
+});
+
+test('moving across siblings gives only the latest row a fresh grace period', (t) => {
+  const { target_menu, history, blocks, clock, owner_document } = create_hover_fixture();
+  target_menu.addItem((item) => item.setTitle('Other').setSubmenu());
+  const other = target_menu.items[2];
+  set_open_submenu(target_menu, history);
+
+  dispatch_menu_hover(target_menu, blocks.dom);
+  clock.tick(100);
+  dispatch_menu_hover(target_menu, other.dom);
+  t.is(clock.pending_count, 1);
+  t.is(owner_document.listeners.length, 4);
+  clock.tick(249);
+  t.is(target_menu.currentSubmenu, history.submenu);
+  clock.tick(1);
+
+  t.is(target_menu.currentSubmenu, other.submenu);
+  t.deepEqual(target_menu.calls, ['close', ['select', 2], ['open', 'Other']]);
+  t.false(blocks.submenu.visible);
+  t.is(owner_document.listeners.length, 0);
+  t.is(clock.listeners.length, 0);
+});
+
+test('padding, separators, disabled rows, and unrelated rows cancel pending switches', (t) => {
+  for (const kind of ['padding', 'separator', 'disabled', 'unrelated']) {
+    const { target_menu, history, blocks, clock } = create_hover_fixture();
+    target_menu.addItem((item) => item.setTitle('Disabled').setDisabled(true));
+    target_menu.addSeparator();
+    const targets = {
+      padding: target_menu.dom,
+      separator: { closest: () => null },
+      disabled: target_menu.items[2].dom,
+      unrelated: { closest: () => ({}) },
+    };
+    set_open_submenu(target_menu, history);
+
+    dispatch_menu_hover(target_menu, blocks.dom);
+    clock.tick(100);
+    dispatch_menu_hover(target_menu, targets[kind]);
+    clock.tick(500);
+
+    t.is(target_menu.currentSubmenu, history.submenu);
+    t.deepEqual(target_menu.calls, []);
+    t.is(clock.pending_count, 0);
+  }
+});
+
+test('explicit input cancels pending hover without consuming native events', (t) => {
+  for (const type of ['keydown', 'pointerdown', 'mousedown', 'click']) {
+    const { target_menu, history, blocks, clock, owner_document } = create_hover_fixture();
+    set_open_submenu(target_menu, history);
+    const hover_event = dispatch_menu_hover(target_menu, blocks.dom);
+    clock.tick(100);
+    const event = owner_document.dispatch(type, blocks.dom, { key: 'Escape' });
+    clock.tick(500);
+
+    t.is(target_menu.currentSubmenu, history.submenu);
+    t.deepEqual(target_menu.calls, []);
+    t.false(hover_event.defaultPrevented);
+    t.false(hover_event.propagation_stopped);
+    t.false(event.defaultPrevented);
+    t.false(event.propagation_stopped);
+    t.is(clock.pending_count, 0);
+    t.is(owner_document.listeners.length, 0);
+  }
+});
+
+test('a click still runs its action immediately during the grace period', async (t) => {
+  const { target_menu, history, blocks, clock, owner_document } = create_hover_fixture();
+  let click_count = 0;
+  target_menu.addItem((item) => {
+    item.setTitle('Refresh').onClick(() => { click_count += 1; });
+  });
+  const refresh = target_menu.items[2];
+  set_open_submenu(target_menu, history);
+  dispatch_menu_hover(target_menu, blocks.dom);
+
+  owner_document.dispatch('click', refresh.dom);
+  await refresh.on_click();
+  t.is(click_count, 1);
+  t.is(clock.pending_count, 0);
+  clock.tick(500);
+  t.deepEqual(target_menu.calls, []);
+});
+
+test('dismissal clears hover state before the same branch is reopened', (t) => {
+  const { target_menu, history, blocks, clock, owner_document } = create_hover_fixture();
+  let hidden_count = 0;
+  target_menu.onHide(() => { hidden_count += 1; });
+  set_open_submenu(target_menu, history);
+  dispatch_menu_hover(target_menu, blocks.dom);
+  clock.tick(100);
+
+  target_menu.hide();
+  t.is(hidden_count, 1);
+  t.is(clock.pending_count, 0);
+  t.is(owner_document.listeners.length, 0);
+  t.is(clock.listeners.length, 0);
+  set_open_submenu(target_menu, history);
+  target_menu.calls.length = 0;
+  clock.tick(500);
+  t.is(target_menu.currentSubmenu, history.submenu);
+  t.deepEqual(target_menu.calls, []);
+
+  dispatch_menu_hover(target_menu, blocks.dom);
+  clock.tick(250);
+  t.is(target_menu.currentSubmenu, blocks.submenu);
+});
+
+test('closing an ancestor cancels pending work in its descendants', (t) => {
+  const { menu, target_item, target_menu, history, blocks, clock, owner_document } = create_hover_fixture();
+  set_open_submenu(menu, target_item);
+  set_open_submenu(target_menu, history);
+  dispatch_menu_hover(target_menu, blocks.dom);
+
+  menu.hide();
+  t.is(clock.pending_count, 0);
+  t.is(owner_document.listeners.length, 0);
+  target_menu.calls.length = 0;
+  clock.tick(500);
+  t.false(target_menu.visible);
+  t.false(blocks.submenu.visible);
+  t.deepEqual(target_menu.calls, []);
+});
+
+test('native navigation wins over a stale pending hover', (t) => {
+  const { target_menu, history, blocks, clock } = create_hover_fixture();
+  target_menu.addItem((item) => item.setTitle('Native').setSubmenu());
+  const native_item = target_menu.items[2];
+  set_open_submenu(target_menu, history);
+  dispatch_menu_hover(target_menu, blocks.dom);
+
+  target_menu.closeSubmenu();
+  set_open_submenu(target_menu, native_item);
+  target_menu.calls.length = 0;
+  clock.tick(250);
+
+  t.is(target_menu.currentSubmenu, native_item.submenu);
+  t.deepEqual(target_menu.calls, []);
+  t.is(clock.pending_count, 0);
+});
+
+test('detached menus cannot be changed by a delayed hover', (t) => {
+  for (const detach_child of [false, true]) {
+    const { target_menu, history, blocks, clock, owner_document } = create_hover_fixture();
+    set_open_submenu(target_menu, history);
+    dispatch_menu_hover(target_menu, blocks.dom);
+    (detach_child ? history.submenu : target_menu).dom.isConnected = false;
+    clock.tick(250);
+
+    t.deepEqual(target_menu.calls, []);
+    t.is(clock.pending_count, 0);
+    t.is(owner_document.listeners.length, 0);
+  }
+});
+
+test('pending rows are revalidated after becoming disabled or being removed', (t) => {
+  for (const remove of [false, true]) {
+    const { target_menu, history, blocks, clock } = create_hover_fixture();
+    set_open_submenu(target_menu, history);
+    dispatch_menu_hover(target_menu, blocks.dom);
+    if (remove) target_menu.items.splice(1, 1);
+    else blocks.setDisabled(true);
+    clock.tick(250);
+
+    t.is(target_menu.currentSubmenu, history.submenu);
+    t.deepEqual(target_menu.calls, []);
+    t.is(clock.pending_count, 0);
+  }
+});
+
+test('a reordered pending row is selected using its current index', (t) => {
+  const { target_menu, history, blocks, clock } = create_hover_fixture();
+  set_open_submenu(target_menu, history);
+  dispatch_menu_hover(target_menu, blocks.dom);
+  target_menu.items.reverse();
+  clock.tick(250);
+
+  t.is(target_menu.currentSubmenu, blocks.submenu);
+  t.deepEqual(target_menu.calls, ['close', ['select', 0], ['open', 'Blocks']]);
+});
+
+test('window blur clears pending work and temporary listeners', (t) => {
+  const { target_menu, history, blocks, clock, owner_document } = create_hover_fixture();
+  set_open_submenu(target_menu, history);
+  dispatch_menu_hover(target_menu, blocks.dom);
+  clock.dispatch('blur');
+  clock.tick(500);
+
+  t.is(target_menu.currentSubmenu, history.submenu);
+  t.deepEqual(target_menu.calls, []);
+  t.is(clock.pending_count, 0);
+  t.is(owner_document.listeners.length, 0);
+  t.is(clock.listeners.length, 0);
+});
+
+test('hover clocks and explicit input are isolated to the owning window', (t) => {
+  const first = create_hover_fixture();
+  const second = create_hover_fixture();
+  for (const fixture of [first, second]) {
+    set_open_submenu(fixture.target_menu, fixture.history);
+    dispatch_menu_hover(fixture.target_menu, fixture.blocks.dom);
+  }
+
+  first.owner_document.dispatch('keydown', first.target_menu.dom);
+  first.clock.tick(500);
+  second.clock.tick(249);
+  t.is(first.target_menu.currentSubmenu, first.history.submenu);
+  t.is(second.target_menu.currentSubmenu, second.history.submenu);
+  second.clock.tick(1);
+  t.is(second.target_menu.currentSubmenu, second.blocks.submenu);
+  t.is(first.clock.pending_count, 0);
+  t.is(second.clock.pending_count, 0);
+});
+
+test('menus shown in a different document use that document for timers and input', (t) => {
+  const { target_menu, history, blocks, clock, owner_document } = create_hover_fixture();
+  const shown_document = create_hover_document();
+  target_menu.dom.ownerDocument = shown_document;
+  set_open_submenu(target_menu, history);
+  dispatch_menu_hover(target_menu, blocks.dom);
+
+  t.is(clock.pending_count, 0);
+  t.is(owner_document.listeners.length, 0);
+  t.is(shown_document.defaultView.pending_count, 1);
+  shown_document.dispatch('keydown', target_menu.dom);
+  shown_document.defaultView.tick(500);
+  t.is(target_menu.currentSubmenu, history.submenu);
+  t.is(shown_document.listeners.length, 0);
+});
+
+test('a document change invalidates an old timer and allows a fresh hover', (t) => {
+  const { target_menu, history, blocks, clock, owner_document } = create_hover_fixture();
+  const shown_document = create_hover_document();
+  set_open_submenu(target_menu, history);
+  dispatch_menu_hover(target_menu, blocks.dom);
+  clock.tick(100);
+  target_menu.dom.ownerDocument = shown_document;
+  clock.tick(150);
+
+  t.is(target_menu.currentSubmenu, history.submenu);
+  t.is(owner_document.listeners.length, 0);
+  dispatch_menu_hover(target_menu, blocks.dom);
+  shown_document.defaultView.tick(250);
+  t.is(target_menu.currentSubmenu, blocks.submenu);
 });
