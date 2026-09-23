@@ -1,5 +1,5 @@
 import test from 'ava';
-import { SecretComponent } from 'obsidian';
+import { SecretComponent, Setting } from 'obsidian';
 import {
   create_settings_group_rerender,
   render_settings_group,
@@ -109,5 +109,53 @@ test.serial('secret setting stores the selected credential ID without writing th
   } finally {
     SecretComponent.prototype.setValue = original_set_value;
     SecretComponent.prototype.onChange = original_on_change;
+  }
+});
+
+test.serial('text setting debounce delays writes and coalesces changes', async t => {
+  const original_add_text = Setting.prototype.addText;
+  let text_component;
+
+  Setting.prototype.addText = function add_text(callback) {
+    text_component = {
+      setValue(value) {
+        this.test_value = value;
+        return this;
+      },
+      onChange(on_change) {
+        this.test_on_change = on_change;
+        return this;
+      },
+    };
+    callback(text_component);
+    return this;
+  };
+
+  try {
+    const scope = {
+      settings: { query: '' },
+    };
+
+    render_settings_group(
+      'Filters',
+      scope,
+      {
+        query: {
+          name: 'Query',
+          type: 'text',
+          debounce_ms: 10,
+        },
+      },
+      create_test_element(),
+    );
+
+    text_component.test_on_change('a');
+    text_component.test_on_change('ab');
+
+    t.is(scope.settings.query, '');
+    await new Promise(resolve => setTimeout(resolve, 20));
+    t.is(scope.settings.query, 'ab');
+  } finally {
+    Setting.prototype.addText = original_add_text;
   }
 });

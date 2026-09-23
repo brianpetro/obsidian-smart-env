@@ -199,8 +199,16 @@ export function render_settings_group(group_name, scope, settings_config, contai
         case 'text':
           setting.addText((text) => {
             text.setValue(String(get_setting_value() || ''));
+            let debounce_timeout;
             text.onChange((value) => {
-              set_setting_value(value);
+              if (!setting_config.debounce_ms) {
+                set_setting_value(value);
+                return;
+              }
+              if (debounce_timeout) clearTimeout(debounce_timeout);
+              debounce_timeout = setTimeout(() => {
+                set_setting_value(value);
+              }, setting_config.debounce_ms);
             });
           });
           break;

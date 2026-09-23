@@ -69,14 +69,13 @@ import { lookup_list_get_results_hyde as lookup_list_get_results_hyde_action, di
 import { lookup_list_get_results_query as lookup_list_get_results_query_action, display_name as lookup_list_get_results_query_action_display_name, display_description as lookup_list_get_results_query_action_display_description, action_scope as lookup_list_get_results_query_action_action_scope, tool as lookup_list_get_results_query_action_tool, version as lookup_list_get_results_query_action_version, input_schema as lookup_list_get_results_query_action_input_schema, output_schema as lookup_list_get_results_query_action_output_schema } from './src/actions/lookup-list/get_results_query.js';
 import { pre_process as lookup_list_pre_process_action, pre_process as lookup_list_pre_process_action_pre_process, version as lookup_list_pre_process_action_version } from './src/actions/lookup-list/pre_process.js';
 import { plugin_open_release_notes as plugin_open_release_notes_action, commands as plugin_open_release_notes_action_commands } from './src/actions/plugin/open_release_notes.js';
-import { similarity as similarity_action, settings_config as similarity_action_settings_config, display_name as similarity_action_display_name, display_description as similarity_action_display_description } from './src/actions/similarity.js';
+import { similarity as similarity_action, settings_config as similarity_action_settings_config, display_name as similarity_action_display_name, display_description as similarity_action_display_description, version as similarity_action_version } from './src/actions/similarity.js';
 import { smart_block_read as smart_block_read_action, display_name as smart_block_read_action_display_name, display_description as smart_block_read_action_display_description, action_scope as smart_block_read_action_action_scope, tool as smart_block_read_action_tool, input_schema as smart_block_read_action_input_schema, output_schema as smart_block_read_action_output_schema } from './src/actions/smart-block/read.js';
 import { smart_source_read as smart_source_read_action, display_name as smart_source_read_action_display_name, display_description as smart_source_read_action_display_description, action_scope as smart_source_read_action_action_scope, tool as smart_source_read_action_tool, input_schema as smart_source_read_action_input_schema, output_schema as smart_source_read_action_output_schema } from './src/actions/smart-source/read.js';
 import { source_base_get_embed_input as source_base_get_embed_input_action, display_name as source_base_get_embed_input_action_display_name } from './src/actions/source/base/get_embed_input.js';
 import { source_canvas_get_embed_input as source_canvas_get_embed_input_action, display_name as source_canvas_get_embed_input_action_display_name } from './src/actions/source/canvas/get_embed_input.js';
 import { source_open as source_open_action, menus as source_open_action_menus } from './src/actions/source/open.js';
 import { source_rendered_get_embed_input as source_rendered_get_embed_input_action, display_name as source_rendered_get_embed_input_action_display_name } from './src/actions/source/rendered/get_embed_input.js';
-import { top_k as top_k_action } from './src/actions/top_k.js';
 
 
 export const smart_env_config = {
@@ -154,13 +153,12 @@ export const smart_env_config = {
     lookup_list_get_results_query: { action: lookup_list_get_results_query_action, display_name: lookup_list_get_results_query_action_display_name, display_description: lookup_list_get_results_query_action_display_description, action_scope: lookup_list_get_results_query_action_action_scope, tool: lookup_list_get_results_query_action_tool, input_schema: lookup_list_get_results_query_action_input_schema, output_schema: lookup_list_get_results_query_action_output_schema, version: lookup_list_get_results_query_action_version },
     lookup_list_pre_process: { action: lookup_list_pre_process_action, pre_process: lookup_list_pre_process_action_pre_process, version: lookup_list_pre_process_action_version },
     plugin_open_release_notes: { action: plugin_open_release_notes_action, commands: plugin_open_release_notes_action_commands, version: "1.0.3" },
-    similarity: { action: similarity_action, settings_config: similarity_action_settings_config, display_name: similarity_action_display_name, display_description: similarity_action_display_description, version: "1.0.3" },
+    similarity: { action: similarity_action, settings_config: similarity_action_settings_config, display_name: similarity_action_display_name, display_description: similarity_action_display_description, version: similarity_action_version },
     smart_block_read: { action: smart_block_read_action, display_name: smart_block_read_action_display_name, display_description: smart_block_read_action_display_description, action_scope: smart_block_read_action_action_scope, tool: smart_block_read_action_tool, input_schema: smart_block_read_action_input_schema, output_schema: smart_block_read_action_output_schema, version: "1.0.3" },
     smart_source_read: { action: smart_source_read_action, display_name: smart_source_read_action_display_name, display_description: smart_source_read_action_display_description, action_scope: smart_source_read_action_action_scope, tool: smart_source_read_action_tool, input_schema: smart_source_read_action_input_schema, output_schema: smart_source_read_action_output_schema, version: "1.0.3" },
     source_base_get_embed_input: { action: source_base_get_embed_input_action, display_name: source_base_get_embed_input_action_display_name, version: "1.0.3" },
     source_canvas_get_embed_input: { action: source_canvas_get_embed_input_action, display_name: source_canvas_get_embed_input_action_display_name, version: "1.0.3" },
     source_open: { action: source_open_action, menus: source_open_action_menus, version: "1.0.3" },
-    source_rendered_get_embed_input: { action: source_rendered_get_embed_input_action, display_name: source_rendered_get_embed_input_action_display_name, version: "1.0.3" },
-    top_k: { action: top_k_action, version: "1.0.3" }
+    source_rendered_get_embed_input: { action: source_rendered_get_embed_input_action, display_name: source_rendered_get_embed_input_action_display_name, version: "1.0.3" }
   }
 };

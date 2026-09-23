@@ -1,16 +1,29 @@
-import { cos_sim } from 'smart-utils/cos_sim.js';
+import { Embeddings } from '../modules/embeddings.js';
 
 /**
  * Calculate cosine similarity between two items based on their vectors.
- * @returns {number}
+ * @returns {{score: number}|{score: null, error: string}}
  */
 
 function similarity(params){
-  if(!this.vec) return { score: null, error: `Missing this.vec for ${this.key}` };
-  if(!params.to_item?.vec) return { score: null, error: 'Missing params.to_item.vec' };
-  return {
-    score: cos_sim(this.vec || [], params.to_item.vec || [])
-  };
+  const embeddings = this.collection?.embeddings;
+  // Direct action callers may supply plain vector-bearing objects without a collection.
+  const cosine_similarity = typeof embeddings?.cosine_similarity === 'function'
+    ? embeddings.cosine_similarity
+    : Embeddings.prototype.cosine_similarity
+  ;
+  try {
+    return { score: cosine_similarity.call(embeddings, this, params?.to_item) };
+  } catch (error) {
+    // Use stable codes rather than instanceof across independently bundled modules.
+    if (error?.code === 'MISSING_FROM_VECTOR') {
+      return { score: null, error: `Missing this.vec for ${this.key}` };
+    }
+    if (error?.code === 'MISSING_TO_VECTOR') {
+      return { score: null, error: 'Missing params.to_item.vec' };
+    }
+    throw error;
+  }
 }
 similarity.action_type = 'score';
 
@@ -26,3 +39,4 @@ export const settings_config = {
 }
 
 export { similarity };
+export const version = '3.0.1';
