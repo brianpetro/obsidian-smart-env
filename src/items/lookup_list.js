@@ -10,17 +10,11 @@ export class LookupList extends CollectionItem {
     return { data: {} };
   }
 
-  async pre_process(params) {
-    // default pre_process (via src/actions/lookup-list/pre_process.js)
-    // adds params.to_item{vec}
+  async get_results (params = {}) {
+    // Pre-process params (adds params.to_item{vec})
     if (typeof this.actions.lookup_list_pre_process === 'function') {
       await this.actions.lookup_list_pre_process(params);
     }
-  }
-
-  async get_results (params = {}) {
-    // Pre-process params
-    await this.pre_process(params);
     // Main filtering and scoring
     // log performance of filter_and_score
     if (this.env.log_perf) this.start_ms = Date.now();
