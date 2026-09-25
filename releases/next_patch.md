@@ -17,3 +17,6 @@ Added: new lookup strategies for semantic retrieval and enhance input validation
 
 
 Improved: Smart drag-and-drop functionality
+
+
+Improve: Add overflow styling to sc-excluded-folders-header for better layout management
