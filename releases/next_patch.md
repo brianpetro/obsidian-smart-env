@@ -20,3 +20,6 @@ Improved: Smart drag-and-drop functionality
 
 
 Improve: Add overflow styling to sc-excluded-folders-header for better layout management
+
+
+Improve: Refactor ribbon action registration and enhance related tests for runtime metadata handling (resolved: preserve ribbon icon ordering)
