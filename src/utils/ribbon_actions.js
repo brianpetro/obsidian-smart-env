@@ -91,7 +91,6 @@ export function register_ribbon_actions(plugin) {
     const {
       action_key,
       ribbon_id,
-      ribbon_spec,
       icon_name,
       description,
     } = candidate;
@@ -102,7 +101,6 @@ export function register_ribbon_actions(plugin) {
       plugin,
       action_key,
       ribbon_id,
-      ribbon_spec,
     });
 
     const ribbon_el = plugin.addRibbonIcon(
@@ -119,12 +117,9 @@ function create_ribbon_callback({
   plugin,
   action_key,
   ribbon_id,
-  ribbon_spec,
 }) {
-  const { env, app } = plugin;
-  const action_entry = env.config.actions[action_key];
-
   return (click_event) => {
+    const { env, app } = plugin;
     const ribbon_ctx = {
       plugin,
       env,
@@ -135,6 +130,11 @@ function create_ribbon_callback({
     };
 
     try {
+      // Startup can replace the environment and its action definitions.
+      const action_entry = env?.config?.actions?.[action_key];
+      const ribbon_spec = action_entry?.ribbon_icons?.[ribbon_id];
+      if (!ribbon_spec) return false;
+
       const params = resolve_params(ribbon_spec, ribbon_ctx);
       const scope = ribbon_spec.get_scope
         ? ribbon_spec.get_scope({ ...ribbon_ctx, params })
@@ -246,7 +246,6 @@ function normalize_ribbon({
   return {
     action_key,
     ribbon_id,
-    ribbon_spec,
     icon_name,
     description,
   };

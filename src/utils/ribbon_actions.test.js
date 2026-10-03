@@ -316,3 +316,148 @@ test('a synchronous action failure is reported without changing ribbon availabil
   t.is(errors.length, 1);
   t.regex(errors[0][0], /Ribbon action failed: failing_ribbon/);
 });
+
+test('registers configured placements before the required collection is available', (t) => {
+  let action_call_ct = 0;
+  const fixture = create_plugin({
+    scoped_action: {
+      action() { action_call_ct += 1; },
+      action_scope: { type: 'collection', collection_key: 'smart_sources' },
+      ribbon_icons: {
+        scoped_action: {
+          icon_name: 'sparkles',
+          register_when() { return true; },
+        },
+      },
+    },
+  });
+  register_ribbon_actions(fixture.plugin);
+  const [ribbon] = fixture.registered_ribbons;
+  t.is(fixture.registered_ribbons.length, 1);
+  t.false(ribbon.callback({}));
+  t.is(action_call_ct, 0);
+
+  fixture.env.smart_sources = { env: fixture.env };
+  t.true(ribbon.callback({}));
+  t.is(action_call_ct, 1);
+  register_ribbon_actions(fixture.plugin);
+  t.is(fixture.registered_ribbons.length, 1);
+  t.is(fixture.plugin._ribbon_action_elements.get('scoped_action'), ribbon.ribbon_el);
+});
+
+test('registration does not resolve runtime parameters, scope, or availability', (t) => {
+  const fixture = create_plugin({
+    local_action: {
+      action() {},
+      ribbon_icons: {
+        local: {
+          icon_name: 'sparkles',
+          register_when({ plugin }) { return plugin === fixture.plugin; },
+          params() { t.fail('params must be resolved only on click'); },
+          get_scope() { t.fail('scope must be resolved only on click'); },
+          when() { t.fail('availability must be resolved only on click'); },
+        },
+      },
+    },
+  });
+
+  register_ribbon_actions(fixture.plugin);
+
+  t.is(fixture.registered_ribbons.length, 1);
+});
+
+for (const replace_env of [false, true]) {
+  test(`ribbon resolves current runtime metadata after ${replace_env ? 'environment replacement' : 'configuration convergence'}`, (t) => {
+    const fixture = create_plugin({
+      current_action: {
+        action() { t.fail('The old action must not run.'); },
+        action_scope: { type: 'env' },
+        ribbon_icons: {
+          current: {
+            icon_name: 'sparkles',
+            description: 'Stable ribbon identity',
+            register_when() { return true; },
+            when() { return false; },
+          },
+        },
+      },
+    });
+    register_ribbon_actions(fixture.plugin);
+    const [ribbon] = fixture.registered_ribbons;
+    const current_env = replace_env ? { config: {} } : fixture.env;
+    const current_scope = { env: current_env };
+    const click_event = { button: 0 };
+    let action_call_ct = 0;
+    let available = false;
+    fixture.plugin.env = current_env;
+    current_env.smart_sources = current_scope;
+    current_env.config.actions = {
+      current_action: {
+        action(params) {
+          action_call_ct += 1;
+          t.is(this, current_scope);
+          t.deepEqual(params, {
+            current: true,
+            event_source: 'ribbon:smart-context:current',
+          });
+        },
+        action_scope: { type: 'collection', collection_key: 'smart_sources' },
+        ribbon_icons: {
+          current: {
+            icon_name: 'updated-icon',
+            description: 'Updated runtime description',
+            register_when() { return true; },
+            params({ plugin, env, click_event: received_event }) {
+              t.is(plugin, fixture.plugin);
+              t.is(env, current_env);
+              t.is(received_event, click_event);
+              return { current: true };
+            },
+            get_scope({ env, params }) {
+              t.true(params.current);
+              return env.smart_sources;
+            },
+            when({ scope }) {
+              t.is(scope, current_scope);
+              return available;
+            },
+          },
+        },
+      },
+    };
+
+    t.false(ribbon.callback(click_event));
+    t.is(action_call_ct, 0);
+    available = true;
+    t.true(ribbon.callback(click_event));
+    t.is(action_call_ct, 1);
+    register_ribbon_actions(fixture.plugin);
+    t.is(fixture.registered_ribbons.length, 1);
+    t.is(fixture.registered_ribbons[0].description, 'Stable ribbon identity');
+    t.is(fixture.registered_ribbons[0].icon_name, 'sparkles');
+    t.is(fixture.plugin._ribbon_action_elements.get('current'), ribbon.ribbon_el);
+  });
+}
+
+test('a missing runtime action or placement leaves the native ribbon intact', (t) => {
+  const fixture = create_plugin({
+    optional_action: {
+      action() { t.fail('The unavailable action must not run.'); },
+      ribbon_icons: {
+        optional: {
+          icon_name: 'sparkles',
+          register_when() { return true; },
+        },
+      },
+    },
+  });
+  register_ribbon_actions(fixture.plugin);
+  const [ribbon] = fixture.registered_ribbons;
+
+  fixture.env.config.actions.optional_action.ribbon_icons = {};
+  t.false(ribbon.callback({}));
+  delete fixture.env.config.actions.optional_action;
+  t.false(ribbon.callback({}));
+  t.is(fixture.registered_ribbons.length, 1);
+  t.is(fixture.plugin._ribbon_action_elements.get('optional'), ribbon.ribbon_el);
+});
