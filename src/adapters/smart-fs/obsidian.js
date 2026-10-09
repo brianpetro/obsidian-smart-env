@@ -311,7 +311,7 @@ export class ObsidianFsAdapter {
   }
 
   /**
-   * Registers Obsidian vault/workspace listeners that emit Smart Environment events for Smart Sources.
+   * Registers Obsidian vault listeners that emit Smart Environment events for Smart Sources.
    * @param {import('smart-sources').SmartSources} sources_collection
    * @returns {boolean}
    */
@@ -339,6 +339,8 @@ export class ObsidianFsAdapter {
         });
       })
     );
+    // Emit persisted changes only. editor-change also fires for unsaved edits
+    // and would duplicate the vault modify event when those edits are saved.
     plugin.registerEvent(
       app.vault.on('modify', (file) => {
         emit_event('sources:modified', {
@@ -361,16 +363,6 @@ export class ObsidianFsAdapter {
         emit_event('sources:deleted', {
           path: file.path,
           event_source: 'obsidian:vault.delete',
-        });
-      })
-    );
-    plugin.registerEvent(
-      app.workspace.on('editor-change', (_editor, info) => {
-        const file = info?.file;
-        if (!file) return;
-        emit_event('sources:modified', {
-          path: file.path,
-          event_source: 'obsidian:workspace.editor-change',
         });
       })
     );
