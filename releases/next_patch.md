@@ -23,3 +23,6 @@ Improve: Add overflow styling to sc-excluded-folders-header for better layout ma
 
 
 Improve: Refactor ribbon action registration and enhance related tests for runtime metadata handling (resolved: preserve ribbon icon ordering)
+
+
+Improved: Refactor source watcher registration to eliminate redundant editor-change listener (reduces extraneous sources:modified events)
