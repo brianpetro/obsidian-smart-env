@@ -26,3 +26,6 @@ Improve: Refactor ribbon action registration and enhance related tests for runti
 
 
 Improved: Refactor source watcher registration to eliminate redundant editor-change listener (reduces extraneous sources:modified events)
+
+
+Add: Register Smart Connect Pro icon with SVG definition
