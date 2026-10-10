@@ -206,6 +206,29 @@ export function add_smart_graph_icon() {
   addIcon("smart-graph", smart_graph_svg);
 }
 
+const smart_connect_pro_svg = `
+  <g fill="none" stroke="currentColor" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16 6H69L94 31V84A10 10 0 0 1 84 94H16A10 10 0 0 1 6 84V16A10 10 0 0 1 16 6Z"></path>
+    <path d="M69 6V23A8 8 0 0 0 77 31H94"></path>
+    <path d="M27 73L50 44L73 73"></path>
+    <g fill="currentColor" stroke="none">
+      <circle cx="27" cy="73" r="11"></circle>
+      <circle cx="73" cy="73" r="11"></circle>
+      <circle cx="50" cy="44" r="12.5" fill="#61dccc"></circle>
+    </g>
+  </g>
+`;
+
+/**
+ * Registers the Connect Pro icon (small-size safe).
+ * Uses an inset page outline and a taller, foreground connection graph.
+ * The outline and graph follow currentColor; the hub retains the source image's teal.
+ * Icon name: smart-connect-pro
+ */
+export function add_smart_connect_pro_icon() {
+  addIcon("smart-connect-pro", smart_connect_pro_svg);
+}
+
 /**
  * Convenience: register all "sc-*" icons in this module.
  */
@@ -218,4 +241,5 @@ export function add_smart_icons() {
   add_smart_dupe_detector_icon();
   add_smart_named_contexts_icon();
   add_smart_graph_icon();
+  add_smart_connect_pro_icon();
 }
