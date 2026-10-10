@@ -1,7 +1,7 @@
 import { collection_tool_action_schemas } from '../../utils/collection_tool_action_schemas.js';
 
 // Keep the query/document contract ahead of query-only actions bundled by other plugins.
-export const version = '3.1.4';
+export const version = '3.1.5';
 
 /**
  * Retrieve exactly the supplied query and/or hypothetical document.
@@ -145,6 +145,7 @@ export const tool = {
     read_only: true,
     destructive: false,
     idempotent: true,
+    open_world: false,
   },
 
   project_result: project_lookup_list_result,

@@ -76,6 +76,7 @@ export const tool = {
     read_only: true,
     destructive: false,
     idempotent: true,
+    open_world: false,
   },
 };
 
@@ -95,3 +96,5 @@ export function project_smart_source_read_request(request, { env }) {
       : {},
   };
 }
+
+export const version = '1.0.4';

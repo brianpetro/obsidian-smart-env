@@ -51,6 +51,7 @@ export const tool = {
     read_only: true,
     destructive: false,
     idempotent: true,
+    open_world: false,
   },
 };
 
@@ -68,3 +69,5 @@ export function project_smart_block_read_request(request, { env }) {
     params: {},
   };
 }
+
+export const version = '1.0.4';
