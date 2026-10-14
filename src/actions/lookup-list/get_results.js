@@ -88,7 +88,7 @@ export const input_schema = {
     },
     hypothetical_document: {
       type: 'object',
-      description: 'Caller-provided item embedded with canonical source/block formatting and document semantics. Its path is a representation hint, never a filter or source evidence. When a query is also supplied, the two result sets are combined.',
+      description: 'Caller-provided item embedded with canonical source/block formatting and document semantics. Its path is a representation hint, never a filter or source evidence. When a query is also supplied, the two result sets are combined when both passes succeed.',
       properties: {
         path: {
           type: 'string',
@@ -121,7 +121,7 @@ export const tool = {
   name: 'smart_lookup',
   description:
     'Use for semantic discovery when the request is expressed as a topic, question, or concept and no exact source or block key is known.'
-    + ' Uses every supplied retrieval input: query, hypothetical_document, or both. Returns ranked keys, scores, and optional content without calling a chat model.'
+    + ' Accepts query, hypothetical_document, or both. If document retrieval fails after query retrieval succeeds, query-only results are returned. Returns ranked keys, scores, and optional content without calling a chat model.'
     + ' Do not use to read a known key or find items related to a known source; use smart_source_read, smart_block_read, or smart_connections_list.',
 
   when({ env }) {
