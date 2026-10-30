@@ -32,3 +32,6 @@ Add: Register Smart Connect Pro icon with SVG definition
 
 
 Improved: Update descriptions in get_results and get_results_hyde for clarity on hypothetical_document usage
+
+
+Improved: Refactor get_metadata to return an empty object instead of undefined and update test cases for better coverage
