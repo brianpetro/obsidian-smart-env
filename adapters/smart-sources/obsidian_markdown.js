@@ -34,7 +34,7 @@ export class ObsidianMarkdownSourceContentAdapter extends MarkdownSourceContentA
   /**
    * Returns metadata using Obsidian's metadataCache, merging frontmatter and tags.
    * @async
-   * @returns {Promise<Object|undefined>}
+   * @returns {Promise<Object>}
    */
   async get_metadata() {
     const app = this.item.env.main.app;
@@ -44,7 +44,7 @@ export class ObsidianMarkdownSourceContentAdapter extends MarkdownSourceContentA
       if (tags.length) cache.frontmatter.tags = tags;
       return cache.frontmatter;
     }
-    return tags.length ? { tags } : undefined;
+    return tags.length ? { tags } : {};
   }
 
   /**
