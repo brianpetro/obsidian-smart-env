@@ -35,3 +35,6 @@ Improved: Update descriptions in get_results and get_results_hyde for clarity on
 
 
 Improved: Refactor get_metadata to return an empty object instead of undefined and update test cases for better coverage
+
+
+Improved: Update input schema patterns to allow whitespace around non-empty strings
