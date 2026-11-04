@@ -83,7 +83,7 @@ export const input_schema = {
     query: {
       type: 'string',
       minLength: 1,
-      pattern: '\\S',
+      pattern: '^[\\s\\S]*\\S[\\s\\S]*$',
       description: 'Original search intent, embedded with query semantics.',
     },
     hypothetical_document: {
@@ -93,13 +93,13 @@ export const input_schema = {
         path: {
           type: 'string',
           minLength: 1,
-          pattern: '\\S',
+          pattern: '^[\\s\\S]*\\S[\\s\\S]*$',
           description: 'Hypothetical source path or block key. Block keys include #, with a trailing # for the root block.',
         },
         content: {
           type: 'string',
           minLength: 1,
-          pattern: '\\S',
+          pattern: '^[\\s\\S]*\\S[\\s\\S]*$',
           description: 'Hypothetical source or block content.',
         },
       },
