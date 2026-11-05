@@ -692,7 +692,7 @@ test('set_item_vector null queues block persistence through its parent source', 
   t.false(embeddings._dirty_files.has(file));
 });
 
-test('embed_batch validates all responses before updating embedding refs', async (t) => {
+test('embed_batch throws on batch-level shape problems', async (t) => {
   const invalid_cases = [
     {
       name: 'invalid batch response',
@@ -703,31 +703,6 @@ test('embed_batch validates all responses before updating embedding refs', async
       name: 'missing result',
       model_results: [],
       message: /returned 0 results for 1 items/,
-    },
-    {
-      name: 'provider error',
-      model_results: [{ error: 'provider failed', vec: default_vector }],
-      message: /provider failed/,
-    },
-    {
-      name: 'missing vector',
-      model_results: [{}],
-      message: /is missing a vector/,
-    },
-    {
-      name: 'wrong dimensions',
-      model_results: [{ vec: [1, 2] }],
-      message: /has 2 dimensions; expected 3/,
-    },
-    {
-      name: 'non-finite values',
-      model_results: [{ vec: [1, Number.NaN, 3] }],
-      message: /contains non-finite values/,
-    },
-    {
-      name: 'zero magnitude',
-      model_results: [{ vec: [0, 0, 0] }],
-      message: /has zero magnitude/,
     },
   ];
 
@@ -771,6 +746,79 @@ test('embed_batch validates all responses before updating embedding refs', async
   }
 });
 
+test('embed_batch isolates a single bad result instead of discarding the whole batch', async (t) => {
+  const invalid_cases = [
+    {
+      name: 'provider error',
+      model_results: [{ error: 'provider failed', vec: default_vector }],
+      message: /provider failed/,
+    },
+    {
+      name: 'missing vector',
+      model_results: [{}],
+      message: /is missing a vector/,
+    },
+    {
+      name: 'wrong dimensions',
+      model_results: [{ vec: [1, 2] }],
+      message: /has 2 dimensions; expected 3/,
+    },
+    {
+      name: 'non-finite values',
+      model_results: [{ vec: [1, Number.NaN, 3] }],
+      message: /contains non-finite values/,
+    },
+    {
+      name: 'zero magnitude',
+      model_results: [{ vec: [0, 0, 0] }],
+      message: /has zero magnitude/,
+    },
+  ];
+
+  for (const invalid_case of invalid_cases) {
+    const { collection, embeddings, file } = create_embeddings({
+      model_results: invalid_case.model_results,
+    });
+    const previous_ref = create_ref('mf_previous', {
+      file_i: 4,
+      read_hash: 'previous-hash',
+    });
+    const item = create_item(collection, {
+      ref: previous_ref,
+    });
+
+    await t.notThrowsAsync(
+      () => embeddings.embed_batch([item]),
+      `${invalid_case.name}: a single bad result does not throw`,
+    );
+
+    t.deepEqual(
+      get_item_ref(item, previous_ref.file),
+      previous_ref,
+      `${invalid_case.name}: previous ref remains unchanged`,
+    );
+    t.true(
+      item._queue_embed,
+      `${invalid_case.name}: item remains queued`,
+    );
+    t.regex(
+      item.data.embedding.error,
+      invalid_case.message,
+      `${invalid_case.name}: error is recorded on the item`,
+    );
+    t.is(
+      embeddings._dirty_files.size,
+      0,
+      `${invalid_case.name}: no vector file is dirtied`,
+    );
+    t.is(
+      embeddings.get_vector_value_count(file),
+      0,
+      `${invalid_case.name}: no row is appended`,
+    );
+  }
+});
+
 test('embed_batch validates later responses before storing earlier vectors', async (t) => {
   const { collection, embeddings, file } = create_embeddings({
     model_results: [
@@ -781,15 +829,19 @@ test('embed_batch validates later responses before storing earlier vectors', asy
   const first_item = create_item(collection, { key: 'Notes/First.md' });
   const second_item = create_item(collection, { key: 'Notes/Second.md' });
 
-  await t.throwsAsync(
+  await t.notThrowsAsync(
     () => embeddings.embed_batch([first_item, second_item]),
-    { message: /has 2 dimensions; expected 3/ },
   );
 
-  t.is(first_item.data.embedding.default, undefined);
+  t.is(get_item_ref(first_item, embeddings.model_fingerprint).read_hash, first_item.read_hash);
+  t.deepEqual(Array.from(embeddings.get_item_vector(first_item)), default_vector);
+
   t.is(second_item.data.embedding.default, undefined);
-  t.is(embeddings._dirty_files.size, 0);
-  t.is(embeddings.get_vector_value_count(file), 0);
+  t.true(second_item._queue_embed);
+  t.regex(second_item.data.embedding.error, /has 2 dimensions; expected 3/);
+
+  t.true(embeddings._dirty_files.has(file));
+  t.is(embeddings.get_vector_value_count(file), default_vector.length);
 });
 
 test('embed_batch rejects an item without a read_hash', async (t) => {
@@ -854,13 +906,8 @@ test('embed_batch throws when a validated vector cannot be stored', async (t) =>
   t.regex(item.data.embedding.error, /Failed to store embedding vector/);
 });
 
-test('process_embed_queue does not mark invalid or missing responses successfully embedded', async (t) => {
+test('process_embed_queue does not mark a batch-level failure as successfully embedded', async (t) => {
   const invalid_cases = [
-    {
-      name: 'wrong dimensions',
-      model_results: [{ vec: [1, 2] }],
-      item_params: {},
-    },
     {
       name: 'missing embedding input',
       model_results: [{ vec: default_vector }],
@@ -921,6 +968,66 @@ test('process_embed_queue does not mark invalid or missing responses successfull
       `${invalid_case.name}: embedded event is not emitted`,
     );
   }
+});
+
+test('process_embed_queue isolates a single bad item instead of halting the whole queue', async (t) => {
+  const { collection, embeddings, events } = create_embeddings({
+    model_results: [{ vec: default_vector }, { vec: [1, 2] }],
+  });
+  collection.data_fs = create_memory_data_fs();
+  const good_item = create_item(collection, { key: 'Notes/Good.md' });
+  const bad_item = create_item(collection, { key: 'Notes/Bad.md' });
+  let embed_hash_set_count = 0;
+
+  [good_item, bad_item].forEach((item) => {
+    Object.defineProperty(item, 'embed_hash', {
+      configurable: true,
+      get() {
+        return get_item_ref(this, embeddings.model_fingerprint)?.read_hash;
+      },
+      set(read_hash) {
+        embed_hash_set_count += 1;
+        const embedding_ref = get_item_ref(this, embeddings.model_fingerprint);
+        if (embedding_ref) embedding_ref.read_hash = read_hash;
+      },
+    });
+  });
+
+  collection._test_embed_queue = [good_item, bad_item];
+  Object.defineProperty(collection, 'embed_queue', {
+    configurable: true,
+    get() {
+      return this._test_embed_queue;
+    },
+  });
+
+  await t.notThrowsAsync(
+    () => embeddings.entities_vector_adapter.process_embed_queue(),
+  );
+
+  // the good item is embedded normally
+  t.is(get_item_ref(good_item, embeddings.model_fingerprint).read_hash, good_item.read_hash);
+  t.deepEqual(Array.from(embeddings.get_item_vector(good_item)), default_vector);
+
+  // the bad item is marked errored and stays queued for retry, but does not
+  // block the rest of the batch or halt the queue
+  t.is(bad_item.data.embedding.default, undefined);
+  t.true(bad_item._queue_embed);
+  t.regex(bad_item.data.embedding.error, /has 2 dimensions; expected 3/);
+
+  // no embedding:error event, since nothing threw
+  t.false(
+    events.some(({ event_key }) => event_key === 'embedding:error'),
+    'no embedding error event is emitted for an isolated per-item failure',
+  );
+
+  // items:embedded still fires for the batch, but only the good item is
+  // reported as changed
+  const embedded_event = events.find(({ event_key }) => event_key === 'items:embedded');
+  t.truthy(embedded_event, 'items:embedded is emitted for the batch');
+  t.true(embedded_event.event.keys.includes(good_item.key));
+  t.true(embedded_event.event.changed_keys.includes(good_item.key));
+  t.false(embedded_event.event.changed_keys.includes(bad_item.key));
 });
 
 
