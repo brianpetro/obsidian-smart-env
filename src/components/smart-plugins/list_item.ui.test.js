@@ -34,5 +34,6 @@ test('Smart Plugins rows render icons, metadata, a link menu, and toggle control
   t.true(styles.includes('.smart-plugin-pro-badge'));
   t.true(styles.includes('.smart-plugins-track-guide-item'));
   t.false(styles.includes('.smart-badge.pro-badge::after'));
-  t.true(styles.includes('.smart-plugins-referral .setting-item + .setting-item'));
+  t.true(styles.includes('.smart-plugins-onboarding .setting-item'));
+  t.false(styles.includes('smart-plugins-referral'));
 });

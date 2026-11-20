@@ -33,10 +33,10 @@ import { render as smart_context_actions_component } from './src/components/smar
 import { render as smart_context_item_component } from './src/components/smart-context/item.js';
 import { render as smart_context_meta_component } from './src/components/smart-context/meta.js';
 import { render as smart_context_tree_component } from './src/components/smart-context/tree.js';
-import { render as smart_plugins_list_component } from './src/components/smart-plugins/list.js';
+import { render as smart_plugins_list_component, version as smart_plugins_list_component_version } from './src/components/smart-plugins/list.js';
 import { render as smart_plugins_list_item_component } from './src/components/smart-plugins/list_item.js';
 import { render as smart_plugins_login_component } from './src/components/smart-plugins/login.js';
-import { render as smart_plugins_referral_component } from './src/components/smart-plugins/referral.js';
+import { render as smart_plugins_onboarding_component } from './src/components/smart-plugins/onboarding.js';
 import { render as source_inspector_component } from './src/components/source_inspector.js';
 import { render as status_bar_component } from './src/components/status_bar.js';
 import { render as suggest_display_right_component } from './src/components/suggest_display_right.js';
@@ -61,7 +61,7 @@ import { env_get_embedding_vector_memory_usage as env_get_embedding_vector_memor
 import { env_inspect_active_note as env_inspect_active_note_action, menus as env_inspect_active_note_action_menus } from './src/actions/env/inspect_active_note.js';
 import { env_open_milestones as env_open_milestones_action, menus as env_open_milestones_action_menus } from './src/actions/env/open_milestones.js';
 import { env_open_notifications as env_open_notifications_action, menus as env_open_notifications_action_menus } from './src/actions/env/open_notifications.js';
-import { env_open_pro_link as env_open_pro_link_action, menus as env_open_pro_link_action_menus } from './src/actions/env/open_pro_link.js';
+import { env_open_pro_link as env_open_pro_link_action, menus as env_open_pro_link_action_menus, version as env_open_pro_link_action_version } from './src/actions/env/open_pro_link.js';
 import { env_open_status_view as env_open_status_view_action, commands as env_open_status_view_action_commands, menus as env_open_status_view_action_menus } from './src/actions/env/open_status_view.js';
 import { env_show_stats as env_show_stats_action, menus as env_show_stats_action_menus } from './src/actions/env/show_stats.js';
 import { lookup_list_get_results as lookup_list_get_results_action, display_name as lookup_list_get_results_action_display_name, display_description as lookup_list_get_results_action_display_description, action_scope as lookup_list_get_results_action_action_scope, tool as lookup_list_get_results_action_tool, version as lookup_list_get_results_action_version, input_schema as lookup_list_get_results_action_input_schema, output_schema as lookup_list_get_results_action_output_schema } from './src/actions/lookup-list/get_results.js';
@@ -116,10 +116,10 @@ export const smart_env_config = {
     smart_context_item: { render: smart_context_item_component, version: "1.0.3" },
     smart_context_meta: { render: smart_context_meta_component, version: "1.0.3" },
     smart_context_tree: { render: smart_context_tree_component, version: "1.0.3" },
-    smart_plugins_list: { render: smart_plugins_list_component, version: "1.0.3" },
+    smart_plugins_list: { render: smart_plugins_list_component, version: smart_plugins_list_component_version },
     smart_plugins_list_item: { render: smart_plugins_list_item_component, version: "1.0.3" },
     smart_plugins_login: { render: smart_plugins_login_component, version: "1.0.3" },
-    smart_plugins_referral: { render: smart_plugins_referral_component, version: "1.0.3" },
+    smart_plugins_onboarding: { render: smart_plugins_onboarding_component, version: "1.0.3" },
     source_inspector: { render: source_inspector_component, version: "1.0.3" },
     status_bar: { render: status_bar_component, version: "1.0.3" },
     suggest_display_right: { render: suggest_display_right_component, version: "1.0.3" },
@@ -145,7 +145,7 @@ export const smart_env_config = {
     env_inspect_active_note: { action: env_inspect_active_note_action, menus: env_inspect_active_note_action_menus, version: "1.0.3" },
     env_open_milestones: { action: env_open_milestones_action, menus: env_open_milestones_action_menus, version: "1.0.3" },
     env_open_notifications: { action: env_open_notifications_action, menus: env_open_notifications_action_menus, version: "1.0.3" },
-    env_open_pro_link: { action: env_open_pro_link_action, menus: env_open_pro_link_action_menus, version: "1.0.3" },
+    env_open_pro_link: { action: env_open_pro_link_action, menus: env_open_pro_link_action_menus, version: env_open_pro_link_action_version },
     env_open_status_view: { action: env_open_status_view_action, commands: env_open_status_view_action_commands, menus: env_open_status_view_action_menus, version: "1.0.3" },
     env_show_stats: { action: env_show_stats_action, menus: env_show_stats_action_menus, version: "1.0.3" },
     lookup_list_get_results: { action: lookup_list_get_results_action, display_name: lookup_list_get_results_action_display_name, display_description: lookup_list_get_results_action_display_description, action_scope: lookup_list_get_results_action_action_scope, tool: lookup_list_get_results_action_tool, input_schema: lookup_list_get_results_action_input_schema, output_schema: lookup_list_get_results_action_output_schema, version: lookup_list_get_results_action_version },

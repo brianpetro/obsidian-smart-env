@@ -307,36 +307,3 @@ export async function fetch_server_plugin_list(token) {
     message: String(response_json?.message || '').trim(),
   };
 }
-
-/**
- * Fetch referral stats for the authenticated user.
- *
- * @param {object} params
- * @param {string} params.token
- * @returns {Promise<object>}
- */
-export async function fetch_referral_stats(params = {}) {
-  const token = String(params.token || '').trim();
-  if (!token) return { ok: false, error: 'missing_token' };
-
-  const resp = await authenticated_smart_plugins_request({
-    token,
-    path: '/api/referrals/stats',
-    method: 'GET',
-  });
-
-  if (resp.status === 401) {
-    return {
-      ok: false,
-      message: get_response_message(resp) || 'Invalid or expired token. Please log in again.',
-    };
-  }
-  if (resp.status !== 200) {
-    throw new Error(
-      get_response_message(resp) ||
-      `referrals stats error ${resp.status}`
-    );
-  }
-
-  return get_response_json(resp);
-}

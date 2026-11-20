@@ -94,3 +94,14 @@ test('register_first_of_event_notifications returns a disposer', (t) => {
   const milestone_events = env.emitted.filter((event) => event.event_key === 'milestones:first_achieved');
   t.is(milestone_events.length, 0);
 });
+
+test('Retired referral events no longer create milestone notices', (t) => {
+  const env = create_env();
+  register_first_of_event_notifications(env);
+
+  for (const first_of_event_key of ['referrals:copied_link', 'referrals:opened_dashboard']) {
+    env.events.emit('event_log:first', { first_of_event_key });
+  }
+
+  t.false(env.emitted.some((event) => event.event_key === 'milestones:first_achieved'));
+});

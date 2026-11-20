@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
+import { merge_env_config } from 'smart-environment/utils/merge_env_config.js';
 import {
   compute_plugin_list_item_state,
   get_install_enable_behavior,
@@ -85,7 +86,7 @@ function create_store_container() {
   server_message.set_selector('.callout-content', create_element());
 
   container.set_selector('.smart-plugins-login', create_element());
-  container.set_selector('.smart-plugins-referral', create_element());
+  container.set_selector('.smart-plugins-onboarding', create_element());
   container.set_selector('.smart-plugins-official-list', create_element());
   container.set_selector('.smart-plugins-experimental-section', create_element());
   container.set_selector('.smart-plugins-experimental-list', create_element());
@@ -97,15 +98,15 @@ function load_post_process(params = {}) {
   const dir_name = path.dirname(fileURLToPath(import.meta.url));
   const file_path = path.join(dir_name, 'list.js');
   const full_source = fs.readFileSync(file_path, 'utf8');
-  const source_start = full_source.indexOf('const SMART_PLUGINS_DESC');
+  const source_start = full_source.indexOf('export const version');
   if (source_start === -1) {
     throw new Error('Smart Plugins module body not found in list.js');
   }
 
   const source = full_source
     .slice(source_start)
-    .replace(/\bexport\s+(?=(?:async\s+)?function|class)/g, '')
-    .concat('\nmodule.exports = { post_process };\n')
+    .replace(/\bexport\s+(?=(?:async\s+)?function|class|const)/g, '')
+    .concat('\npost_process.version = version;\nmodule.exports = { post_process };\n')
   ;
 
   const context = vm.createContext({
@@ -298,7 +299,86 @@ test('Store layout keeps account state full width without inherited heading styl
   t.true(source.includes('<div class="smart-plugins-marketing-section">'));
   t.true(source.includes('<div class="smart-plugins-marketing-title">More from Smart Plugins</div>'));
   t.true(source.includes('<p class="smart-plugins-footer">'));
-  t.true(source.indexOf('smart-plugins-marketing-section') < source.indexOf('smart-plugins-referral'));
+  t.true(source.indexOf('smart-plugins-marketing-section') < source.indexOf('smart-plugins-onboarding'));
   t.false(source.includes('pro-plugins-container setting-item-heading'));
   t.false(source.includes('<div class="setting-item setting-item-heading">'));
+});
+
+for (const [name, token, status, sub_exp] of [
+  ['signed out', '', 200, null],
+  ['active subscriber', 'active-token', 200, Date.now() + 86400000],
+  ['expired subscriber', 'expired-token', 200, 1],
+  ['invalid session', 'invalid-token', 401, null],
+]) {
+  test(`Store renders onboarding without referral components for ${name}`, async (t) => {
+    const fetch_calls = [];
+    const component_calls = [];
+    const app = {
+      plugins: { enabledPlugins: new Set(), manifests: {}, plugins: {} },
+      vault: { configDir: '.obsidian', adapter: {}, getName() { return 'Test Vault'; } },
+    };
+    const env = {
+      plugin: { app },
+      obsidian_app: app,
+      plugin_states: {},
+      events: { emit() {}, on() { return () => {}; } },
+      smart_components: {
+        async render_component(component_key, scope, params) {
+          component_calls.push({ component_key, params });
+          t.true(['smart_plugins_login', 'smart_plugins_onboarding', 'smart_plugins_list_item'].includes(component_key));
+          if (component_key === 'smart_plugins_list_item') return null;
+          return create_element();
+        },
+      },
+    };
+    const post_process = load_post_process({
+      token,
+      fetch_server_plugin_list: async (request_token) => {
+        fetch_calls.push(request_token);
+        return {
+          list: [],
+          status: request_token ? status : 200,
+          sub_exp,
+          message: '',
+        };
+      },
+    });
+    const view = {
+      attach_disposer() {},
+      empty(element) {
+        element.children = [];
+        element.textContent = '';
+      },
+    };
+    const container = create_store_container();
+    await post_process.call(view, env, container);
+
+    t.deepEqual(fetch_calls, status === 401 ? [token, ''] : [token]);
+    const onboarding_calls = component_calls.filter((call) => call.component_key === 'smart_plugins_onboarding');
+    t.is(onboarding_calls.length, 1);
+    t.is(onboarding_calls[0].params.token, undefined);
+    t.is(onboarding_calls[0].params.sub_exp, undefined);
+    t.is(container.querySelector('.smart-plugins-onboarding').children.length, 1);
+    const login_calls = component_calls.filter((call) => call.component_key === 'smart_plugins_login');
+    t.is(login_calls.at(-1).params.auth_state, status === 401 ? 'invalid' : token ? 'signed_in' : 'signed_out');
+  });
+}
+
+test('Cleaned store component wins over an older plugin in either load order', (t) => {
+  const new_render = load_post_process();
+  const old_render = () => {};
+  for (const old_first of [true, false]) {
+    const old_config = {
+      version: '3.1.3',
+      components: { smart_plugins_list: { render: old_render, version: '1.0.3' } },
+    };
+    const new_config = {
+      version: '3.1.3',
+      components: { smart_plugins_list: { render: new_render, version: new_render.version } },
+    };
+    const merged = {};
+    merge_env_config(merged, old_first ? old_config : new_config);
+    merge_env_config(merged, old_first ? new_config : old_config);
+    t.is(merged.components.smart_plugins_list.render, new_render);
+  }
 });

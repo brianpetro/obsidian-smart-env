@@ -23,6 +23,9 @@ import { convert_to_time_ago } from 'smart-utils/convert_to_time_ago.js';
 import { convert_to_time_until } from 'smart-utils/convert_to_time_until.js';
 import { get_smart_plugins_token } from '../../../utils/sc_oauth.js';
 
+// Prefer this cleanup when older plugins share the same environment.
+export const version = '1.0.4';
+
 const SMART_PLUGINS_DESC = `
   <div class="smart-plugins-track-guide-item">
     <a class="smart-plugin-track-badge smart-plugin-core-track-badge" href="https://smartconnections.app/core-plugins/?utm_source=plugin-store-track-guide" target="_external">Core</a>
@@ -150,7 +153,7 @@ export function build_html(env, params = {}) {
         <div class="smart-plugins-marketing-section">
           <div class="smart-plugins-marketing-title">More from Smart Plugins</div>
           <p class="smart-plugins-footer">${PRO_PLUGINS_FOOTER}</p>
-          <div class="smart-plugins-referral"></div>
+          <div class="smart-plugins-onboarding"></div>
         </div>
       </div>
     </div>
@@ -171,7 +174,7 @@ export async function post_process(env, container, params = {}) {
   const app = plugin?.app || window.app;
 
   const login_container = container.querySelector('.smart-plugins-login');
-  const referral_container = container.querySelector('.smart-plugins-referral');
+  const onboarding_container = container.querySelector('.smart-plugins-onboarding');
   const official_list_el = container.querySelector('.smart-plugins-official-list');
   const experimental_section_el = container.querySelector('.smart-plugins-experimental-section');
   const experimental_list_el = container.querySelector('.smart-plugins-experimental-list');
@@ -198,13 +201,10 @@ export async function post_process(env, container, params = {}) {
     this.empty(login_container);
     if (login_el) login_container.appendChild(login_el);
   };
-  const render_referrals = async (referral_params = {}) => {
-    const referral_el = await render_component('smart_plugins_referral', env, {
-      ...params,
-      ...referral_params,
-    });
-    this.empty(referral_container);
-    if (referral_el) referral_container.appendChild(referral_el);
+  const render_onboarding = async () => {
+    const onboarding_el = await render_component('smart_plugins_onboarding', env, params);
+    this.empty(onboarding_container);
+    if (onboarding_el) onboarding_container.appendChild(onboarding_el);
   };
   const render_markdown = async (target_el, markdown = '') => {
     if (!target_el) return;
@@ -281,7 +281,7 @@ export async function post_process(env, container, params = {}) {
       auth_state: has_token ? 'checking' : 'signed_out',
       sub_exp: null,
     });
-    this.empty(referral_container);
+    this.empty(onboarding_container);
     await render_server_message();
     experimental_section_el.style.display = 'none';
     this.empty(experimental_list_el);
@@ -333,11 +333,7 @@ export async function post_process(env, container, params = {}) {
         auth_state,
         sub_exp,
       });
-      await render_referrals({
-        token: auth_state === 'signed_in' ? token : '',
-        sub_exp,
-        auth_state,
-      });
+      await render_onboarding();
       await render_server_message(server_message, {
         callout_type: auth_state === 'invalid' ? 'warning' : 'note',
         title: auth_state === 'invalid' ? 'Account message' : 'Store message',
