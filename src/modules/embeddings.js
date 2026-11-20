@@ -562,12 +562,13 @@ export class Embeddings {
     );
 
     let validated_vecs;
+    let validation_errors;
     try {
-      validated_vecs = validate_embedding_batch(
+      ({ validated_vecs, errors: validation_errors } = validate_embedding_batch(
         embeddings,
         prepared_items.length,
         expected_dims,
-      );
+      ));
     } catch (error) {
       error.response_json = embeddings?.[0]?.response_json;
       prepared_items.forEach((entry) => {
@@ -576,17 +577,31 @@ export class Embeddings {
       throw error;
     }
 
-    const vector_dims = validated_vecs[0]?.length || expected_dims;
-    const value_count = this.get_vector_value_count(active_file);
-    if (value_count && value_count % vector_dims !== 0) {
-      const message = `Invalid vector file shape for ${active_file}: ${value_count} values cannot form ${vector_dims}-dimension rows.`;
-      prepared_items.forEach((entry) => mark_embedding_error(entry.item, message));
-      throw new Error(message);
+    const vector_dims = validated_vecs.find((vec) => vec?.length)?.length || expected_dims;
+    if (vector_dims) {
+      const value_count = this.get_vector_value_count(active_file);
+      if (value_count && value_count % vector_dims !== 0) {
+        const message = `Invalid vector file shape for ${active_file}: ${value_count} values cannot form ${vector_dims}-dimension rows.`;
+        prepared_items.forEach((entry) => mark_embedding_error(entry.item, message));
+        throw new Error(message);
+      }
     }
 
     for (let result_i = 0; result_i < prepared_items.length; result_i += 1) {
       const entry = prepared_items[result_i];
       const result = embeddings[result_i];
+      const error_message = validation_errors[result_i];
+
+      if (error_message) {
+        // Isolate this item's validation failure: mark it errored and queued
+        // for retry, but do not poison the rest of the batch. Reuses the
+        // `{ skipped, vector_changed: false }` shape the outer vector
+        // adapter already treats as "nothing new to commit here".
+        mark_embedding_error(entry.item, error_message);
+        results[entry.item_i] = { skipped: true, vector_changed: false };
+        continue;
+      }
+
       const stored_ref = this.set_item_vector(entry.item, validated_vecs[result_i], entry.type, {
         model_fingerprint,
         file: active_file,
@@ -1185,6 +1200,21 @@ export class Embeddings {
 }
 
 
+/**
+ * Validates a batch of embedding model results.
+ *
+ * Batch-level shape problems (a non-array response, or a response whose
+ * length does not match the number of requested items) cannot be blamed on
+ * any single item, so those remain thrown errors.
+ *
+ * A problem with a single result (a provider error, a missing/invalid
+ * vector, the wrong dimensionality, non-finite values, or zero magnitude)
+ * is isolated to that result: it is recorded in `errors[result_i]` instead
+ * of throwing, so one bad item in a batch does not discard the valid
+ * vectors for every other item in the same batch.
+ *
+ * @returns {{ validated_vecs: Array<Float32Array|undefined>, errors: Array<string|undefined> }}
+ */
 function validate_embedding_batch(embeddings, expected_count, expected_dims = 0) {
   if (!Array.isArray(embeddings)) {
     throw new Error('Embedding model returned an invalid batch response.');
@@ -1195,15 +1225,18 @@ function validate_embedding_batch(embeddings, expected_count, expected_dims = 0)
   }
 
   const validated_vecs = new Array(expected_count);
+  const errors = new Array(expected_count);
   let dims = Number(expected_dims || 0);
 
   for (let result_i = 0; result_i < embeddings.length; result_i += 1) {
     const result = embeddings[result_i];
     if (result?.error) {
-      throw new Error(`Embedding result ${result_i} failed: ${String(result.error)}`);
+      errors[result_i] = `Embedding result ${result_i} failed: ${String(result.error)}`;
+      continue;
     }
     if (!result?.vec?.length) {
-      throw new Error(`Embedding result ${result_i} is missing a vector.`);
+      errors[result_i] = `Embedding result ${result_i} is missing a vector.`;
+      continue;
     }
 
     let vec;
@@ -1213,31 +1246,40 @@ function validate_embedding_batch(embeddings, expected_count, expected_dims = 0)
         : new Float32Array(result.vec)
       ;
     } catch {
-      throw new Error(`Embedding result ${result_i} contains an invalid vector.`);
+      errors[result_i] = `Embedding result ${result_i} contains an invalid vector.`;
+      continue;
     }
 
     if (!dims) dims = vec.length;
     if (vec.length !== dims) {
-      throw new Error(`Embedding result ${result_i} has ${vec.length} dimensions; expected ${dims}.`);
+      errors[result_i] = `Embedding result ${result_i} has ${vec.length} dimensions; expected ${dims}.`;
+      continue;
     }
 
     let squared_sum = 0;
+    let has_non_finite = false;
     for (let value_i = 0; value_i < vec.length; value_i += 1) {
       const value = vec[value_i];
       if (!Number.isFinite(value)) {
-        throw new Error(`Embedding result ${result_i} contains non-finite values.`);
+        has_non_finite = true;
+        break;
       }
       squared_sum += value * value;
     }
+    if (has_non_finite) {
+      errors[result_i] = `Embedding result ${result_i} contains non-finite values.`;
+      continue;
+    }
 
     if (!Number.isFinite(squared_sum) || squared_sum <= 0) {
-      throw new Error(`Embedding result ${result_i} has zero magnitude.`);
+      errors[result_i] = `Embedding result ${result_i} has zero magnitude.`;
+      continue;
     }
 
     validated_vecs[result_i] = vec;
   }
 
-  return validated_vecs;
+  return { validated_vecs, errors };
 }
 
 function mark_embedding_error(item, message) {
