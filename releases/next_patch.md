@@ -38,3 +38,6 @@ Improved: Refactor get_metadata to return an empty object instead of undefined a
 
 
 Improved: Update input schema patterns to allow whitespace around non-empty strings
+
+
+Improved: Add menu styles and enhance menu item title formatting with hotkeys
