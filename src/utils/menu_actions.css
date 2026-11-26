@@ -1,0 +1,19 @@
+.smart-menu-action-title {
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+  width: 100%;
+}
+
+.smart-menu-action-hotkey {
+  flex-shrink: 0;
+  margin-inline-start: auto;
+  padding: 0 var(--size-2-1);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  color: var(--text-muted);
+  font-family: var(--font-monospace, monospace);
+  font-size: var(--font-smallest);
+  white-space: nowrap;
+  background-color: var(--background-primary-alt);
+}

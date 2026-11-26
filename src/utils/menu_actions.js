@@ -330,6 +330,7 @@ function add_item(menu_ctx) {
   if (typeof menu_ctx.menu?.addItem !== 'function') return;
 
   const title = get_title(menu_ctx);
+  const hotkey = get_command_hotkey(menu_ctx);
   const icon = get_icon(menu_ctx);
   const disabled = get_disabled(menu_ctx);
   const order = get_menu_order(menu_ctx);
@@ -339,7 +340,7 @@ function add_item(menu_ctx) {
     item._action_key = menu_ctx.action_key;
     item._order = order;
 
-    if (title) item.setTitle?.(title);
+    if (title) item.setTitle?.(build_menu_title(menu_ctx, item, title, hotkey));
     if (icon) item.setIcon?.(icon);
     item.setDisabled?.(disabled);
     item.onClick?.(async (event) => {
@@ -347,6 +348,51 @@ function add_item(menu_ctx) {
       return await menu_ctx.run({}, event);
     });
   });
+}
+
+/** Keep the native shortcut readable without giving it the same visual weight as the action. */
+function build_menu_title(menu_ctx, item, title, hotkey) {
+  if (!hotkey) return title;
+  const document_ref = item.dom?.ownerDocument || menu_ctx.menu.dom?.ownerDocument
+    || globalThis.activeDocument || globalThis.document;
+  if (typeof document_ref?.createDocumentFragment !== 'function' || typeof document_ref?.createElement !== 'function') {
+    return `${title} (${hotkey})`;
+  }
+  const fragment = document_ref.createDocumentFragment();
+  const container = document_ref.createElement('span');
+  container.className = 'smart-menu-action-title';
+  const shortcut = document_ref.createElement('span');
+  shortcut.className = 'smart-menu-action-hotkey';
+  shortcut.textContent = hotkey;
+  // Append text/nodes directly: action names and key sequences must never become HTML.
+  container.append(title, ' ', shortcut);
+  fragment.append(container);
+  return fragment;
+}
+
+/** Native formatting follows the current custom/default binding, including a cleared hotkey. */
+function get_command_hotkey({ env, action_key, action_entry }) {
+  const command_ids = Object.keys(action_entry?.commands || {});
+  if (!command_ids.length) return '';
+  const plugins = new Set([env.main,
+    ...Object.values(env.smart_env_configs || {}).map((config) => config?.main),
+  ]);
+  for (const plugin of plugins) {
+    if (!plugin?.manifest?.id || plugin.env !== env) continue;
+    const registered = plugin._registered_command_actions;
+    const hotkeys = plugin.app?.hotkeyManager;
+    if (typeof registered?.get !== 'function' || typeof hotkeys?.printHotkeyForCommand !== 'function') continue;
+    for (const command_id of command_ids) {
+      if (registered.get(command_id) !== action_key) continue;
+      try {
+        // Obsidian owns modifier names, platform symbols and the displayed binding.
+        // Its formatter is internal; unavailable presentation must not block the action.
+        const label = hotkeys.printHotkeyForCommand(`${plugin.manifest.id}:${command_id}`);
+        if (typeof label === 'string' && label.trim()) return label;
+      } catch { /* Keep the menu usable if the host cannot format this command. */ }
+    }
+  }
+  return '';
 }
 
 function add_separator(menu_ctx) {

@@ -3,16 +3,19 @@ import {
   build_menu,
   resolve_menu_actions,
 } from './menu_actions.js';
+import { register_command_actions } from './command_actions.js';
 
 function without_run(actions = []) {
   return actions.map(({ run: _run, ...action }) => action);
 }
 
-function create_menu() {
+function create_menu(document_ref, item_document = document_ref) {
   return {
     items: [],
+    dom: document_ref ? { ownerDocument: document_ref } : undefined,
     addItem(callback) {
       const item = {
+        dom: item_document ? { ownerDocument: item_document } : undefined,
         title: '',
         icon: '',
         disabled: false,
@@ -43,6 +46,36 @@ function create_menu() {
     },
   };
 }
+
+/** Minimal document boundary for title fragments; no HTML parsing or layout simulation. */
+function create_menu_document() {
+  const document_ref = {
+    createDocumentFragment: () => node(11),
+    createElement: (tag) => node(1, tag),
+  };
+  function node(node_type, tag) {
+    let text = '';
+    return {
+      nodeType: node_type, tagName: tag?.toUpperCase(), ownerDocument: document_ref,
+      childNodes: [], style: {},
+      get textContent() { return text + this.childNodes.map((child) => child.textContent).join(''); },
+      set textContent(value) { text = String(value); this.childNodes = []; },
+      set innerHTML(_value) { throw new Error('Menu titles must use text, not HTML'); },
+      append(...values) {
+        for (const value of values) {
+          if (typeof value === 'string') {
+            const child = node(3); child.textContent = value; this.childNodes.push(child);
+          } else if (value.nodeType === 11) {
+            this.childNodes.push(...value.childNodes); value.childNodes = [];
+          } else this.childNodes.push(value);
+        }
+      },
+    };
+  }
+  return document_ref;
+}
+
+const menu_title_text = (item) => typeof item.title === 'string' ? item.title : item.title.textContent;
 
 test('resolve_menu_actions returns visible action metadata in menu order', (t) => {
   const env = {
@@ -355,6 +388,142 @@ test('build_menu and resolve_menu_actions share presentation metadata', (t) => {
   t.is(built.icon, resolved.icon);
   t.is(built.disabled, resolved.disabled);
   t.is(built._order, resolved.order);
+});
+
+function create_command_menu() {
+  const document_ref = create_menu_document();
+  const labels = new Map();
+  const lookups = [];
+  const calls = [];
+  const action = {
+    action(params) { calls.push(params); },
+    commands: {
+      run: {
+        name: 'Run', register_when: () => true,
+        hotkeys: [{ modifiers: ['Mod'], key: 'P' }],
+      },
+    },
+    menus: { 'test:menu': { title: 'Run', icon: 'play' } },
+  };
+  const env = { config: { actions: { run_action: action } } };
+  const plugin = {
+    env, manifest: { id: 'test-plugin' },
+    app: { hotkeyManager: { printHotkeyForCommand(command_id) {
+      lookups.push(command_id);
+      return labels.get(command_id);
+    } } },
+    addCommand() {},
+  };
+  env.main = plugin;
+  register_command_actions(plugin);
+  const render = ({ menu_document = document_ref, item_document = menu_document } = {}) => {
+    const menu = create_menu(menu_document, item_document);
+    build_menu(env, 'test:menu', menu, { env });
+    return menu.items[0];
+  };
+  return { env, plugin, action, labels, lookups, calls, render, document_ref };
+}
+
+test('command menus use the current native shortcut label without changing direct-action titles', async (t) => {
+  const f = create_command_menu();
+  f.labels.set('test-plugin:run', 'Ctrl+P');
+  const item = f.render();
+  t.is(item.title.nodeType, 11);
+  t.is(menu_title_text(item), 'Run Ctrl+P');
+  const container = item.title.childNodes[0];
+  t.is(container.className, 'smart-menu-action-title');
+  const shortcut = container.childNodes.at(-1);
+  t.is(shortcut.tagName, 'SPAN');
+  t.is(shortcut.className, 'smart-menu-action-hotkey');
+  t.deepEqual(shortcut.style, {});
+  t.deepEqual(f.lookups, ['test-plugin:run']);
+  await item.on_click();
+  t.is(f.calls.length, 1);
+  t.is(f.calls[0].event_source, 'menu:test:menu:run_action');
+  t.is(resolve_menu_actions(f.env, 'test:menu', { env: f.env })[0].title, 'Run');
+
+  // Reopening reads native settings again; cleared bindings must not revive exported defaults.
+  f.labels.set('test-plugin:run', 'Alt+P');
+  t.is(menu_title_text(f.render()), 'Run Alt+P');
+  f.labels.set('test-plugin:run', '');
+  t.is(f.render().title, 'Run');
+});
+
+test('native hotkey formatting stays intact and does not enable a disabled menu action', async (t) => {
+  const f = create_command_menu();
+  f.labels.set('test-plugin:run', '\u2318\u21e7P');
+  f.action.menus['test:menu'].disabled = true;
+  const item = f.render();
+  t.is(menu_title_text(item), 'Run \u2318\u21e7P');
+  t.true(item.disabled);
+  t.false(await item.on_click());
+  t.is(f.calls.length, 0);
+});
+
+test('menu hotkeys use the registered plugin owner in a shared environment', (t) => {
+  const f = create_command_menu();
+  const owner = f.plugin;
+  f.env.main = { env: f.env, manifest: { id: 'another-plugin' }, app: owner.app };
+  f.env.smart_env_configs = { first: { main: f.env.main }, second: { main: owner } };
+  f.labels.set('test-plugin:run', 'Ctrl+P');
+  f.labels.set('another-plugin:run', 'Wrong owner');
+  t.is(menu_title_text(f.render()), 'Run Ctrl+P');
+  t.deepEqual(f.lookups, ['test-plugin:run']);
+});
+
+test('styled title uses the native item document and preserves literal title/hotkey text', (t) => {
+  const f = create_command_menu();
+  const item_document = create_menu_document();
+  f.action.menus['test:menu'].title = '<b>Run</b>';
+  f.labels.set('test-plugin:run', '<img src=x>');
+  const item = f.render({ item_document });
+  t.is(item.title.ownerDocument, item_document);
+  t.is(item.title.childNodes.at(-1).ownerDocument, item_document);
+  t.is(menu_title_text(item), '<b>Run</b> <img src=x>');
+  t.deepEqual(item.title.childNodes[0].childNodes.map(({ nodeType }) => nodeType), [3, 3, 1]);
+});
+
+test('styled title preserves an existing fragment and works without item-specific DOM', (t) => {
+  const f = create_command_menu();
+  const title = f.document_ref.createDocumentFragment();
+  const label = f.document_ref.createElement('strong');
+  label.textContent = 'Run';
+  title.append(label);
+  f.action.menus['test:menu'].title = title;
+  f.labels.set('test-plugin:run', 'Ctrl+P');
+  const item = f.render({ item_document: null });
+  t.is(item.title.ownerDocument, f.document_ref);
+  t.is(item.title.childNodes[0].childNodes[0], label);
+  t.is(menu_title_text(item), 'Run Ctrl+P');
+});
+
+test('headless menus retain a readable title when no document is available', (t) => {
+  const f = create_command_menu();
+  f.labels.set('test-plugin:run', 'Ctrl+P');
+  t.is(f.render({ menu_document: null }).title, 'Run (Ctrl+P)');
+});
+
+for (const missing of ['registration', 'matching action', 'commands export', 'same environment', 'native formatter']) {
+  test(`menu labels stay plain without ${missing}`, (t) => {
+    const f = create_command_menu();
+    f.labels.set('test-plugin:run', 'Ctrl+P');
+    if (missing === 'registration') f.plugin._registered_command_actions.clear();
+    if (missing === 'matching action') f.plugin._registered_command_actions.set('run', 'different_action');
+    if (missing === 'commands export') delete f.action.commands;
+    if (missing === 'same environment') f.plugin.env = {};
+    if (missing === 'native formatter') delete f.plugin.app.hotkeyManager.printHotkeyForCommand;
+    t.is(f.render().title, 'Run');
+    t.deepEqual(f.lookups, []);
+  });
+}
+
+test('an unavailable native hotkey formatter cannot break menu execution', async (t) => {
+  const f = create_command_menu();
+  f.plugin.app.hotkeyManager.printHotkeyForCommand = () => { throw new Error('Unavailable native formatter'); };
+  const item = f.render();
+  t.is(item.title, 'Run');
+  await item.on_click();
+  t.is(f.calls.length, 1);
 });
 
 test('menu discovery validates each declared action scope', (t) => {

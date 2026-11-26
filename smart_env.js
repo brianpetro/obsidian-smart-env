@@ -33,6 +33,8 @@ import {
   build_menu as build_registered_menu,
   resolve_menu_actions as resolve_registered_menu_actions,
 } from './src/utils/menu_actions.js';
+import menu_styles from './src/utils/menu_actions.css';
+void menu_styles; // The shared build collects this import into dist/styles.css; no runtime injection.
 
 const MIN_COMPATIBLE_SMART_ENV_VERSION = '3.0.0';
 
