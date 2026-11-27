@@ -13,8 +13,10 @@ export async function smart_source_read(params = {}) {
   if (typeof this.read !== 'function') {
     throw new Error('Unable to read Smart Source.');
   }
-  const result = await this.read();
-  if (result === null || result === undefined) return '';
+  const result = await this.read({ throw_on_error: true });
+  if (result === null || result === undefined) {
+    throw new Error('No content returned while reading Smart Source.');
+  }
   return typeof result === 'string'
     ? result
     : JSON.stringify(result, null, 2)
@@ -97,4 +99,4 @@ export function project_smart_source_read_request(request, { env }) {
   };
 }
 
-export const version = '1.0.4';
+export const version = '1.0.5';

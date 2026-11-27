@@ -1,4 +1,5 @@
 import test from 'ava';
+import { SmartSource } from 'smart-sources/smart_source.js';
 import {
   input_schema,
   output_schema,
@@ -7,10 +8,10 @@ import {
   tool,
 } from './read.js';
 
-test('smart_source_read returns Smart Source text without routing params', async (t) => {
+test('smart_source_read requests strict text without routing params', async (t) => {
   const source = {
     async read(...args) {
-      t.deepEqual(args, []);
+      t.deepEqual(args, [{ throw_on_error: true }]);
       return 'Alpha source text';
     },
   };
@@ -124,4 +125,44 @@ test('smart_source_read fails clearly when the scope cannot be read', async (t) 
     () => smart_source_read.call({}),
     { message: 'Unable to read Smart Source.' },
   );
+});
+
+test('smart_source_read propagates the source adapter failure', async (t) => {
+  const read_error = new Error('Source content is unavailable');
+  const source = {
+    key: 'Notes/Failure.md',
+    read: SmartSource.prototype.read,
+    use_source_adapter: SmartSource.prototype.use_source_adapter,
+    source_adapter: {
+      async read() {
+        throw read_error;
+      },
+    },
+  };
+
+  t.is(await t.throwsAsync(() => smart_source_read.call(source)), read_error);
+});
+
+test('smart_source_read preserves genuinely empty source content', async (t) => {
+  const source = {
+    key: 'Notes/Empty.md',
+    read: SmartSource.prototype.read,
+    use_source_adapter: SmartSource.prototype.use_source_adapter,
+    source_adapter: {
+      async read() {
+        return '';
+      },
+    },
+  };
+
+  t.is(await smart_source_read.call(source), '');
+});
+
+test('smart_source_read rejects nullish results from a custom reader', async (t) => {
+  for (const result of [null, undefined]) {
+    await t.throwsAsync(
+      () => smart_source_read.call({ read: async () => result }),
+      { message: 'No content returned while reading Smart Source.' },
+    );
+  }
 });
