@@ -41,3 +41,6 @@ Improved: Update input schema patterns to allow whitespace around non-empty stri
 
 
 Improved: Add menu styles and enhance menu item title formatting with hotkeys
+
+
+Improved: Enhance error handling in smart_block_read and smart_source_read functions
